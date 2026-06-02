@@ -1,0 +1,31 @@
+# Secrets & credentials
+.env
+token.json
+credentials.json
+
+# Database files
+*.db
+*.db.new
+*.db.new-journal
+
+# Logs & outputs
+*.log
+outputs/
+
+# Audit / debug
+audit.jsonl
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Claude session data
+.claude/
+
+# One-off scripts
+fix_db.py
+install_cron.sh
