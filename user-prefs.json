@@ -1,0 +1,52 @@
+{
+  "_comment": "Edit this file to personalise your OzBargain deal alerts.",
+
+  "preferred_categories": [
+    "Electronics",
+    "Computing",
+    "Home & Garden",
+    "Travel",
+    "Gaming",
+    "Phones",
+    "Appliances",
+    "Supermarket"
+  ],
+
+  "keyword_watchlist": [
+    "iPad",
+    "MacBook",
+    "Dyson",
+    "Roomba",
+    "Sony",
+    "Samsung",
+    "standing desk",
+    "Nintendo Switch",
+    "AirPods",
+    "Bose",
+    "robot vacuum",
+    "air fryer",
+    "coffee machine",
+    "espresso",
+    "Nespresso"
+  ],
+
+  "excluded_brands": [],
+
+  "excluded_merchants": [],
+
+  "min_savings_per_category": {
+    "Electronics":  300,
+    "Computing":    300,
+    "Travel":       150,
+    "Supermarket":   80,
+    "default":      500
+  },
+
+  "preferred_cashback_platform": "ShopBack",
+
+  "flash_deal_hours":    6,
+  "flash_deal_min_score": 8,
+
+  "alert_mode": "digest",
+  "slack_webhook_url": ""
+}
