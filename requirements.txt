@@ -6,7 +6,10 @@ google-auth-oauthlib>=1.2.0
 google-auth-httplib2>=0.2.0
 google-api-python-client>=2.126.0
 
-# Enrichment / scraping
+# HTML parsing — used by price_intel.py (StaticICE scraping)
 beautifulsoup4>=4.12.0
 lxml>=5.2.0
-curl_cffi>=0.7.0
+
+# Optional: OZB page enrichment (currently disabled — Cloudflare blocks scraping)
+# Uncomment if a bypass method becomes available:
+# curl_cffi>=0.7.0

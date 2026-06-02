@@ -32,9 +32,10 @@ _DEFAULT_PREFS = {
     "excluded_merchants": [],
     "min_savings_per_category": {
         "Electronics": 200,
-        "Travel": 100,
-        "Supermarket": 50,
-        "default": 500
+        "Computing":   200,
+        "Travel":      200,
+        "Supermarket":  80,
+        "default":     200
     },
     "preferred_cashback_platform": "ShopBack"
 }

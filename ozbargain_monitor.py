@@ -42,7 +42,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
 # ── Local modules ─────────────────────────────────────────────────────────────
-from modules.storage       import filter_unsent, mark_sent, is_flash_deal
+from modules.storage       import is_flash_deal   # filter_unsent/mark_sent removed — no deduplication
 from modules.price_intel   import analyse_all
 from modules.prefs         import match_all
 from modules.email_builder import build_email_html

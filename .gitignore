@@ -28,4 +28,3 @@ __pycache__/
 
 # One-off scripts
 fix_db.py
-install_cron.sh

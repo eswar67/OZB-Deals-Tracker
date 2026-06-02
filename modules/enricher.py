@@ -1,9 +1,17 @@
 """
 modules/enricher.py
 Scrape the OzBargain deal page for each deal to extract richer metadata.
-Uses curl_cffi to impersonate Chrome's TLS fingerprint, bypassing Cloudflare.
 
-Extracted fields added to the deal dict:
+NOTE: This module is NOT currently called in the main pipeline.
+OzBargain pages are protected by Cloudflare, which reliably blocks scraping
+even with curl_cffi TLS fingerprint impersonation. All enrichment fields
+(thumbnail, description, top_comments, categories, merchant_name) are
+defaulted to empty values in main() instead.
+
+This module is retained for future use if Cloudflare bypass improves,
+or if a proxy/scraping service is integrated.
+
+Would extract:
   thumbnail       str   — absolute URL of the deal image (or "")
   description     str   — first 400 chars of the deal body text
   top_comments    list  — up to 3 dicts: {author, text, upvotes}

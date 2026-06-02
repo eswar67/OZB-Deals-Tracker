@@ -35,11 +35,11 @@
   "excluded_merchants": [],
 
   "min_savings_per_category": {
-    "Electronics":  300,
-    "Computing":    300,
-    "Travel":       150,
+    "Electronics":  200,
+    "Computing":    200,
+    "Travel":       200,
     "Supermarket":   80,
-    "default":      500
+    "default":      200
   },
 
   "preferred_cashback_platform": "ShopBack",

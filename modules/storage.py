@@ -1,12 +1,14 @@
 """
 modules/storage.py
-SQLite-backed store for deal history.
+SQLite-backed deal history store.
 
-Responsibilities:
-- filter_unsent(deals)  → return only deals not already alerted
-- mark_sent(deals)      → record alerted deals
-- is_flash_deal(deal)   → True if posted <6h ago (used for priority flag)
-- prune_old()           → keep DB tidy (auto-called on init)
+Active function (used by main pipeline):
+  is_flash_deal(deal)   → True if posted <6h ago with score≥8 (flash deal flag)
+
+Inactive functions (deduplication removed — all qualifying deals are sent every run):
+  filter_unsent(deals)  → kept for reference / future use
+  mark_sent(deals)      → kept for reference / future use
+  prune_old()           → kept for reference / future use
 """
 
 import sqlite3
