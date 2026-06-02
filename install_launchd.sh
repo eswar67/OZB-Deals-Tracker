@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Installs ozbargain_monitor.py as a launchd agent that:
-#   - Runs at 6am, 12pm, 6pm, midnight AEST
+#   - Runs once daily at 7:00 PM
 #   - Uses caffeinate -s to prevent system sleep during each run
 #   - Works even when the lid is closed (on AC power)
 #
@@ -56,18 +56,12 @@ cat > "$PLIST" << PLIST_EOF
   <key>WorkingDirectory</key>
   <string>${SCRIPT_DIR}</string>
 
-  <!-- Run every 3 hours: 0am, 3am, 6am, 9am, 12pm, 3pm, 6pm, 9pm -->
+  <!-- Run once daily at 7:00 PM -->
   <key>StartCalendarInterval</key>
-  <array>
-    <dict><key>Hour</key><integer>0</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>6</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>15</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>18</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
-  </array>
+  <dict>
+    <key>Hour</key><integer>19</integer>
+    <key>Minute</key><integer>0</integer>
+  </dict>
 
   <!-- If the Mac was asleep at the scheduled time, run as soon as it wakes -->
   <key>RunAtLoad</key>
@@ -106,7 +100,7 @@ launchctl load "$PLIST"
 echo ""
 echo "✅ launchd agent installed: $LABEL"
 echo ""
-echo "Schedule: every 3 hours — 12am · 3am · 6am · 9am · 12pm · 3pm · 6pm · 9pm"
+echo "Schedule: once daily at 7:00 PM"
 echo "Logs:     $LOG"
 echo "Errors:   $ERR_LOG"
 echo ""
