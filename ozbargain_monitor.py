@@ -2,22 +2,25 @@
 """
 OzBargain Deal Monitor — Enhanced
 Fetches popular deals, scores via Claude, alerts via Gmail, logs to Google Sheets.
+Runs once daily at 7:00 PM via launchd (com.ozbargain.monitor).
 
 Pipeline:
   fetch_all_deals()
-  → filter_deals()          # votes / comments / clicks / age thresholds
-  → keyword_filter()        # blocklist pre-filter
-  → oos_filter()            # drop expired/OOS by title signals
-  → oos_filter()             # skip expired/OOS deals (no SQLite dedup)
-  → price_intel.analyse()   # cashback detection, price-beat hints, StaticICE lookup
-  → score_deals()           # two-pass Claude: value calculation then quality score
-  → prefs.match_all()       # relevance tagging against user-prefs.json
-  → top_deals filter
+  → filter_deals()              # votes / comments / clicks thresholds (no age limit)
+  → keyword_filter()            # blocklist pre-filter
+  → oos_filter()                # drop expired/OOS by title signals
+  → price_intel.analyse()       # cashback detection, price-beat hints, StaticICE lookup
+  → score_deals()               # two-pass Claude: value calculation then quality score
+  → prefs.match_all()           # relevance tagging against user-prefs.json
+  → top_deals filter            # score≥MIN_SCORE + savings≥MIN_SAVINGS ($200)
   → flash deal flagging
-  → email_builder.build()   # rich HTML deal card email
+  → fetch_financial_deals()     # banking, CC, insurance — tag feeds, no age limit
+  → fetch_travel_deals()        # flights, hotels, cruises — no age limit
+  → fetch_lifestyle_deals()     # food/groceries + home/appliances — top 5 each
+  → review_and_fix_deals()      # single Claude Sonnet pre-send quality pass
+  → email_builder.build()       # rich HTML deal card email
   → send_gmail_alert()
-  → append_to_sheets()      # log to Google Sheets
-  → append_to_sheets()
+  → append_to_sheets()          # log to Google Sheets
 """
 
 import os
@@ -101,7 +104,7 @@ HOME_APPLIANCE_FEEDS = [
     "https://www.ozbargain.com.au/tag/appliances/feed",
 ]
 
-# No time limit — fetch all available deals from OZB RSS history
+# No time limit — fetch all available deals from OZB RSS history (capped by RSS pagination depth)
 FIN_MAX_AGE_HOURS    = int(os.getenv("FIN_MAX_AGE_HOURS",    "99999"))
 TRAVEL_MAX_AGE_HOURS = int(os.getenv("TRAVEL_MAX_AGE_HOURS", "99999"))
 
@@ -249,27 +252,21 @@ def fetch_all_deals() -> list[dict]:
             seen.add(d["link"])
             unique.append(d)
 
-    log.info(
-        f"Fetched {len(unique)} unique deals within last {MAX_AGE_HOURS}h "
-        f"({MAX_AGE_HOURS//24}d) across {page} pages"
-    )
+    log.info(f"Fetched {len(unique)} unique deals across {page} page(s) (no age limit)")
     return unique
 
 # ── Threshold filter ──────────────────────────────────────────────────────────
 
 def filter_deals(deals: list[dict]) -> list[dict]:
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(hours=MAX_AGE_HOURS)
     filtered = [
         d for d in deals
         if d["votes"]    >= MIN_VOTES
         and d["comments"] >= MIN_COMMENTS
         and d["clicks"]   >= MIN_CLICKS
-        and d["pubDate"]  >= cutoff
     ]
     log.info(
         f"{len(filtered)} deals pass threshold filters "
-        f"(votes≥{MIN_VOTES}, comments≥{MIN_COMMENTS}, clicks≥{MIN_CLICKS}, age<{MAX_AGE_HOURS}h)"
+        f"(votes≥{MIN_VOTES}, comments≥{MIN_COMMENTS}, clicks≥{MIN_CLICKS})"
     )
     return filtered
 
@@ -745,20 +742,17 @@ def fetch_financial_deals() -> list[dict]:
         except Exception as e:
             log.warning(f"Tag feed {tag_url} failed: {e}")
 
-    log.info(f"Financial feed total: {len(deals)} unique deals (cutoff: {FIN_MAX_AGE_HOURS//24}d)")
+    log.info(f"Financial feed total: {len(deals)} unique deals (no age limit)")
     return deals
 
 
 def filter_financial_deals(deals: list[dict]) -> list[dict]:
     """Apply relaxed thresholds and OOS filter to financial deals."""
-    now    = datetime.now(timezone.utc)
-    cutoff = now - timedelta(hours=FIN_MAX_AGE_HOURS)
     kept   = [
         d for d in deals
         if d["votes"]    >= FIN_MIN_VOTES
         and d["comments"] >= FIN_MIN_COMMENTS
         and d["clicks"]   >= FIN_MIN_CLICKS
-        and d["pubDate"]  >= cutoff
     ]
     log.info(f"Financial threshold filter: {len(kept)}/{len(deals)} passed")
 
@@ -1079,7 +1073,7 @@ def fetch_travel_deals() -> list[dict]:
             seen.add(d["link"])
             unique.append(d)
 
-    log.info(f"Travel feed: {len(unique)} unique deals in last {TRAVEL_MAX_AGE_HOURS//24}d")
+    log.info(f"Travel feed: {len(unique)} unique deals (no age limit)")
     return unique
 
 
