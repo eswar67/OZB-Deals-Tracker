@@ -139,9 +139,8 @@ def _deal_card(deal: dict) -> str:
     cb_plat    = deal.get("cashback_platform", "")
     cb_pct     = deal.get("cashback_pct", 0.0)
     cb_url     = deal.get("cashback_url", "")
-    si_lowest  = deal.get("staticice_lowest", 0)
-    si_label   = deal.get("staticice_label", "")
-    si_url     = deal.get("staticice_url", "")
+    market_price  = deal.get("market_price", 0)
+    market_note   = deal.get("market_note", "")
     rel_tags   = deal.get("relevance_tags", [])
     is_flash   = deal.get("is_flash", False)
     is_expired = deal.get("is_expired", False)
@@ -213,67 +212,30 @@ def _deal_card(deal: dict) -> str:
             f'text-decoration:none;margin:6px 0;">💰 {cb_plat} ~{cb_pct:.0f}% cashback</a>'
         )
 
-    si_html = ""
-
-    # Market price panel
-    market_lowest       = deal.get("market_lowest", 0)
-    market_store        = deal.get("market_lowest_store", "")
-    market_url          = deal.get("market_lowest_url", "")
-    market_alt_stores   = deal.get("market_alt_stores", [])
-    market_cheaper      = deal.get("market_cheaper", False)
-    market_saving_vs    = deal.get("market_saving_vs_deal", 0)
-
-    si_search_url = deal.get("staticice_url", "")
-    si_link = (
-        f'<a href="{si_search_url}" style="color:#888;font-size:10px;text-decoration:none;" '
-        f'title="Prices sourced from StaticICE — may not reflect current stock or pricing">'
-        f'via StaticICE ↗</a>'
-    ) if si_search_url else '<span style="color:#888;font-size:10px;">via StaticICE</span>'
-    stale_note = (
-        f'<span style="color:#999;font-size:10px;margin-left:6px;">'
-        f'· prices indicative, verify before purchase</span>'
-    )
+    # Market price panel (Claude-sourced)
+    market_cheaper = deal.get("market_cheaper", False)
+    market_saving  = deal.get("market_saving", 0)
+    deal_price_val = deal.get("deal_price", 0)
 
     market_html = ""
-    if market_lowest > 0:
+    if market_price > 0:
         if market_cheaper:
-            # Deal is NOT the cheapest — warn the user
-            market_href = f'href="{market_url}"' if market_url else ""
-            alt_bits = "".join(
-                f'<span style="font-size:11px;color:#666;margin-left:10px;">'
-                f'· {a["store"]} ${a["price"]:,}</span>'
-                for a in market_alt_stores[:2] if a.get("store")
-            )
+            # Deal price is HIGHER than typical market — warn
+            overpay = deal_price_val - market_price if deal_price_val else 0
             market_html = f"""
 <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;
             padding:8px 12px;margin:8px 0;font-size:12px;">
-  <strong>⚠️ Cheaper available online:</strong>
-  <a {market_href} style="color:#856404;font-weight:700;text-decoration:none;">
-    {market_store or "another retailer"} — ${market_lowest:,} AUD
-  </a>
-  <span style="color:#856404;"> (${market_saving_vs:,} less than this deal)</span>
-  {alt_bits}
-  <br>{si_link}{stale_note}
+  <strong>⚠️ Market check:</strong> {market_note or f'~${market_price:,} AUD typical market price'}
+  {f'<span style="color:#856404;"> — deal may be ${overpay:,} above market</span>' if overpay > 0 else ""}
+  <span style="color:#999;font-size:10px;margin-left:6px;">· verify current pricing</span>
 </div>"""
         else:
-            # Market price confirms or improves the deal — show as validation
-            # Link to StaticICE search rather than direct store URL (store prices may be stale)
-            store_label = market_store or "online"
-            store_link = (
-                f'<a href="{si_search_url}" style="color:#1a7f37;text-decoration:none;font-weight:700;">{store_label}</a>'
-                if si_search_url else f"<strong>{store_label}</strong>"
-            )
-            alt_bits = "".join(
-                f'<span style="font-size:11px;color:#666;margin-left:8px;">'
-                f'· {a["store"]} ${a["price"]:,}</span>'
-                for a in market_alt_stores[:2] if a.get("store")
-            )
+            # Market price validates the deal or provides useful context
             market_html = f"""
 <div style="background:#e6f4ea;border:1px solid #a8d5b5;border-radius:6px;
             padding:8px 12px;margin:8px 0;font-size:12px;">
-  <strong>🏪 Next cheapest online:</strong> {store_link} — ~${market_lowest:,} AUD
-  {alt_bits}
-  <br>{si_link}{stale_note}
+  <strong>🏪 Market price:</strong> {market_note or f'~${market_price:,} AUD'}
+  <span style="color:#999;font-size:10px;margin-left:6px;">· estimated from Claude AI</span>
 </div>"""
 
     # Top comment
@@ -349,7 +311,6 @@ def _deal_card(deal: dict) -> str:
       {f'<div style="margin-bottom:8px;">{cat_tags}</div>' if cat_tags else ""}
 
       {cb_html}
-      {si_html}
       {market_html}
 
       <!-- Savings breakdown -->

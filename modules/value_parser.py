@@ -200,15 +200,17 @@ def _match_free_bundle(t: str, use_live_lookup: bool = False):
     if not re.search(r"\bfree\b|\bbonus\b|\bbundled?\b|\bincluded?\b", t, re.IGNORECASE):
         return None
 
-    # 2. Live lookup — extract product name then query StaticICE
+    # 2. Live lookup — extract product name then query Claude for current AU price
     if use_live_lookup:
         product_name = _extract_gift_product_name(t)
         if product_name:
             try:
-                from modules.price_intel import lookup_gift_price
-                price = lookup_gift_price(product_name)
+                from modules.price_intel import lookup_gift_price_claude
+                import os, anthropic as _anthropic
+                _client = _anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+                price = lookup_gift_price_claude(product_name, _client)
                 if price > 0:
-                    return price, f"Free gift(s): {product_name} (~${price:,} via StaticICE)"
+                    return price, f"Free gift(s): {product_name} (~${price:,} AU market price)"
             except Exception as e:
                 log.debug(f"Live gift lookup failed: {e}")
 

@@ -948,9 +948,6 @@ def score_financial_deals(deals: list[dict]) -> list[dict]:
         deal.setdefault("cashback_platform", "")
         deal.setdefault("cashback_pct", 0.0)
         deal.setdefault("cashback_url", "")
-        deal.setdefault("staticice_lowest", 0)
-        deal.setdefault("staticice_label", "")
-        deal.setdefault("staticice_url", "")
         deal.setdefault("top_comments", [])
         deal.setdefault("categories", [])
         deal.setdefault("merchant_name", "")
@@ -1199,16 +1196,7 @@ def score_travel_deals(deals: list[dict]) -> list[dict]:
         deal.setdefault("cashback_platform", "")
         deal.setdefault("cashback_pct", 0.0)
         deal.setdefault("cashback_url", "")
-        deal.setdefault("staticice_lowest", 0)
-        deal.setdefault("staticice_label", "")
-        deal.setdefault("staticice_url", "")
-        deal.setdefault("staticice_stores", [])
-        deal.setdefault("market_lowest", 0)
-        deal.setdefault("market_lowest_store", "")
-        deal.setdefault("market_lowest_url", "")
-        deal.setdefault("market_alt_stores", [])
         deal.setdefault("market_cheaper", False)
-        deal.setdefault("market_saving_vs_deal", 0)
         deal.setdefault("top_comments", [])
         deal.setdefault("categories", ["Travel"])
         deal.setdefault("merchant_name", "")
@@ -1348,16 +1336,7 @@ def score_lifestyle_deals(deals: list[dict], category: str, icon: str) -> list[d
         deal.setdefault("cashback_platform", "")
         deal.setdefault("cashback_pct", 0.0)
         deal.setdefault("cashback_url", "")
-        deal.setdefault("staticice_lowest", 0)
-        deal.setdefault("staticice_label", "")
-        deal.setdefault("staticice_url", "")
-        deal.setdefault("staticice_stores", [])
-        deal.setdefault("market_lowest", 0)
-        deal.setdefault("market_lowest_store", "")
-        deal.setdefault("market_lowest_url", "")
-        deal.setdefault("market_alt_stores", [])
         deal.setdefault("market_cheaper", False)
-        deal.setdefault("market_saving_vs_deal", 0)
         deal.setdefault("top_comments", [])
         deal.setdefault("categories", [category])
         deal.setdefault("merchant_name", "")
@@ -1691,26 +1670,22 @@ def main():
     #    (score_deals also calls parse_deal_values later, but analyse_all needs it first)
     parse_deal_values(deals)
 
-    # 7b. Price intelligence (cashback, price-beat, StaticICE, market price)
-    deals = analyse_all(deals, do_staticice=True, do_market=True)
+    # 7b. Price intelligence: cashback, price-beat, Claude market price
+    claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    deals = analyse_all(deals, client=claude_client)
 
-    # 7c. Recalculate savings using market lowest price when available
-    #     If the market's cheapest price is LOWER than the deal price → flag it
-    #     If the market's cheapest price is HIGHER than what we calculated → use
-    #     the market price as the real baseline (more accurate than stated RRP)
+    # 7c. Recalculate savings using Claude market price when available
     for d in deals:
-        market = d.get("market_lowest", 0)
+        market = d.get("market_price", 0)
         deal_price_guess = d.get("deal_price", 0)
         current_savings  = d.get("savings", 0)
 
         if market > 0 and deal_price_guess > 0:
-            if market < deal_price_guess:
-                # Market is cheaper than this deal — flag it, don't count as saving
-                d["market_cheaper"] = True
-                d["market_saving_vs_deal"] = deal_price_guess - market
+            if d.get("market_cheaper"):
+                # Deal is more expensive than market — flag it
                 log.info(
-                    f"  ⚠️  Cheaper elsewhere: ${market:,} @ {d.get('market_lowest_store','?')} "
-                    f"vs deal ${deal_price_guess:,} — {d['title'][:50]}"
+                    f"  ⚠️  Cheaper in market: ~${market:,} vs deal ${deal_price_guess:,} "
+                    f"— {d['title'][:50]}"
                 )
             else:
                 # Market is higher → recalculate savings using market as true baseline
@@ -1718,8 +1693,8 @@ def main():
                 if market_savings > current_savings:
                     d["savings"]     = market_savings
                     d["explanation"] = (
-                        f"Market lowest ${market:,} ({d.get('market_lowest_store','online')}) "
-                        f"→ deal ${deal_price_guess:,} = ${market_savings:,} saving"
+                        f"{d.get('market_note', 'Market')} ${market:,} → "
+                        f"deal ${deal_price_guess:,} = ${market_savings:,} saving"
                     )
                     log.info(
                         f"  ✓ Savings upgraded: ${current_savings:,}→${market_savings:,} "

@@ -152,7 +152,7 @@ def detect_price_beat(deal: dict) -> dict:
     return deal
 
 
-def _staticice_query(title: str) -> str:
+def _clean_product_query(title: str) -> str:
     """Build a clean StaticICE search query from a deal title."""
     q = re.sub(r"\([^)]*\)", "", title)            # remove (Was $X) / (RRP $X) etc
     q = re.sub(r"\s*@.*$", "", q)                  # remove everything from @ onwards (merchant)
@@ -182,7 +182,7 @@ def _staticice_query(title: str) -> str:
     return " ".join(words[:7])  # increased from 5 → 7 so model numbers aren't cut off
 
 
-def _parse_staticice_rows(soup: BeautifulSoup, query: str) -> list[dict]:
+def _UNUSED_parse_staticice_rows(soup, query: str) -> list[dict]:  # kept for reference only
     """
     Parse all product+store+price rows from a StaticICE results page.
 
@@ -266,191 +266,173 @@ def _parse_staticice_rows(soup: BeautifulSoup, query: str) -> list[dict]:
     return deduped
 
 
-def lookup_staticice(deal: dict) -> dict:
+# ── Claude-based market price lookup ─────────────────────────────────────────
+#
+# Replaces StaticICE entirely. Claude Haiku knows current AU retail prices for
+# popular electronics, appliances, phones, and accessories from training data.
+# Results are cached within a run to avoid duplicate API calls.
+
+_market_price_cache: dict[str, dict] = {}   # title → {market_price, note, confidence}
+
+
+def lookup_market_price_claude(deal: dict, client) -> dict:
     """
-    Search StaticICE for the deal product.
-
-    Adds:
-      staticice_url     str  — direct search URL
-      staticice_lowest  int  — lowest price found in AUD (0 if not found)
-      staticice_label   str  — display string e.g. "$549 at Centrecom"
-      staticice_stores  list — [{price, store, store_url}, ...] all matching stores
+    Ask Claude Haiku for the current Australian market price of the product in
+    this deal title. Populates:
+      market_price      int   — estimated current AU market price (0 = unknown)
+      market_note       str   — one-line context ("RRP ~$X at JB Hi-Fi / Harvey Norman")
+      market_cheaper    bool  — True if market_price < deal_price (deal may not be a bargain)
+      market_saving     int   — deal_price - market_price (negative = deal is cheaper)
     """
-    title = deal.get("title", "")
-    query = _staticice_query(title)
+    deal.setdefault("market_price",   0)
+    deal.setdefault("market_note",    "")
+    deal.setdefault("market_cheaper", False)
+    deal.setdefault("market_saving",  0)
 
-    search_url = f"https://www.staticice.com.au/cgi-bin/search.cgi?q={urllib.parse.quote(query)}&stype=1"
-    deal["staticice_url"]    = search_url
-    deal["staticice_lowest"] = 0
-    deal["staticice_label"]  = ""
-    deal["staticice_stores"] = []
-
-    try:
-        r = requests.get(search_url, headers=HEADERS, timeout=10)
-        r.raise_for_status()
-        soup = BeautifulSoup(r.text, "lxml")
-        entries = _parse_staticice_rows(soup, query)
-
-        if entries:
-            best = entries[0]
-            deal["staticice_lowest"] = best["price"]
-            deal["staticice_label"]  = (
-                f"${best['price']:,}" + (f" at {best['store']}" if best["store"] else "")
-            )
-            deal["staticice_stores"] = entries  # all stores, sorted by price
-            log.info(
-                f"  StaticICE: {deal['staticice_label']} "
-                f"(+{len(entries)-1} more stores) — {deal['title'][:45]}"
-            )
-
-    except Exception as e:
-        log.debug(f"StaticICE lookup failed for '{title[:40]}': {e}")
-
-    return deal
-
-
-# ── Free gift live price lookup ───────────────────────────────────────────────
-
-# In-process cache: product name → price (avoids duplicate lookups within one run)
-_gift_price_cache: dict[str, int] = {}
-
-
-def lookup_gift_price(product_name: str) -> int:
-    """
-    Look up the current AU market price for a free gift product.
-
-    Strategy:
-      1. Check in-run cache first (free)
-      2. Query StaticICE for the product name
-      3. Return the lowest price found, or 0 if nothing found
-
-    The caller (value_parser) will fall back to Claude's calculate_financial_value
-    if this returns 0.
-    """
-    key = product_name.lower().strip()
-    if key in _gift_price_cache:
-        return _gift_price_cache[key]
-
-    # Build a clean query from the product name
-    query = _staticice_query(product_name)
-    if not query:
-        return 0
-
-    search_url = (
-        f"https://www.staticice.com.au/cgi-bin/search.cgi"
-        f"?q={urllib.parse.quote(query)}&stype=1"
-    )
-    try:
-        r = requests.get(search_url, headers=HEADERS, timeout=10)
-        r.raise_for_status()
-        soup  = BeautifulSoup(r.text, "lxml")
-        rows  = _parse_staticice_rows(soup, query)
-
-        if rows:
-            price = rows[0]["price"]
-            store = rows[0].get("store", "")
-            log.info(f"  Gift price lookup: '{product_name}' → ${price:,} @ {store} (StaticICE)")
-            _gift_price_cache[key] = price
-            return price
-
-    except Exception as e:
-        log.debug(f"Gift price lookup failed for '{product_name}': {e}")
-
-    _gift_price_cache[key] = 0
-    return 0
-
-
-# ── Market price summary (derived from StaticICE multi-store results) ─────────
-
-def lookup_market_price(deal: dict) -> dict:
-    """
-    Derive a cross-platform market price from the StaticICE multi-store results
-    already fetched by lookup_staticice().
-
-    Requires lookup_staticice() to have run first (it populates staticice_stores).
-    Filters out accessories / clearly-wrong results by requiring the market price
-    to be within 30%–300% of the deal price (so a $33 ear-cushion kit doesn't
-    mask a $399 headphone deal).
-
-    Adds to deal dict:
-      market_lowest        int  — lowest comparable price in AUD (0 if not found)
-      market_lowest_store  str  — retailer name, e.g. "JB Hi-Fi"
-      market_lowest_url    str  — retailer URL if known
-      market_alt_stores    list — [{price, store, url}, ...] next 3 cheapest
-      market_cheaper       bool — True if market lowest < deal price (set downstream)
-      market_saving_vs_deal int — how much cheaper market is (set downstream)
-    """
-    deal.setdefault("market_lowest",         0)
-    deal.setdefault("market_lowest_store",   "")
-    deal.setdefault("market_lowest_url",     "")
-    deal.setdefault("market_alt_stores",     [])
-    deal.setdefault("market_cheaper",        False)
-    deal.setdefault("market_saving_vs_deal", 0)
-
-    stores    = deal.get("staticice_stores", [])
+    title      = deal.get("title", "")
     deal_price = deal.get("deal_price", 0)
 
-    if not stores:
+    # Only look up product deals (not financial/insurance/gift-card deals)
+    skip_signals = ["credit card", "insurance", "cashback", "% p.a.", "gift card",
+                    "points", "voucher", "hotel", "flight", "cruise", "superannuation"]
+    if any(s in title.lower() for s in skip_signals):
         return deal
 
-    # Filter to prices that are plausibly the same product (not accessories)
-    if deal_price > 0:
-        comparable = [
-            s for s in stores
-            if deal_price * 0.30 <= s["price"] <= deal_price * 3.0
-        ]
-    else:
-        comparable = stores  # no deal price to compare against, use all
-
-    if not comparable:
+    cache_key = title.lower()[:80]
+    if cache_key in _market_price_cache:
+        cached = _market_price_cache[cache_key]
+        deal.update(cached)
+        _apply_market_comparison(deal, deal_price)
         return deal
 
-    best = comparable[0]
-    deal["market_lowest"]       = best["price"]
-    deal["market_lowest_store"] = best["store"]
-    deal["market_lowest_url"]   = best.get("store_url", "")
-    deal["market_alt_stores"]   = [
-        {"store": s["store"], "price": s["price"], "url": s.get("store_url", "")}
-        for s in comparable[1:4]
-    ]
+    prompt = f"""You are an Australian retail price expert. For the product in this deal title, state the current typical Australian market price.
 
-    alts_str = ", ".join(
-        f"{a['store']} ${a['price']:,}" for a in deal["market_alt_stores"] if a.get("store")
-    )
-    log.info(
-        f"  Market: ${best['price']:,} @ {best['store'] or '?'}"
-        + (f" | also: {alts_str}" if alts_str else "")
-        + f" — {deal['title'][:45]}"
-    )
+Deal: {title}
+
+Reply with EXACTLY: PRICE|NOTE
+- PRICE: integer AUD (current street price at major AU retailers like JB Hi-Fi, Harvey Norman, Amazon AU). Use 0 if you cannot determine a reliable price.
+- NOTE: one short phrase like "RRP ~$X at JB Hi-Fi / Amazon" or "Market ~$X" or "Unknown"
+
+Examples:
+1499|RRP ~$1,499 at JB Hi-Fi / Harvey Norman
+449|Market ~$449 at major AU retailers
+0|Specialty/niche product — price unknown"""
+
+    try:
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=60,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = msg.content[0].text.strip()
+        parts = text.split("|", 1)
+        price_str = "".join(c for c in parts[0] if c.isdigit())
+        price = int(price_str) if price_str else 0
+        note  = parts[1].strip() if len(parts) > 1 else ""
+
+        # Sanity: reject if price is suspiciously low or high
+        if price > 0 and (price < 5 or price > 80000):
+            price, note = 0, ""
+
+        result = {"market_price": price, "market_note": note}
+        _market_price_cache[cache_key] = result
+        deal.update(result)
+        _apply_market_comparison(deal, deal_price)
+
+        if price > 0:
+            log.info(f"  Market price: ${price:,} — {note} | {title[:50]}")
+
+    except Exception as e:
+        log.debug(f"Market price lookup failed for '{title[:40]}': {e}")
+
     return deal
 
 
-def analyse_all(deals: list[dict], do_staticice: bool = True, do_market: bool = True) -> list[dict]:
-    """Run all price intelligence checks on every deal — StaticICE in parallel."""
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    log.info(f"── Price intelligence: analysing {len(deals)} deals ──")
+def _apply_market_comparison(deal: dict, deal_price: int):
+    """Set market_cheaper and market_saving based on deal_price vs market_price."""
+    market = deal.get("market_price", 0)
+    if market > 0 and deal_price > 0:
+        saving = market - deal_price
+        deal["market_saving"]  = saving
+        deal["market_cheaper"] = (deal_price > market)   # deal is MORE expensive than market
+    else:
+        deal["market_saving"]  = 0
+        deal["market_cheaper"] = False
 
-    # Cashback + price-beat are instant (no network) — run sequentially
+
+def lookup_gift_price_claude(product_name: str, client) -> int:
+    """
+    Ask Claude Haiku for the current AU retail price of a free gift product.
+    Returns integer AUD price, or 0 if unknown.
+    Cached within a run.
+    """
+    key = product_name.lower().strip()
+    if key in _market_price_cache:
+        return _market_price_cache[key].get("market_price", 0)
+
+    prompt = f"""What is the current Australian retail price for: {product_name}
+
+Reply with EXACTLY: PRICE|SOURCE
+- PRICE: integer AUD at major AU retailers (JB Hi-Fi, Harvey Norman, Amazon AU). Use 0 if unknown.
+- SOURCE: one short phrase like "JB Hi-Fi ~$X" or "Amazon AU ~$X"
+
+Example: 1299|JB Hi-Fi / Samsung ~$1,299"""
+
+    try:
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=50,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text  = msg.content[0].text.strip()
+        parts = text.split("|", 1)
+        price_str = "".join(c for c in parts[0] if c.isdigit())
+        price = int(price_str) if price_str else 0
+        note  = parts[1].strip() if len(parts) > 1 else ""
+        if price > 0 and (price < 5 or price > 50000):
+            price = 0
+        _market_price_cache[key] = {"market_price": price, "market_note": note}
+        if price > 0:
+            log.info(f"  Gift price: '{product_name}' → ${price:,} ({note})")
+        return price
+    except Exception as e:
+        log.debug(f"Gift price lookup failed for '{product_name}': {e}")
+        return 0
+
+
+def analyse_all(deals: list[dict], client=None) -> list[dict]:
+    """
+    Run all price intelligence checks on every deal.
+    - Cashback + price-beat: instant, no API
+    - Market price: Claude Haiku in parallel (only for product deals with a deal_price)
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    log.info(f"── Price intelligence: {len(deals)} deals ──")
+
     for deal in deals:
         detect_cashback(deal)
         detect_price_beat(deal)
 
-    if not do_staticice:
+    if not client:
+        log.info("  No Claude client — skipping market price lookup")
         return deals
 
-    # StaticICE lookups in parallel (I/O bound — 8 workers)
-    def _enrich(deal):
-        lookup_staticice(deal)
-        if do_market:
-            lookup_market_price(deal)
-        return deal
+    # Only look up products where we have a deal price (skip zero-price deals)
+    priceable = [d for d in deals if d.get("deal_price", 0) > 0]
+    if not priceable:
+        return deals
+
+    log.info(f"  Market price lookup: {len(priceable)} deals (Claude Haiku, parallel)")
+
+    def _lookup(deal):
+        return lookup_market_price_claude(deal, client)
 
     with ThreadPoolExecutor(max_workers=8) as ex:
-        futures = {ex.submit(_enrich, d): d for d in deals}
+        futures = {ex.submit(_lookup, d): d for d in priceable}
         for f in as_completed(futures):
             try:
                 f.result()
             except Exception as e:
-                log.warning(f"StaticICE enrichment error: {e}")
+                log.warning(f"Market price error: {e}")
 
     return deals
