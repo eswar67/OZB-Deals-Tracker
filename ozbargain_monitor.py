@@ -104,19 +104,13 @@ HOME_APPLIANCE_FEEDS = [
     "https://www.ozbargain.com.au/tag/appliances/feed",
 ]
 
-# Age caps per section — prevents recycling of ancient deals
-FIN_MAX_AGE_HOURS    = int(os.getenv("FIN_MAX_AGE_HOURS",    "720"))   # 30 days
-TRAVEL_MAX_AGE_HOURS = int(os.getenv("TRAVEL_MAX_AGE_HOURS", "2160"))  # 90 days
-FOOD_MAX_AGE_HOURS   = int(os.getenv("FOOD_MAX_AGE_HOURS",   "48"))    # 48 hours
-HOME_MAX_AGE_HOURS   = int(os.getenv("HOME_MAX_AGE_HOURS",   "72"))    # 72 hours
-
 # Points valuations (AUD per point)
 QANTAS_CPP   = 0.0135   # Qantas Frequent Flyer
 VELOCITY_CPP = 0.0135   # Virgin Velocity
 MIN_VOTES      = int(os.getenv("MIN_VOTES",    "30"))
 MIN_COMMENTS   = int(os.getenv("MIN_COMMENTS", "10"))
 MIN_CLICKS     = int(os.getenv("MIN_CLICKS",   "200"))
-MAX_AGE_HOURS  = int(os.getenv("MAX_AGE_HOURS","99999"))
+MAX_AGE_HOURS  = 999999  # No age limit — fetch all available deals
 MIN_SCORE      = int(os.getenv("MIN_SCORE",    "7"))
 MIN_SAVINGS    = int(os.getenv("MIN_SAVINGS",  "200"))
 
@@ -710,7 +704,7 @@ def fetch_financial_deals() -> list[dict]:
       2. Targeted tag feeds for CC/points/home-loan to maximise coverage of
          deals that predate the rolling financial feed window
     """
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=FIN_MAX_AGE_HOURS)
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
     seen   = set()
     deals  = []
 
@@ -1011,7 +1005,7 @@ def fetch_travel_deals() -> list[dict]:
     """Fetch recent deals from OZB travel category feed."""
     from email.utils import parsedate_to_datetime
 
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=TRAVEL_MAX_AGE_HOURS)
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
     deals  = []
 
     for page in range(0, 7):  # more pages to cover 14-day window
@@ -1153,10 +1147,10 @@ FOOD_MIN_SAVINGS  = 15   # filter out $2-$3 trivial supermarket discounts
 HOME_MIN_SAVINGS  = 50   # filter out low-value home deals
 
 
-def fetch_lifestyle_deals(feeds: list[str], label: str, max_age_hours: int = None) -> list[dict]:
+def fetch_lifestyle_deals(feeds: list[str], label: str) -> list[dict]:
     """Fetch and deduplicate deals from a list of tag/category feeds."""
     from email.utils import parsedate_to_datetime
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours or MAX_AGE_HOURS)
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
     seen, deals = set(), []
     for url in feeds:
         try:
@@ -1478,7 +1472,6 @@ def send_gmail_alert(
         min_votes=MIN_VOTES,
         min_comments=MIN_COMMENTS,
         min_clicks=MIN_CLICKS,
-        max_age_hours=MAX_AGE_HOURS,
         fin_min_savings=FIN_MIN_SAVINGS,
         travel_min_savings=TRAVEL_MIN_SAVINGS,
         net_worth_summary=net_worth_summary,
@@ -1628,7 +1621,7 @@ def main():
 
     # 11d. Food & Grocery deals (separate feeds, age-capped)
     log.info("── Fetching Food & Grocery deals ──")
-    food_deals = fetch_lifestyle_deals(FOOD_FEEDS, "Food & Groceries", max_age_hours=FOOD_MAX_AGE_HOURS)
+    food_deals = fetch_lifestyle_deals(FOOD_FEEDS, "Food & Groceries")
     food_deals = [
         d for d in food_deals
         if d["votes"] >= FOOD_MIN_VOTES
@@ -1641,7 +1634,7 @@ def main():
 
     # 11e. Home & Appliances deals (separate feeds, age-capped)
     log.info("── Fetching Home & Appliances deals ──")
-    home_deals = fetch_lifestyle_deals(HOME_APPLIANCE_FEEDS, "Home & Appliances", max_age_hours=HOME_MAX_AGE_HOURS)
+    home_deals = fetch_lifestyle_deals(HOME_APPLIANCE_FEEDS, "Home & Appliances")
     home_deals = [
         d for d in home_deals
         if d["votes"] >= FOOD_MIN_VOTES
