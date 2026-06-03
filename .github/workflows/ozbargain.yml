@@ -31,7 +31,6 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GMAIL_TO:          ${{ secrets.GMAIL_TO }}
-          SHEETS_ID:         ${{ secrets.SHEETS_ID }}
           TOKEN_FILE:        token.json
           CREDENTIALS_FILE:  credentials.json
         run: python ozbargain_monitor.py

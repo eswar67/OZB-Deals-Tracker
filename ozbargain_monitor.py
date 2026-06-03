@@ -20,7 +20,6 @@ Pipeline:
   → review_and_fix_deals()      # single Claude Sonnet pre-send quality pass
   → email_builder.build()       # rich HTML deal card email
   → send_gmail_alert()
-  → append_to_sheets()          # log to Google Sheets
 """
 
 import os
@@ -124,14 +123,11 @@ MIN_SAVINGS    = int(os.getenv("MIN_SAVINGS",  "200"))
 ANTHROPIC_API_KEY  = os.getenv("ANTHROPIC_API_KEY")
 GMAIL_TO           = os.getenv("GMAIL_TO")   # comma-separated for multiple recipients
 GMAIL_CC           = os.getenv("GMAIL_CC")   # optional CC recipients, comma-separated
-SHEETS_ID          = os.getenv("SHEETS_ID")
-SHEETS_TAB         = os.getenv("SHEETS_TAB", "Deals")
 TOKEN_FILE         = os.getenv("TOKEN_FILE", "token.json")
 CREDENTIALS_FILE   = os.getenv("CREDENTIALS_FILE", "credentials.json")
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.send",
-    "https://www.googleapis.com/auth/spreadsheets",
 ]
 
 OZB_NS = "https://www.ozbargain.com.au"
@@ -1503,77 +1499,8 @@ def send_gmail_alert(
 
 # ── Google Sheets logging ─────────────────────────────────────────────────────
 
-SHEET_HEADERS = [
-    "Timestamp", "Deal Title", "OZB URL", "Merchant URL",
-    "Votes", "Comments", "Clicks", "Score", "Est. Value ($)", "Value Calculation",
-    "Cashback Platform", "Cashback %", "StaticICE Lowest",
-    "Categories", "Relevance Score",
-    "Acted? (Y/N)", "Buy Price ($)", "Sell Price ($)", "Profit ($)", "Notes",
-]
 
 
-def ensure_sheet_headers(service, sheet_id: str, tab: str):
-    result = service.spreadsheets().values().get(
-        spreadsheetId=sheet_id, range=f"{tab}!A1"
-    ).execute()
-    if not result.get("values"):
-        service.spreadsheets().values().update(
-            spreadsheetId=sheet_id,
-            range=f"{tab}!A1",
-            valueInputOption="USER_ENTERED",
-            body={"values": [SHEET_HEADERS]},
-        ).execute()
-        log.info("Sheet headers written")
-
-
-def append_to_sheets(creds: Credentials, deals: list[dict]):
-    if not SHEETS_ID:
-        log.warning("SHEETS_ID not set — skipping Sheets append")
-        return
-
-    service = build("sheets", "v4", credentials=creds)
-    ensure_sheet_headers(service, SHEETS_ID, SHEETS_TAB)
-
-    result = service.spreadsheets().values().get(
-        spreadsheetId=SHEETS_ID, range=f"{SHEETS_TAB}!A:A"
-    ).execute()
-    next_row = len(result.get("values", [])) + 1
-
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    rows = []
-    for i, d in enumerate(deals):
-        r = next_row + i
-        rows.append([
-            now_str,
-            d["title"],
-            d["link"],
-            d.get("external_url", ""),
-            d["votes"],
-            d["comments"],
-            d["clicks"],
-            d["score"],
-            d.get("savings", 0),
-            d.get("explanation", ""),
-            d.get("cashback_platform", ""),
-            d.get("cashback_pct", 0),
-            d.get("staticice_label", ""),
-            ", ".join(d.get("categories", [])),
-            d.get("relevance_score", 0),
-            "",                                  # Acted? (manual)
-            "",                                  # Buy price (manual)
-            "",                                  # Sell price (manual)
-            f'=IF(R{r}="Y",S{r}-R{r},"")',       # Profit (auto)
-            "",                                  # Notes (manual)
-        ])
-
-    service.spreadsheets().values().append(
-        spreadsheetId=SHEETS_ID,
-        range=f"{SHEETS_TAB}!A1",
-        valueInputOption="USER_ENTERED",
-        insertDataOption="INSERT_ROWS",
-        body={"values": rows},
-    ).execute()
-    log.info(f"Appended {len(rows)} row(s) to Google Sheets ({SHEETS_TAB})")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -1772,11 +1699,7 @@ def main():
 
     # 13. (mark_sent removed — no deduplication)
 
-    # 14. Append to Google Sheets
-    try:
-        append_to_sheets(creds, top_deals + fin_deals + cc_travel_deals + food_deals + home_deals)
-    except Exception as e:
-        log.warning(f"Google Sheets append failed (non-fatal): {e}")
+    log.info("=== Done ===")
 
     log.info("=== Done ===")
 
