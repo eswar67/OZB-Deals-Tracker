@@ -47,6 +47,9 @@ from modules.prefs          import match_all
 from modules.email_builder  import build_email_html
 from modules.value_parser   import parse_all as parse_deal_values
 from modules.personal_score import score_all_personal, build_net_worth_summary
+from modules.life_events    import get_life_event_alerts
+from modules.money_audit    import get_money_audit
+from modules.travel_arb     import get_travel_arb
 
 # ── Config ────────────────────────────────────────────────────────────────────
 _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
@@ -1413,6 +1416,9 @@ def send_gmail_alert(
     food_deals: list[dict] = None,
     home_deals: list[dict] = None,
     net_worth_summary: dict = None,
+    life_event_alerts: list[dict] = None,
+    money_audit: list[dict] = None,
+    travel_arb: list[dict] = None,
 ):
     if not GMAIL_TO:
         log.warning("GMAIL_TO not set — skipping email")
@@ -1421,9 +1427,12 @@ def send_gmail_alert(
     financial_deals = financial_deals or []
     cc_travel_deals = cc_travel_deals or []
     food_deals      = food_deals      or []
-    home_deals      = home_deals      or []
-    net_worth_summary = net_worth_summary or {}
-    flash_count     = sum(1 for d in deals if d.get("is_flash"))
+    home_deals         = home_deals         or []
+    net_worth_summary  = net_worth_summary  or {}
+    life_event_alerts  = life_event_alerts  or []
+    money_audit        = money_audit        or []
+    travel_arb         = travel_arb         or []
+    flash_count        = sum(1 for d in deals if d.get("is_flash"))
     flash_prefix    = "⚡ FLASH + " if flash_count else ""
 
     notes = []
@@ -1437,9 +1446,12 @@ def send_gmail_alert(
     tier1_count   = sum(1 for d in all_categorised if d.get("tier") == "1_action")
     total_deals   = len(all_categorised)
     relevant_savings = net_worth_summary.get("relevant", sum(d.get("savings", 0) for d in all_categorised))
-    tier1_str     = f" · 🔴 {tier1_count} Act-Now" if tier1_count else ""
+    tier1_str      = f" · 🔴 {tier1_count} Act-Now" if tier1_count else ""
+    intel_count    = len([a for a in life_event_alerts if a.get("urgency") in ("immediate","soon")]) + \
+                     len([o for o in money_audit if o.get("estimated_value", 0) >= 500])
+    intel_str      = f" · 🧠 {intel_count} intel" if intel_count else ""
     subject = (
-        f"🤖 OZB | {flash_prefix}{total_deals} deals{tier1_str}{note_str} "
+        f"🤖 OZB | {flash_prefix}{total_deals} deals{tier1_str}{intel_str}{note_str} "
         f"· ~${relevant_savings:,} relevant savings"
     )
 
@@ -1475,6 +1487,9 @@ def send_gmail_alert(
         fin_min_savings=FIN_MIN_SAVINGS,
         travel_min_savings=TRAVEL_MIN_SAVINGS,
         net_worth_summary=net_worth_summary,
+        life_event_alerts=life_event_alerts,
+        money_audit=money_audit,
+        travel_arb=travel_arb,
     )
     msg.attach(MIMEText(html, "html"))
 
@@ -1680,6 +1695,16 @@ def main():
         f"Relevant: ${net_worth_summary['relevant']:,}"
     )
 
+    # 12d. Tier-1 intelligence modules
+    log.info("── Life Event Engine ──")
+    life_event_alerts = get_life_event_alerts(lookahead_days=120)
+
+    log.info("── Money Left on Table Audit ──")
+    money_audit = get_money_audit()
+
+    log.info("── Travel Arbitrage Engine ──")
+    travel_arb = get_travel_arb()
+
     creds = get_google_creds()
     send_gmail_alert(
         creds, top_deals,
@@ -1688,6 +1713,9 @@ def main():
         food_deals=food_deals,
         home_deals=home_deals,
         net_worth_summary=net_worth_summary,
+        life_event_alerts=life_event_alerts,
+        money_audit=money_audit,
+        travel_arb=travel_arb,
     )
 
     # 13. (mark_sent removed — no deduplication)

@@ -723,6 +723,129 @@ def _net_worth_bar(net_worth_summary: dict) -> str:
   </div>"""
 
 
+def _life_events_section(alerts: list) -> str:
+    if not alerts:
+        return ""
+    rows = ""
+    for a in alerts:
+        icon      = a.get("urgency_icon", "🔵")
+        value_str = f'<span style="color:#1a7f37;font-weight:700;">~${a["estimated_value"]:,} saving</span>' if a.get("estimated_value") else ""
+        lines_html = "".join(
+            f'<div style="font-size:11px;color:#555;margin-top:2px;">• {l}</div>'
+            for l in a.get("detail_lines", [])[:3] if l
+        )
+        action_html = (
+            f'<div style="font-size:11px;color:#0969da;margin-top:4px;font-style:italic;">'
+            f'→ {a["action"][:140]}</div>'
+        ) if a.get("action") else ""
+        rows += f"""
+<div style="border-bottom:1px solid #fee2e2;padding:10px 0;{'background:#fff8f8;' if a.get('urgency')=='immediate' else ''}">
+  <div style="font-weight:700;font-size:13px;">{icon} {a['headline']}</div>
+  {lines_html}
+  {action_html}
+  <div style="margin-top:4px;">{value_str}
+    <span style="font-size:10px;color:#888;margin-left:8px;">{a['days_until']} days away</span>
+  </div>
+</div>"""
+    return f"""
+  <!-- Life Events section -->
+  <div style="background:#fff5f5;border:2px solid #fca5a5;border-radius:10px;
+              padding:14px 18px;margin-bottom:16px;">
+    <div style="font-size:15px;font-weight:800;color:#dc2626;margin-bottom:2px;">
+      📅 Life Events — Action Required
+    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px;">
+      Upcoming events that create financial opportunities
+    </div>
+    {rows}
+  </div>"""
+
+
+def _money_audit_section(opps: list) -> str:
+    if not opps:
+        return ""
+    total = sum(o.get("estimated_value", 0) for o in opps)
+    rows = ""
+    for o in opps[:5]:
+        icon = o.get("urgency_icon", "🔵")
+        lines_html = "".join(
+            f'<div style="font-size:11px;color:#555;margin-top:2px;">• {l}</div>'
+            for l in o.get("detail_lines", [])[:3] if l
+        )
+        action_html = (
+            f'<div style="font-size:11px;color:#0969da;margin-top:4px;font-style:italic;">'
+            f'→ {o["action"][:140]}</div>'
+        ) if o.get("action") else ""
+        rows += f"""
+<div style="border-bottom:1px solid #fde68a;padding:10px 0;">
+  <div style="font-weight:700;font-size:13px;">{o['headline']}</div>
+  {lines_html}
+  {action_html}
+  <div style="font-size:11px;color:#92400e;font-weight:700;margin-top:4px;">
+    Est. value: ~${o.get('estimated_value',0):,} AUD
+  </div>
+</div>"""
+    return f"""
+  <!-- Money Audit section -->
+  <div style="background:#fffbeb;border:2px solid #fbbf24;border-radius:10px;
+              padding:14px 18px;margin-bottom:16px;">
+    <div style="font-size:15px;font-weight:800;color:#92400e;margin-bottom:2px;">
+      💸 Money Left on the Table — ~${total:,} AUD
+    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px;">
+      Financial opportunities you're currently missing
+    </div>
+    {rows}
+  </div>"""
+
+
+def _travel_arb_section(routes: list) -> str:
+    if not routes:
+        return ""
+    rows = ""
+    for r in routes:
+        best = r.get("best") or {}
+        cabin_label = r.get("cabin", "").replace("_", " ").title()
+        verdict = r.get("verdict", "")
+
+        opts_html = ""
+        for opt in r.get("program_options", [])[:4]:
+            bar_color = "#1a7f37" if opt["recommended"] and opt["can_afford"] else \
+                        "#bf8700" if opt["can_afford"] else "#d0d7de"
+            opts_html += f"""
+<div style="display:flex;align-items:baseline;gap:8px;margin:3px 0;font-size:11px;">
+  <span style="min-width:90px;font-weight:600;color:#333;">{opt['label']}</span>
+  <span style="color:#555;">{opt['total_cost_str']}</span>
+  <span style="color:{bar_color};font-weight:700;">{opt['cpp']:.2f}¢/pt</span>
+  <span style="color:#888;font-size:10px;">{opt['verdict_line']}</span>
+</div>"""
+
+        rows += f"""
+<div style="border-bottom:1px solid #bfdbfe;padding:10px 0;">
+  <div style="font-weight:800;font-size:13px;color:#1e3a8a;">
+    ✈️ {r['label']} — {cabin_label} × {r['pax']}pax
+  </div>
+  <div style="font-size:11px;color:#555;margin:3px 0;">
+    Cash fare: ~${r['cash_total']:,} AUD
+  </div>
+  {opts_html}
+  <div style="font-size:12px;font-weight:700;color:#1e3a8a;margin-top:6px;">{verdict}</div>
+</div>"""
+
+    return f"""
+  <!-- Travel Arbitrage section -->
+  <div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:10px;
+              padding:14px 18px;margin-bottom:16px;">
+    <div style="font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:2px;">
+      ✈️ Travel Arbitrage — Best Redemption Today
+    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px;">
+      Cash vs points across all your programs · CPP = cents per point
+    </div>
+    {rows}
+  </div>"""
+
+
 def build_email_html(
     deals: list[dict],
     financial_deals: list[dict] = None,
@@ -738,12 +861,18 @@ def build_email_html(
     fin_min_savings: int = 200,
     travel_min_savings: int = 200,
     net_worth_summary: dict = None,
+    life_event_alerts: list = None,
+    money_audit: list = None,
+    travel_arb: list = None,
 ) -> str:
-    financial_deals = financial_deals or []
-    cc_travel_deals = cc_travel_deals or []
-    food_deals      = food_deals      or []
-    home_deals      = home_deals      or []
+    financial_deals   = financial_deals   or []
+    cc_travel_deals   = cc_travel_deals   or []
+    food_deals        = food_deals        or []
+    home_deals        = home_deals        or []
     net_worth_summary = net_worth_summary or {}
+    life_event_alerts = life_event_alerts or []
+    money_audit       = money_audit       or []
+    travel_arb        = travel_arb        or []
     total_savings = sum(d.get("savings", 0) for d in deals)
     flash_count   = sum(1 for d in deals if d.get("is_flash"))
     now_str       = datetime.now().strftime("%d %b %Y %H:%M AEST")
@@ -786,7 +915,10 @@ def build_email_html(
         d.get("savings", 0)
         for d in deals + financial_deals + cc_travel_deals + food_deals + home_deals
     )
-    net_worth_bar_html = _net_worth_bar(net_worth_summary)
+    net_worth_bar_html   = _net_worth_bar(net_worth_summary)
+    life_events_html     = _life_events_section(life_event_alerts)
+    money_audit_html     = _money_audit_section(money_audit)
+    travel_arb_html      = _travel_arb_section(travel_arb)
 
     # ── Tier 1 "Act Now" callout section ───────────────────────────────────────
     all_flat = deals + financial_deals + cc_travel_deals + food_deals + home_deals
@@ -966,6 +1098,9 @@ def build_email_html(
   </div>
 
   {net_worth_bar_html}
+  {life_events_html}
+  {money_audit_html}
+  {travel_arb_html}
   {tier1_section}
   {deals_section}
   {cct_section}
