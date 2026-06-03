@@ -864,11 +864,13 @@ def build_email_html(
     life_event_alerts: list = None,
     money_audit: list = None,
     travel_arb: list = None,
+    extra_deals: list = None,
 ) -> str:
     financial_deals   = financial_deals   or []
     cc_travel_deals   = cc_travel_deals   or []
     food_deals        = food_deals        or []
     home_deals        = home_deals        or []
+    extra_deals       = extra_deals       or []
     net_worth_summary = net_worth_summary or {}
     life_event_alerts = life_event_alerts or []
     money_audit       = money_audit       or []
@@ -913,7 +915,7 @@ def build_email_html(
 
     all_savings = sum(
         d.get("savings", 0)
-        for d in deals + financial_deals + cc_travel_deals + food_deals + home_deals
+        for d in deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     )
     net_worth_bar_html   = _net_worth_bar(net_worth_summary)
     life_events_html     = _life_events_section(life_event_alerts)
@@ -1072,6 +1074,36 @@ def build_email_html(
     else:
         home_section = ""
 
+    # Extra categories — group by section label, one card per deal
+    if extra_deals:
+        sorted_extra = sorted(
+            extra_deals,
+            key=lambda d: (d.get("opportunity_score", 0), d.get("score", 0), d.get("savings", 0)),
+            reverse=True,
+        )[:LIFESTYLE_TOP_N * 2]  # show top 10 across all extra categories
+        extra_cards  = "\n".join(_lifestyle_card(d, accent_color="#555") for d in sorted_extra)
+        # Group label breakdown
+        from collections import Counter
+        cat_counts = Counter(d.get("_section", "other") for d in extra_deals)
+        cat_str = " · ".join(f"{v} {k}" for k, v in cat_counts.most_common(5))
+        extra_section = f"""
+  <!-- Extra categories section -->
+  <div style="margin-top:24px;">
+    <div style="background:linear-gradient(135deg,#374151,#1f2937);border-radius:10px 10px 0 0;
+                padding:14px 20px;color:#fff;">
+      <div style="font-size:17px;font-weight:800;">📦 More Categories</div>
+      <div style="font-size:11px;opacity:0.85;margin-top:2px;">
+        Top {len(sorted_extra)} of {len(extra_deals)} deal(s) · {cat_str} · savings≥$200
+      </div>
+    </div>
+    <div style="background:#f9fafb;border:1px solid #d1d5db;border-top:none;
+                border-radius:0 0 10px 10px;padding:14px;margin-bottom:18px;">
+      {extra_cards}
+    </div>
+  </div>"""
+    else:
+        extra_section = ""
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1107,6 +1139,7 @@ def build_email_html(
   {fin_section}
   {food_section}
   {home_section}
+  {extra_section}
 
   <!-- Footer -->
   <div style="font-size:11px;color:#999;margin-top:16px;padding:12px;

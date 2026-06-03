@@ -94,6 +94,7 @@ FOOD_FEEDS = [
     "https://www.ozbargain.com.au/tag/coles/feed",
     "https://www.ozbargain.com.au/tag/woolworths/feed",
     "https://www.ozbargain.com.au/tag/meal-kit/feed",
+    "https://www.ozbargain.com.au/cat/dining-takeaway/feed",
 ]
 
 # Home & appliances feeds
@@ -105,6 +106,48 @@ HOME_APPLIANCE_FEEDS = [
     "https://www.ozbargain.com.au/tag/air-fryer/feed",
     "https://www.ozbargain.com.au/tag/kitchen/feed",
     "https://www.ozbargain.com.au/tag/appliances/feed",
+    "https://www.ozbargain.com.au/cat/home-garden/feed",
+]
+
+# Additional category feeds — previously untracked, all $200+ filtered
+COMPUTING_FEEDS = [
+    "https://www.ozbargain.com.au/cat/computing/feed",
+]
+
+GAMING_FEEDS = [
+    "https://www.ozbargain.com.au/cat/gaming/feed",
+]
+
+MOBILE_FEEDS = [
+    "https://www.ozbargain.com.au/cat/mobile/feed",
+]
+
+ELECTRICAL_FEEDS = [
+    "https://www.ozbargain.com.au/cat/electrical-electronics/feed",
+]
+
+AUTOMOTIVE_FEEDS = [
+    "https://www.ozbargain.com.au/cat/automotive/feed",
+]
+
+HEALTH_BEAUTY_FEEDS = [
+    "https://www.ozbargain.com.au/cat/health-beauty/feed",
+]
+
+ENTERTAINMENT_FEEDS = [
+    "https://www.ozbargain.com.au/cat/entertainment/feed",
+]
+
+INTERNET_FEEDS = [
+    "https://www.ozbargain.com.au/cat/internet/feed",
+]
+
+TOYS_FEEDS = [
+    "https://www.ozbargain.com.au/cat/toys-kids/feed",
+]
+
+PETS_FEEDS = [
+    "https://www.ozbargain.com.au/cat/pets/feed",
 ]
 
 # Points valuations (AUD per point)
@@ -1146,8 +1189,8 @@ FOOD_MIN_VOTES    = 20
 FOOD_MIN_COMMENTS = 3
 FOOD_MIN_CLICKS   = 50
 FOOD_MIN_SCORE    = 5
-FOOD_MIN_SAVINGS  = 15   # filter out $2-$3 trivial supermarket discounts
-HOME_MIN_SAVINGS  = 50   # filter out low-value home deals
+FOOD_MIN_SAVINGS  = 200   # unified $200 minimum across all categories
+HOME_MIN_SAVINGS  = 200   # unified $200 minimum across all categories
 
 
 def fetch_lifestyle_deals(feeds: list[str], label: str) -> list[dict]:
@@ -1415,6 +1458,7 @@ def send_gmail_alert(
     cc_travel_deals: list[dict] = None,
     food_deals: list[dict] = None,
     home_deals: list[dict] = None,
+    extra_deals: list[dict] = None,
     net_worth_summary: dict = None,
     life_event_alerts: list[dict] = None,
     money_audit: list[dict] = None,
@@ -1428,6 +1472,7 @@ def send_gmail_alert(
     cc_travel_deals = cc_travel_deals or []
     food_deals      = food_deals      or []
     home_deals         = home_deals         or []
+    extra_deals        = extra_deals        or []
     net_worth_summary  = net_worth_summary  or {}
     life_event_alerts  = life_event_alerts  or []
     money_audit        = money_audit        or []
@@ -1442,7 +1487,7 @@ def send_gmail_alert(
     if home_deals:      notes.append(f"🏠 {len(home_deals)} home")
     note_str = " · " + " · ".join(notes) if notes else ""
 
-    all_categorised = deals + financial_deals + cc_travel_deals + food_deals + home_deals
+    all_categorised = deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     tier1_count   = sum(1 for d in all_categorised if d.get("tier") == "1_action")
     total_deals   = len(all_categorised)
     relevant_savings = net_worth_summary.get("relevant", sum(d.get("savings", 0) for d in all_categorised))
@@ -1479,6 +1524,7 @@ def send_gmail_alert(
         cc_travel_deals=cc_travel_deals,
         food_deals=food_deals,
         home_deals=home_deals,
+        extra_deals=extra_deals,
         min_score=MIN_SCORE,
         min_savings=MIN_SAVINGS,
         min_votes=MIN_VOTES,
@@ -1647,7 +1693,7 @@ def main():
     log.info(f"Food threshold filter: {len(food_deals)} passed")
     food_deals = score_lifestyle_deals(food_deals, "Food & Groceries", "🍎")
 
-    # 11e. Home & Appliances deals (separate feeds, age-capped)
+    # 11e. Home & Appliances deals
     log.info("── Fetching Home & Appliances deals ──")
     home_deals = fetch_lifestyle_deals(HOME_APPLIANCE_FEEDS, "Home & Appliances")
     home_deals = [
@@ -1660,8 +1706,53 @@ def main():
     log.info(f"Home & Appliances threshold filter: {len(home_deals)} passed")
     home_deals = score_lifestyle_deals(home_deals, "Home & Appliances", "🏠")
 
+    # 11f. Previously-untracked categories — all funnel through same lifestyle pipeline
+    def _fetch_category(feeds, label, icon):
+        raw = fetch_lifestyle_deals(feeds, label)
+        raw = [d for d in raw if d["votes"] >= FOOD_MIN_VOTES
+               and d["comments"] >= FOOD_MIN_COMMENTS
+               and d["clicks"] >= FOOD_MIN_CLICKS]
+        raw = oos_filter(raw)
+        log.info(f"{label} threshold filter: {len(raw)} passed")
+        return score_lifestyle_deals(raw, label, icon)
+
+    log.info("── Fetching Computing deals ──")
+    computing_deals = _fetch_category(COMPUTING_FEEDS, "Computing", "💻")
+
+    log.info("── Fetching Gaming deals ──")
+    gaming_deals = _fetch_category(GAMING_FEEDS, "Gaming", "🎮")
+
+    log.info("── Fetching Mobile deals ──")
+    mobile_deals = _fetch_category(MOBILE_FEEDS, "Mobile", "📱")
+
+    log.info("── Fetching Electrical & Electronics deals ──")
+    electrical_deals = _fetch_category(ELECTRICAL_FEEDS, "Electrical & Electronics", "⚡")
+
+    log.info("── Fetching Automotive deals ──")
+    auto_deals = _fetch_category(AUTOMOTIVE_FEEDS, "Automotive", "🚗")
+
+    log.info("── Fetching Health & Beauty deals ──")
+    health_deals = _fetch_category(HEALTH_BEAUTY_FEEDS, "Health & Beauty", "💊")
+
+    log.info("── Fetching Entertainment deals ──")
+    entertainment_deals = _fetch_category(ENTERTAINMENT_FEEDS, "Entertainment", "🎬")
+
+    log.info("── Fetching Internet deals ──")
+    internet_deals = _fetch_category(INTERNET_FEEDS, "Internet & Telco", "🌐")
+
+    log.info("── Fetching Toys & Kids deals ──")
+    toys_deals = _fetch_category(TOYS_FEEDS, "Toys & Kids", "🧸")
+
+    log.info("── Fetching Pets deals ──")
+    pets_deals = _fetch_category(PETS_FEEDS, "Pets", "🐾")
+
+    extra_deals = (computing_deals + gaming_deals + mobile_deals + electrical_deals +
+                   auto_deals + health_deals + entertainment_deals + internet_deals +
+                   toys_deals + pets_deals)
+    log.info(f"Extra categories total: {len(extra_deals)} deals")
+
     # 12. Send Gmail alert (always send if any list has deals)
-    if not top_deals and not fin_deals and not cc_travel_deals and not food_deals and not home_deals:
+    if not top_deals and not fin_deals and not cc_travel_deals and not food_deals and not home_deals and not extra_deals:
         log.info("No qualifying deals in any feed — no email sent.")
         return
 
@@ -1671,15 +1762,15 @@ def main():
         top_deals, fin_deals, cc_travel_deals, food_deals, home_deals
     )
 
-    # 12b. Personal opportunity scoring — tags each deal with opportunity_score, tier,
-    #      expected_value, stacking_hint, flight_intel, deal_quality_label
+    # 12b. Personal opportunity scoring
     log.info("── Personal opportunity scoring ──")
     all_sections = [
-        (top_deals,       "product"),
-        (fin_deals,       "banking"),
-        (cc_travel_deals, "credit_card"),
-        (food_deals,      "food"),
-        (home_deals,      "home"),
+        (top_deals,          "product"),
+        (fin_deals,          "banking"),
+        (cc_travel_deals,    "credit_card"),
+        (food_deals,         "food"),
+        (home_deals,         "home"),
+        (extra_deals,        "other"),
     ]
     for deal_list, section_tag in all_sections:
         for d in deal_list:
@@ -1687,7 +1778,7 @@ def main():
         score_all_personal(deal_list)
 
     # 12c. Net Worth Impact summary for email header
-    all_deals_flat = top_deals + fin_deals + cc_travel_deals + food_deals + home_deals
+    all_deals_flat = top_deals + fin_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     net_worth_summary = build_net_worth_summary(all_deals_flat)
     log.info(
         f"Net worth summary — Potential: ${net_worth_summary['potential']:,} | "
@@ -1712,6 +1803,7 @@ def main():
         cc_travel_deals=cc_travel_deals,
         food_deals=food_deals,
         home_deals=home_deals,
+        extra_deals=extra_deals,
         net_worth_summary=net_worth_summary,
         life_event_alerts=life_event_alerts,
         money_audit=money_audit,
