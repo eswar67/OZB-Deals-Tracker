@@ -145,164 +145,45 @@ def _match_gift_card(t: str):
     return None
 
 
-# ── Known free gift retail prices (AU RRP, conservative) ─────────────────────
-# Keyed by lowercase keyword fragments found in deal titles.
-# Use the lowest commonly seen street price, not MSRP.
-FREE_GIFT_PRICES = {
-    # Samsung phones (S-series)
-    "galaxy s25 ultra":       1849,
-    "galaxy s25+":            1499,
-    "galaxy s25":             1249,
-    "galaxy s24 ultra":       1649,
-    "galaxy s24+":             899,
-    "galaxy s24 fe":           799,
-    "galaxy s24":             1149,
-    "galaxy s23 ultra":       1449,
-    "galaxy s23+":            1149,
-    "galaxy s23 fe":           649,
-    "galaxy s23":              949,
-    "s25 ultra":              1849,
-    "s25+":                   1499,
-    "s25":                    1249,
-    "s24 ultra":              1649,
-    "s24+":                   1299,
-    "s24 fe":                  799,
-    "s24":                    1149,
-    "s23 ultra":              1449,
-    "s23+":                   1149,
-    "s23 fe":                  649,
-    "s23":                     949,
-    # Samsung phones (A-series, Z-series)
-    "galaxy z fold 6":        2199,
-    "galaxy z flip 6":        1299,
-    "galaxy z fold 5":        1999,
-    "galaxy z flip 5":        1149,
-    "galaxy a55":              649,
-    "galaxy a35":              499,
-    "galaxy a15":              299,
-    # Samsung
-    "galaxy buds fe":           99,
-    "galaxy buds2 pro":        299,
-    "galaxy buds2":            179,
-    "galaxy buds live":        149,
-    "galaxy buds pro":         249,
-    "galaxy buds+":            149,
-    "galaxy buds":              99,
-    "galaxy watch fe":         299,
-    "galaxy watch 7":          449,
-    "galaxy watch 6":          399,
-    "galaxy watch 5":          349,
-    "galaxy watch 4":          299,
-    "galaxy watch ultra":      899,
-    "galaxy watch":            299,
-    "galaxy tab s9 fe":        599,
-    "galaxy tab s9":           999,
-    "galaxy tab s8":           799,
-    "galaxy tab a9":           399,
-    "galaxy tab a8":           349,
-    "galaxy tab":              349,
-    "galaxy fit3":             119,
-    "galaxy fit2":              89,
-    # Apple
-    "airpods pro":             399,
-    "airpods max":             899,
-    "airpods":                 219,
-    "apple watch se":          349,
-    "apple watch series 10":   699,
-    "apple watch series 9":    649,
-    "apple tv":                229,
-    "apple pencil":            179,
-    "magic keyboard":          199,
-    "magic mouse":             129,
-    "homepod mini":            149,
-    "homepod":                 549,
-    # Sony
-    "wh-1000xm5":              449,
-    "wh-1000xm4":              349,
-    "wf-1000xm5":              399,
-    "wf-1000xm4":              299,
-    "linkbuds s":              199,
-    "linkbuds":                249,
-    # Bose
-    "quietcomfort ultra":      549,
-    "quietcomfort 45":         429,
-    "quietcomfort earbuds":    349,
-    "soundsport":              149,
-    # Jabra
-    "jabra elite 10":          349,
-    "jabra elite 8":           299,
-    "jabra elite 4":           149,
-    # JBL
-    "jbl flip 6":              149,
-    "jbl flip 5":              129,
-    "jbl charge 5":            229,
-    "jbl charge 4":            179,
-    "jbl clip 4":               69,
-    "jbl go 3":                 49,
-    # Garmin
-    "garmin forerunner 265":   699,
-    "garmin forerunner 255":   549,
-    "garmin vivoactive 5":     499,
-    "garmin instinct 2":       599,
-    # Fitbit
-    "fitbit charge 6":         229,
-    "fitbit sense 2":          299,
-    "fitbit versa 4":          249,
-    # Ecovacs / Robot vacuum
-    "ecovacs deebot":          499,
-    "roomba j7":               699,
-    "roomba i7":               599,
-    # Storage
-    "samsung t7 shield":       149,
-    "samsung t7":              129,
-    "samsung t9":              179,
-    "sandisk extreme ssd":     129,
-    # Misc
-    "nintendo switch":         469,
-    "xbox controller":         109,
-    "ps5 controller":          109,
-    "nespresso":               199,
-    "kindle":                  219,
-    "echo dot":                 79,
-    "echo":                    149,
-    "ring doorbell":           199,
-    "philips hue":              89,
-    "tile":                     39,
-    "airtag":                   45,
-    "gopro hero 12":           449,
-    "gopro hero 11":           349,
-}
-
-
-def _lookup_free_gift_value(text: str) -> tuple:
+def _extract_gift_product_name(text: str) -> str:
     """
-    Scan text for known free gift product names.
-    Returns (total_value, description_str) or (0, "").
-    Sums all matched gifts (handles multiple free items).
+    Extract the product name from a free/bonus gift mention in deal title/description.
+    Returns the best product name string to search for, or "" if nothing found.
+
+    Examples:
+      "Bonus S24+ 256GB"           → "Samsung Galaxy S24+"
+      "Free Galaxy Buds2 Pro"      → "Samsung Galaxy Buds2 Pro"
+      "Includes AirPods Pro 2nd"   → "Apple AirPods Pro"
+      "+ Free Dyson V12"           → "Dyson V12"
     """
-    tl = text.lower()
-    total = 0
-    found = []
-    for keyword, price in FREE_GIFT_PRICES.items():
-        if keyword in tl:
-            total += price
-            found.append(f"{keyword.title()} (~${price:,})")
-            # Remove matched section to avoid double-counting overlapping keywords
-            tl = tl.replace(keyword, "", 1)
+    # Normalise
+    t = re.sub(r"<[^>]+>", " ", text)  # strip HTML
+    t = re.sub(r"\s+", " ", t).strip()
 
-    if total > 0:
-        return total, "Free gift(s): " + " + ".join(found)
-    return 0, ""
+    # Patterns: look for "free/bonus/includes/bundled [product name]"
+    patterns = [
+        r"(?:free|bonus|bundled?|includes?|plus|\+)\s+([A-Z][A-Za-z0-9 \+\-]{3,50}?)(?:\s+\d+GB|\s+\d+TB|\s+\(|\s+@|\s+Shipped|$|,)",
+        r"([A-Z][A-Za-z0-9 \+\-]{3,50}?)\s+(?:for free|included free|as a bonus)",
+    ]
+    for pat in patterns:
+        m = re.search(pat, t)
+        if m:
+            name = m.group(1).strip()
+            # Filter out generic words that aren't product names
+            skip = {"deal","item","product","gift","voucher","card","shipping","delivery","month"}
+            if name.lower() not in skip and len(name) > 4:
+                return name
+    return ""
 
 
-def _match_free_bundle(t: str):
+def _match_free_bundle(t: str, use_live_lookup: bool = False):
     """
-    Detect free bundled items in three ways (in priority order):
+    Detect free bundled items:
       1. Explicitly stated value: 'Free X (worth $Y)' / 'Free X valued at $Y'
-      2. Known product lookup from FREE_GIFT_PRICES table
-      3. Generic 'free' keyword near a price not already the deal price
+      2. Live StaticICE price lookup for the detected product name
+         (only when use_live_lookup=True — skipped in fast regex-only path)
     """
-    # 1. Explicitly stated value
+    # 1. Explicitly stated value — always fast, no API needed
     for pat in [
         r"free[^$]*?\((?:worth|valued?(?:\s+at)?)\s+\$\s*([\d,]+)\)",
         r"free[^$]*?worth\s+\$\s*([\d,]+)",
@@ -315,14 +196,21 @@ def _match_free_bundle(t: str):
             if v > 0:
                 return v, f"Free item(s) worth ${v:,} bundled (stated)"
 
-    # 2. Only search for free gifts when "free" or "bonus" appears in the text
+    # Only proceed if "free" / "bonus" keyword present
     if not re.search(r"\bfree\b|\bbonus\b|\bbundled?\b|\bincluded?\b", t, re.IGNORECASE):
         return None
 
-    # 3. Known product lookup
-    val, desc = _lookup_free_gift_value(t)
-    if val > 0:
-        return val, desc
+    # 2. Live lookup — extract product name then query StaticICE
+    if use_live_lookup:
+        product_name = _extract_gift_product_name(t)
+        if product_name:
+            try:
+                from modules.price_intel import lookup_gift_price
+                price = lookup_gift_price(product_name)
+                if price > 0:
+                    return price, f"Free gift(s): {product_name} (~${price:,} via StaticICE)"
+            except Exception as e:
+                log.debug(f"Live gift lookup failed: {e}")
 
     return None
 
@@ -506,13 +394,17 @@ def _extract_deal_price(title: str) -> int:
     return min(meaningful)
 
 
-def parse_deal_value(deal: dict) -> dict:
+def parse_deal_value(deal: dict, live_gift_lookup: bool = False) -> dict:
     """
     Parse savings from title + RSS description.
     Returns {"savings": int, "explanation": str, "deal_price": int}.
 
     Free gift value is ADDITIVE — if the deal already has a discount saving,
     the free gift value is added on top of it.
+
+    live_gift_lookup=True: query StaticICE for the current market price of any
+    detected free gift product. Use this in the main scoring pipeline.
+    live_gift_lookup=False (default): fast regex-only path, no network calls.
     """
     title = deal.get("title", "")
     desc  = deal.get("description", "") or ""
@@ -542,12 +434,12 @@ def parse_deal_value(deal: dict) -> dict:
         if base_savings:
             break
 
-    # Always check for free gift value (additive on top of base savings)
+    # Check for free gift value (additive on top of base savings)
     gift_val, gift_desc = 0, ""
-    gift_result = _match_free_bundle(combined)
+    gift_result = _match_free_bundle(combined, use_live_lookup=live_gift_lookup)
     if gift_result:
         gift_val, gift_desc = gift_result
-        if gift_val > 2000:   # sanity cap on gift value
+        if gift_val > 3500:   # sanity cap — no single gift >$3,500
             gift_val = 0
 
     total = base_savings + gift_val
@@ -573,11 +465,14 @@ def parse_deal_value(deal: dict) -> dict:
     return {"savings": total, "explanation": explanation, "deal_price": deal_price}
 
 
-def parse_all(deals: list) -> list:
-    """Parse savings for all deals. O(n) — no API calls."""
-    log.info(f"── Value parsing: {len(deals)} deals (regex, no API) ──")
+def parse_all(deals: list, live_gift_lookup: bool = True) -> list:
+    """
+    Parse savings for all deals.
+    live_gift_lookup=True (default): queries StaticICE for free gift prices.
+    """
+    log.info(f"── Value parsing: {len(deals)} deals (live gift lookup: {live_gift_lookup}) ──")
     for deal in deals:
-        result = parse_deal_value(deal)
+        result = parse_deal_value(deal, live_gift_lookup=live_gift_lookup)
         deal["savings"]     = result["savings"]
         deal["explanation"] = result["explanation"]
         deal["deal_price"]  = result.get("deal_price", 0)

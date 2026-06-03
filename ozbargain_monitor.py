@@ -557,7 +557,7 @@ def score_deals(deals: list[dict]) -> list[dict]:
     from modules.value_parser import parse_deal_value as _pdv
     for d in deals:
         if d.get("savings", 0) == 0:
-            result = _pdv(d)
+            result = _pdv(d, live_gift_lookup=True)
             d.update(result)
 
     value_passed = [d for d in deals if d["savings"] >= MIN_SAVINGS]
@@ -567,16 +567,25 @@ def score_deals(deals: list[dict]) -> list[dict]:
     if not value_passed:
         return []
 
-    # Step 2: Haiku accessibility score (only for deals that passed value filter)
-    log.info("── Scoring quality/accessibility (Haiku) ──")
-    for deal in value_passed:
-        result = assign_score(client, deal)
-        deal["score"]          = result["score"]
-        deal["score_reason"]   = result["score_reason"]
-        deal["trust_pct"]      = result["trust_pct"]
-        deal["trust_barriers"] = result["trust_barriers"]
-        log.info(f"  [{deal['score']}/10 trust={result['trust_pct']}%] ${deal['savings']:,} — {deal['title'][:50]}")
-        time.sleep(0.2)
+    # Step 2: Haiku accessibility score — parallel (I/O bound)
+    log.info("── Scoring quality/accessibility (Haiku, parallel) ──")
+    from concurrent.futures import ThreadPoolExecutor, as_completed as _as_completed
+
+    def _score_one(deal):
+        return deal, assign_score(client, deal)
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        futures = {ex.submit(_score_one, d): d for d in value_passed}
+        for f in _as_completed(futures):
+            try:
+                deal, result = f.result()
+                deal["score"]          = result["score"]
+                deal["score_reason"]   = result["score_reason"]
+                deal["trust_pct"]      = result["trust_pct"]
+                deal["trust_barriers"] = result["trust_barriers"]
+                log.info(f"  [{deal['score']}/10 trust={result['trust_pct']}%] ${deal['savings']:,} — {deal['title'][:50]}")
+            except Exception as e:
+                log.warning(f"Scoring error: {e}")
 
     return value_passed
 
@@ -791,32 +800,35 @@ def fetch_financial_deals() -> list[dict]:
     seen   = set()
     deals  = []
 
-    # 1. Financial category feed (single page — pagination is broken/no-op on OZB)
-    try:
-        xml_text = fetch_feed(FINANCIAL_FEED_URL)
-        items    = _parse_feed_items(xml_text, cutoff, "financial/feed")
-        for d in items:
-            if d["link"] not in seen:
-                seen.add(d["link"])
-                deals.append(d)
-    except Exception as e:
-        log.warning(f"Financial category feed failed: {e}")
+    # Fetch all financial feeds in parallel
+    from concurrent.futures import ThreadPoolExecutor, as_completed as _asc
+    import threading
+    _seen_lock = threading.Lock()
 
-    # 2. Supplementary tag feeds — each brings ~10 unique deals OZB RSS misses
-    for tag_url in FINANCIAL_TAG_FEEDS:
-        try:
-            xml_text  = fetch_feed(tag_url)
-            tag_items = _parse_feed_items(xml_text, cutoff, tag_url.split("/")[-2])
-            added = 0
-            for d in tag_items:
-                if d["link"] not in seen:
-                    seen.add(d["link"])
-                    deals.append(d)
-                    added += 1
-            if added:
-                log.info(f"  Tag feed {tag_url.split('/')[-2]}: +{added} unique deals")
-        except Exception as e:
-            log.warning(f"Tag feed {tag_url} failed: {e}")
+    all_feed_urls = [FINANCIAL_FEED_URL] + FINANCIAL_TAG_FEEDS
+
+    def _fetch_fin_feed(url):
+        xml = fetch_feed(url)
+        label = "financial/feed" if url == FINANCIAL_FEED_URL else url.split("/")[-2]
+        return _parse_feed_items(xml, cutoff, label)
+
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        futures = {ex.submit(_fetch_fin_feed, u): u for u in all_feed_urls}
+        for f in _asc(futures):
+            url = futures[f]
+            try:
+                items = f.result()
+                added = 0
+                with _seen_lock:
+                    for d in items:
+                        if d["link"] not in seen:
+                            seen.add(d["link"])
+                            deals.append(d)
+                            added += 1
+                if added:
+                    log.info(f"  {url.split('/')[-2]}: +{added} unique deals")
+            except Exception as e:
+                log.warning(f"Feed {url} failed: {e}")
 
     log.info(f"Financial feed total: {len(deals)} unique deals (no age limit)")
     return deals
@@ -971,28 +983,45 @@ def score_financial_deals(deals: list[dict]) -> list[dict]:
     if rate_only_skipped:
         log.info(f"  Skipping Claude for {len(rate_only_skipped)} rate-only HISA deal(s) (savings always $0)")
     if no_value:
-        log.info(f"── Financial deals: Claude fallback for {len(no_value)} unparsed ──")
-        for deal in no_value:
-            result = calculate_financial_value(client, deal)
-            deal["savings"]     = result["savings"]
-            deal["explanation"] = result["explanation"]
-            log.info(f"  ${deal['savings']:>5,} — {deal['title'][:60]}")
-            time.sleep(0.2)
+        log.info(f"── Financial deals: Claude value fallback — {len(no_value)} deals (parallel) ──")
+        from concurrent.futures import ThreadPoolExecutor, as_completed as _as_completed
 
-    # Step 3: Haiku score only deals with savings ≥ FIN_MIN_SAVINGS (skip $0 HISA rate deals)
+        def _calc_val(deal):
+            return deal, calculate_financial_value(client, deal)
+
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            for f in _as_completed({ex.submit(_calc_val, d): d for d in no_value}):
+                try:
+                    deal, result = f.result()
+                    deal["savings"]     = result["savings"]
+                    deal["explanation"] = result["explanation"]
+                    log.info(f"  ${deal['savings']:>5,} — {deal['title'][:60]}")
+                except Exception as e:
+                    log.warning(f"Financial value calc error: {e}")
+
+    # Step 3: Haiku score — parallel
     scoreable = [d for d in deals if d.get("savings", 0) >= FIN_MIN_SAVINGS]
     skipped_score = len(deals) - len(scoreable)
     if skipped_score:
-        log.info(f"  Skipping Haiku scoring for {skipped_score} deal(s) with savings<${FIN_MIN_SAVINGS}")
-    log.info("── Financial deals: accessibility scoring (Haiku) ──")
-    for deal in scoreable:
-        result = assign_score(client, deal)
-        deal["score"]        = result["score"]
-        deal["trust_pct"]      = result.get("trust_pct", result["score"] * 10)
-        deal["trust_barriers"] = result.get("trust_barriers", [])
-        deal["score_reason"] = result["score_reason"]
-        log.info(f"  [{deal['score']}/10] {deal['title'][:60]}")
-        time.sleep(0.2)
+        log.info(f"  Skipping scoring for {skipped_score} deal(s) with savings<${FIN_MIN_SAVINGS}")
+    log.info(f"── Financial: Haiku scoring {len(scoreable)} deals (parallel) ──")
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed as _as_completed
+
+    def _score_fin(deal):
+        return deal, assign_score(client, deal)
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        for f in _as_completed({ex.submit(_score_fin, d): d for d in scoreable}):
+            try:
+                deal, result = f.result()
+                deal["score"]          = result["score"]
+                deal["trust_pct"]      = result.get("trust_pct", result["score"] * 10)
+                deal["trust_barriers"] = result.get("trust_barriers", [])
+                deal["score_reason"]   = result["score_reason"]
+                log.info(f"  [{deal['score']}/10] {deal['title'][:60]}")
+            except Exception as e:
+                log.warning(f"Financial scoring error: {e}")
 
     # Tag each deal with its sub-type
     for d in deals:
@@ -1192,27 +1221,34 @@ def score_travel_deals(deals: list[dict]) -> list[dict]:
     log.info("── Travel deals: regex value parsing ──")
     parse_deal_values(deals)
 
-    # Step 2: Claude fallback for deals regex couldn't parse
+    # Step 2 + 3: Claude value fallback AND scoring — both parallel
+    from concurrent.futures import ThreadPoolExecutor, as_completed as _asc
+
     no_value = [d for d in deals if d["savings"] == 0]
     if no_value:
-        log.info(f"── Travel deals: Claude fallback for {len(no_value)} unparsed ──")
-        for deal in no_value:
-            result = calculate_travel_value(client, deal)
-            deal["savings"]     = result["savings"]
-            deal["explanation"] = result["explanation"]
-            log.info(f"  ${deal['savings']:>5,} — {deal['title'][:60]}")
-            time.sleep(0.2)
+        log.info(f"── Travel: Claude value fallback {len(no_value)} deals (parallel) ──")
+        def _tv(deal): return deal, calculate_travel_value(client, deal)
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            for f in _asc({ex.submit(_tv, d): d for d in no_value}):
+                try:
+                    deal, r = f.result()
+                    deal["savings"]     = r["savings"]
+                    deal["explanation"] = r["explanation"]
+                except Exception as e:
+                    log.warning(f"Travel value error: {e}")
 
-    # Step 3: Accessibility score
-    log.info("── Travel deals: accessibility scoring (Haiku) ──")
-    for deal in deals:
-        result = assign_score(client, deal)
-        deal["score"]        = result["score"]
-        deal["trust_pct"]      = result.get("trust_pct", result["score"] * 10)
-        deal["trust_barriers"] = result.get("trust_barriers", [])
-        deal["score_reason"] = result["score_reason"]
-        log.info(f"  [{deal['score']}/10] ${deal['savings']:,} — {deal['title'][:55]}")
-        time.sleep(0.2)
+    log.info(f"── Travel: Haiku scoring {len(deals)} deals (parallel) ──")
+    def _ts(deal): return deal, assign_score(client, deal)
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        for f in _asc({ex.submit(_ts, d): d for d in deals}):
+            try:
+                deal, r = f.result()
+                deal["score"]          = r["score"]
+                deal["trust_pct"]      = r.get("trust_pct", r["score"] * 10)
+                deal["trust_barriers"] = r.get("trust_barriers", [])
+                deal["score_reason"]   = r["score_reason"]
+            except Exception as e:
+                log.warning(f"Travel scoring error: {e}")
 
     passed = [
         d for d in deals
@@ -1236,24 +1272,32 @@ HOME_MIN_SAVINGS  = 200   # unified $200 minimum across all categories
 
 
 def fetch_lifestyle_deals(feeds: list[str], label: str) -> list[dict]:
-    """Fetch and deduplicate deals from a list of tag/category feeds."""
-    from email.utils import parsedate_to_datetime
+    """Fetch and deduplicate deals from a list of tag/category feeds — parallel."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed as _asc
+    import threading
     cutoff = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
     seen, deals = set(), []
-    for url in feeds:
-        try:
-            xml_text = fetch_feed(url)
-            items = _parse_feed_items(xml_text, cutoff, url.split("/")[-2])
-            added = 0
-            for d in items:
-                if d["link"] not in seen:
-                    seen.add(d["link"])
-                    deals.append(d)
-                    added += 1
-            if added:
-                log.info(f"  {url.split('/')[-2]}: +{added} unique {label} deals")
-        except Exception as e:
-            log.warning(f"{label} feed {url} failed: {e}")
+    _lock = threading.Lock()
+
+    def _fetch_one(url):
+        xml = fetch_feed(url)
+        return url, _parse_feed_items(xml, cutoff, url.split("/")[-2])
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        for f in _asc({ex.submit(_fetch_one, u): u for u in feeds}):
+            try:
+                url, items = f.result()
+                added = 0
+                with _lock:
+                    for d in items:
+                        if d["link"] not in seen:
+                            seen.add(d["link"])
+                            deals.append(d)
+                            added += 1
+                if added:
+                    log.info(f"  {url.split('/')[-2]}: +{added} unique {label} deals")
+            except Exception as e:
+                log.warning(f"{label} feed failed: {e}")
     log.info(f"{label} feeds total: {len(deals)} unique deals")
     return deals
 
@@ -1325,16 +1369,21 @@ def score_lifestyle_deals(deals: list[dict], category: str, icon: str) -> list[d
     # Regex parse savings (catches "Was $X, Now $Y", "Save $X", etc.)
     parse_deal_values(deals)
 
-    # Haiku score all deals (no savings floor)
-    log.info(f"── {category} deals: Haiku scoring ({len(deals)}) ──")
-    for deal in deals:
-        result = assign_score(client, deal)
-        deal["score"]        = result["score"]
-        deal["trust_pct"]      = result.get("trust_pct", result["score"] * 10)
-        deal["trust_barriers"] = result.get("trust_barriers", [])
-        deal["score_reason"] = result["score_reason"]
-        log.info(f"  [{deal['score']}/10] ${deal.get('savings',0):,} — {deal['title'][:55]}")
-        time.sleep(0.2)
+    # Haiku score all deals — parallel
+    log.info(f"── {category}: Haiku scoring {len(deals)} deals (parallel) ──")
+    from concurrent.futures import ThreadPoolExecutor, as_completed as _asc
+
+    def _sc(deal): return deal, assign_score(client, deal)
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        for f in _asc({ex.submit(_sc, d): d for d in deals}):
+            try:
+                deal, r = f.result()
+                deal["score"]          = r["score"]
+                deal["trust_pct"]      = r.get("trust_pct", r["score"] * 10)
+                deal["trust_barriers"] = r.get("trust_barriers", [])
+                deal["score_reason"]   = r["score_reason"]
+            except Exception as e:
+                log.warning(f"{category} scoring error: {e}")
 
     scored = [d for d in deals if d["score"] >= FOOD_MIN_SCORE]
 
@@ -1698,101 +1747,86 @@ def main():
     # 10. Preference matching + relevance tagging
     top_deals = match_all(top_deals)
 
-    # 11a. Financial deals (banking, HISA, etc.) — separate feed, relaxed thresholds
-    log.info("── Fetching financial category deals ──")
-    fin_deals = fetch_financial_deals()
-    fin_deals = filter_financial_deals(fin_deals)
-    fin_deals = score_financial_deals(fin_deals)
+    # 11. Fetch + score all secondary sections in parallel
+    #     Each section is independent — run them all concurrently.
+    from concurrent.futures import ThreadPoolExecutor, as_completed as _asc
 
-    # 11b. Split financial deals: credit card + any tagged travel → cc_travel_deals
-    #      Pure banking (HISA, mortgage, etc.) → stays in fin_deals
-    cc_travel_from_fin = [d for d in fin_deals if d.get("deal_subtype") in ("credit_card", "travel")]
-    fin_deals          = [d for d in fin_deals if d.get("deal_subtype") == "banking"]
-
-    # 11c. Travel feed (flights, hotels, cruises, experiences)
-    log.info("── Fetching travel category deals ──")
-    travel_deals = fetch_travel_deals()
-    travel_deals = [
-        d for d in travel_deals
-        if d["votes"] >= TRAVEL_MIN_VOTES
-        and d["comments"] >= TRAVEL_MIN_COMMENTS
-        and d["clicks"] >= TRAVEL_MIN_CLICKS
-    ]
-    log.info(f"Travel threshold filter: {len(travel_deals)} passed")
-    travel_deals = score_travel_deals(travel_deals)
-
-    # Combine all credit-card + travel deals into one section
-    cc_travel_deals = cc_travel_from_fin + travel_deals
-
-    # 11d. Food & Grocery deals (separate feeds, age-capped)
-    log.info("── Fetching Food & Grocery deals ──")
-    food_deals = fetch_lifestyle_deals(FOOD_FEEDS, "Food & Groceries")
-    food_deals = [
-        d for d in food_deals
-        if d["votes"] >= FOOD_MIN_VOTES
-        and d["comments"] >= FOOD_MIN_COMMENTS
-        and d["clicks"] >= FOOD_MIN_CLICKS
-    ]
-    food_deals = oos_filter(food_deals)
-    log.info(f"Food threshold filter: {len(food_deals)} passed")
-    food_deals = score_lifestyle_deals(food_deals, "Food & Groceries", "🍎")
-
-    # 11e. Home & Appliances deals
-    log.info("── Fetching Home & Appliances deals ──")
-    home_deals = fetch_lifestyle_deals(HOME_APPLIANCE_FEEDS, "Home & Appliances")
-    home_deals = [
-        d for d in home_deals
-        if d["votes"] >= FOOD_MIN_VOTES
-        and d["comments"] >= FOOD_MIN_COMMENTS
-        and d["clicks"] >= FOOD_MIN_CLICKS
-    ]
-    home_deals = oos_filter(home_deals)
-    log.info(f"Home & Appliances threshold filter: {len(home_deals)} passed")
-    home_deals = score_lifestyle_deals(home_deals, "Home & Appliances", "🏠")
-
-    # 11f. Previously-untracked categories — all funnel through same lifestyle pipeline
-    def _fetch_category(feeds, label, icon):
+    def _lifestyle_pipeline(feeds, label, icon):
         raw = fetch_lifestyle_deals(feeds, label)
         raw = [d for d in raw if d["votes"] >= FOOD_MIN_VOTES
                and d["comments"] >= FOOD_MIN_COMMENTS
                and d["clicks"] >= FOOD_MIN_CLICKS]
         raw = oos_filter(raw)
-        log.info(f"{label} threshold filter: {len(raw)} passed")
         return score_lifestyle_deals(raw, label, icon)
 
-    log.info("── Fetching Computing deals ──")
-    computing_deals = _fetch_category(COMPUTING_FEEDS, "Computing", "💻")
+    def _financial_pipeline():
+        deals = fetch_financial_deals()
+        deals = filter_financial_deals(deals)
+        return score_financial_deals(deals)
 
-    log.info("── Fetching Gaming deals ──")
-    gaming_deals = _fetch_category(GAMING_FEEDS, "Gaming", "🎮")
+    def _travel_pipeline():
+        deals = fetch_travel_deals()
+        deals = [d for d in deals
+                 if d["votes"] >= TRAVEL_MIN_VOTES
+                 and d["comments"] >= TRAVEL_MIN_COMMENTS
+                 and d["clicks"] >= TRAVEL_MIN_CLICKS]
+        return score_travel_deals(deals)
 
-    log.info("── Fetching Mobile deals ──")
-    mobile_deals = _fetch_category(MOBILE_FEEDS, "Mobile", "📱")
+    section_tasks = {
+        "financial":   (_financial_pipeline, ),
+        "travel":      (_travel_pipeline, ),
+        "food":        (_lifestyle_pipeline, FOOD_FEEDS, "Food & Groceries", "🍎"),
+        "home":        (_lifestyle_pipeline, HOME_APPLIANCE_FEEDS, "Home & Appliances", "🏠"),
+        "computing":   (_lifestyle_pipeline, COMPUTING_FEEDS, "Computing", "💻"),
+        "gaming":      (_lifestyle_pipeline, GAMING_FEEDS, "Gaming", "🎮"),
+        "mobile":      (_lifestyle_pipeline, MOBILE_FEEDS, "Mobile", "📱"),
+        "electrical":  (_lifestyle_pipeline, ELECTRICAL_FEEDS, "Electrical & Electronics", "⚡"),
+        "automotive":  (_lifestyle_pipeline, AUTOMOTIVE_FEEDS, "Automotive", "🚗"),
+        "health":      (_lifestyle_pipeline, HEALTH_BEAUTY_FEEDS, "Health & Beauty", "💊"),
+        "entertainment":(_lifestyle_pipeline, ENTERTAINMENT_FEEDS, "Entertainment", "🎬"),
+        "internet":    (_lifestyle_pipeline, INTERNET_FEEDS, "Internet & Telco", "🌐"),
+        "toys":        (_lifestyle_pipeline, TOYS_FEEDS, "Toys & Kids", "🧸"),
+        "pets":        (_lifestyle_pipeline, PETS_FEEDS, "Pets", "🐾"),
+    }
 
-    log.info("── Fetching Electrical & Electronics deals ──")
-    electrical_deals = _fetch_category(ELECTRICAL_FEEDS, "Electrical & Electronics", "⚡")
+    section_results = {}
+    log.info(f"── Fetching + scoring {len(section_tasks)} sections in parallel ──")
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        futures = {}
+        for name, task in section_tasks.items():
+            fn, *args = task
+            futures[ex.submit(fn, *args)] = name
+        for f in _asc(futures):
+            name = futures[f]
+            try:
+                section_results[name] = f.result()
+                log.info(f"  ✓ {name}: {len(section_results[name])} deals")
+            except Exception as e:
+                log.warning(f"  ✗ {name} pipeline error: {e}")
+                section_results[name] = []
 
-    log.info("── Fetching Automotive deals ──")
-    auto_deals = _fetch_category(AUTOMOTIVE_FEEDS, "Automotive", "🚗")
+    fin_all    = section_results.get("financial", [])
+    travel_deals = section_results.get("travel", [])
+    food_deals   = section_results.get("food", [])
+    home_deals   = section_results.get("home", [])
 
-    log.info("── Fetching Health & Beauty deals ──")
-    health_deals = _fetch_category(HEALTH_BEAUTY_FEEDS, "Health & Beauty", "💊")
+    # 11b. Split financial → banking vs CC/travel
+    cc_travel_from_fin = [d for d in fin_all if d.get("deal_subtype") in ("credit_card", "travel")]
+    fin_deals          = [d for d in fin_all if d.get("deal_subtype") == "banking"]
+    cc_travel_deals    = cc_travel_from_fin + travel_deals
 
-    log.info("── Fetching Entertainment deals ──")
-    entertainment_deals = _fetch_category(ENTERTAINMENT_FEEDS, "Entertainment", "🎬")
-
-    log.info("── Fetching Internet deals ──")
-    internet_deals = _fetch_category(INTERNET_FEEDS, "Internet & Telco", "🌐")
-
-    log.info("── Fetching Toys & Kids deals ──")
-    toys_deals = _fetch_category(TOYS_FEEDS, "Toys & Kids", "🧸")
-
-    log.info("── Fetching Pets deals ──")
-    pets_deals = _fetch_category(PETS_FEEDS, "Pets", "🐾")
-
-    extra_deals = (computing_deals + gaming_deals + mobile_deals + electrical_deals +
-                   auto_deals + health_deals + entertainment_deals + internet_deals +
-                   toys_deals + pets_deals)
+    extra_deals = (
+        section_results.get("computing", []) +
+        section_results.get("gaming", []) +
+        section_results.get("mobile", []) +
+        section_results.get("electrical", []) +
+        section_results.get("automotive", []) +
+        section_results.get("health", []) +
+        section_results.get("entertainment", []) +
+        section_results.get("internet", []) +
+        section_results.get("toys", []) +
+        section_results.get("pets", [])
+    )
     log.info(f"Extra categories total: {len(extra_deals)} deals")
 
     # 12. Send Gmail alert (always send if any list has deals)

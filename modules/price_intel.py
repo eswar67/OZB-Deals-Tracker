@@ -309,6 +309,56 @@ def lookup_staticice(deal: dict) -> dict:
     return deal
 
 
+# ── Free gift live price lookup ───────────────────────────────────────────────
+
+# In-process cache: product name → price (avoids duplicate lookups within one run)
+_gift_price_cache: dict[str, int] = {}
+
+
+def lookup_gift_price(product_name: str) -> int:
+    """
+    Look up the current AU market price for a free gift product.
+
+    Strategy:
+      1. Check in-run cache first (free)
+      2. Query StaticICE for the product name
+      3. Return the lowest price found, or 0 if nothing found
+
+    The caller (value_parser) will fall back to Claude's calculate_financial_value
+    if this returns 0.
+    """
+    key = product_name.lower().strip()
+    if key in _gift_price_cache:
+        return _gift_price_cache[key]
+
+    # Build a clean query from the product name
+    query = _staticice_query(product_name)
+    if not query:
+        return 0
+
+    search_url = (
+        f"https://www.staticice.com.au/cgi-bin/search.cgi"
+        f"?q={urllib.parse.quote(query)}&stype=1"
+    )
+    try:
+        r = requests.get(search_url, headers=HEADERS, timeout=10)
+        r.raise_for_status()
+        soup  = BeautifulSoup(r.text, "lxml")
+        rows  = _parse_staticice_rows(soup, query)
+
+        if rows:
+            price = rows[0]["price"]
+            store = rows[0].get("store", "")
+            log.info(f"  Gift price lookup: '{product_name}' → ${price:,} @ {store} (StaticICE)")
+            _gift_price_cache[key] = price
+            return price
+
+    except Exception as e:
+        log.debug(f"Gift price lookup failed for '{product_name}': {e}")
+
+    _gift_price_cache[key] = 0
+    return 0
+
 
 # ── Market price summary (derived from StaticICE multi-store results) ─────────
 
@@ -376,13 +426,31 @@ def lookup_market_price(deal: dict) -> dict:
 
 
 def analyse_all(deals: list[dict], do_staticice: bool = True, do_market: bool = True) -> list[dict]:
-    """Run all price intelligence checks on every deal."""
+    """Run all price intelligence checks on every deal — StaticICE in parallel."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     log.info(f"── Price intelligence: analysing {len(deals)} deals ──")
+
+    # Cashback + price-beat are instant (no network) — run sequentially
     for deal in deals:
         detect_cashback(deal)
         detect_price_beat(deal)
-        if do_staticice:
-            lookup_staticice(deal)
+
+    if not do_staticice:
+        return deals
+
+    # StaticICE lookups in parallel (I/O bound — 8 workers)
+    def _enrich(deal):
+        lookup_staticice(deal)
         if do_market:
             lookup_market_price(deal)
+        return deal
+
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        futures = {ex.submit(_enrich, d): d for d in deals}
+        for f in as_completed(futures):
+            try:
+                f.result()
+            except Exception as e:
+                log.warning(f"StaticICE enrichment error: {e}")
+
     return deals
