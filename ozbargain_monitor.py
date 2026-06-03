@@ -104,9 +104,11 @@ HOME_APPLIANCE_FEEDS = [
     "https://www.ozbargain.com.au/tag/appliances/feed",
 ]
 
-# No time limit — fetch all available deals from OZB RSS history (capped by RSS pagination depth)
-FIN_MAX_AGE_HOURS    = int(os.getenv("FIN_MAX_AGE_HOURS",    "99999"))
-TRAVEL_MAX_AGE_HOURS = int(os.getenv("TRAVEL_MAX_AGE_HOURS", "99999"))
+# Age caps per section — prevents recycling of ancient deals
+FIN_MAX_AGE_HOURS    = int(os.getenv("FIN_MAX_AGE_HOURS",    "720"))   # 30 days
+TRAVEL_MAX_AGE_HOURS = int(os.getenv("TRAVEL_MAX_AGE_HOURS", "2160"))  # 90 days
+FOOD_MAX_AGE_HOURS   = int(os.getenv("FOOD_MAX_AGE_HOURS",   "48"))    # 48 hours
+HOME_MAX_AGE_HOURS   = int(os.getenv("HOME_MAX_AGE_HOURS",   "72"))    # 72 hours
 
 # Points valuations (AUD per point)
 QANTAS_CPP   = 0.0135   # Qantas Frequent Flyer
@@ -655,7 +657,7 @@ def classify_deal(deal: dict) -> str:
 FIN_MIN_VOTES    = 10
 FIN_MIN_COMMENTS = 3
 FIN_MIN_CLICKS   = 30
-FIN_MIN_SCORE    = 5
+FIN_MIN_SCORE    = 6
 FIN_MIN_SAVINGS  = int(os.getenv("FIN_MIN_SAVINGS", "200"))   # min $ value for financial deals
 TRAVEL_MIN_SAVINGS = int(os.getenv("TRAVEL_MIN_SAVINGS", "200"))  # min $ value for travel deals
 
@@ -1150,12 +1152,14 @@ FOOD_MIN_VOTES    = 20
 FOOD_MIN_COMMENTS = 3
 FOOD_MIN_CLICKS   = 50
 FOOD_MIN_SCORE    = 5
+FOOD_MIN_SAVINGS  = 15   # filter out $2-$3 trivial supermarket discounts
+HOME_MIN_SAVINGS  = 50   # filter out low-value home deals
 
 
-def fetch_lifestyle_deals(feeds: list[str], label: str) -> list[dict]:
+def fetch_lifestyle_deals(feeds: list[str], label: str, max_age_hours: int = None) -> list[dict]:
     """Fetch and deduplicate deals from a list of tag/category feeds."""
     from email.utils import parsedate_to_datetime
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours or MAX_AGE_HOURS)
     seen, deals = set(), []
     for url in feeds:
         try:
@@ -1173,6 +1177,32 @@ def fetch_lifestyle_deals(feeds: list[str], label: str) -> list[dict]:
             log.warning(f"{label} feed {url} failed: {e}")
     log.info(f"{label} feeds total: {len(deals)} unique deals")
     return deals
+
+
+def _dedup_by_product(deals: list[dict]) -> list[dict]:
+    """
+    Remove near-duplicate product listings (same product, different prices/sellers).
+    Normalises title by stripping price tokens and punctuation, then keeps the
+    highest-scoring deal per normalised key.
+    """
+    import re
+    def _normalise(title: str) -> str:
+        t = title.lower()
+        # Strip price patterns like $99, US$49, ~A$200
+        t = re.sub(r"[a-z~]*\$[\d,\.]+", "", t)
+        # Strip common noise tokens
+        t = re.sub(r"\b(delivered|delivery|shipped|free|with|and|or|the|at|@|via|plus|\+)\b", "", t)
+        # Strip punctuation
+        t = re.sub(r"[^\w\s]", " ", t)
+        # Collapse whitespace
+        return re.sub(r"\s+", " ", t).strip()
+
+    seen: dict[str, dict] = {}
+    for d in deals:
+        key = _normalise(d.get("title", ""))[:60]
+        if key not in seen or d.get("score", 0) > seen[key].get("score", 0):
+            seen[key] = d
+    return list(seen.values())
 
 
 def score_lifestyle_deals(deals: list[dict], category: str, icon: str) -> list[dict]:
@@ -1225,8 +1255,19 @@ def score_lifestyle_deals(deals: list[dict], category: str, icon: str) -> list[d
         log.info(f"  [{deal['score']}/10] ${deal.get('savings',0):,} — {deal['title'][:55]}")
         time.sleep(0.2)
 
-    passed = [d for d in deals if d["score"] >= FOOD_MIN_SCORE]
-    log.info(f"{category}: {len(passed)}/{len(deals)} deals passed score≥{FOOD_MIN_SCORE}")
+    scored = [d for d in deals if d["score"] >= FOOD_MIN_SCORE]
+
+    # Apply savings minimums to remove trivial discounts
+    min_sav = HOME_MIN_SAVINGS if "home" in category.lower() or "appliance" in category.lower() else FOOD_MIN_SAVINGS
+    passed = [d for d in scored if d.get("savings", 0) >= min_sav]
+    log.info(
+        f"{category}: {len(passed)}/{len(deals)} deals passed "
+        f"score≥{FOOD_MIN_SCORE} + savings≥${min_sav}"
+    )
+
+    # Deduplicate by normalised product title (keep highest score per product)
+    passed = _dedup_by_product(passed)
+    log.info(f"{category}: {len(passed)} after product deduplication")
     return passed
 
 
@@ -1652,9 +1693,9 @@ def main():
     # Combine all credit-card + travel deals into one section
     cc_travel_deals = cc_travel_from_fin + travel_deals
 
-    # 11d. Food & Grocery deals (separate feeds, no savings threshold)
+    # 11d. Food & Grocery deals (separate feeds, age-capped)
     log.info("── Fetching Food & Grocery deals ──")
-    food_deals = fetch_lifestyle_deals(FOOD_FEEDS, "Food & Groceries")
+    food_deals = fetch_lifestyle_deals(FOOD_FEEDS, "Food & Groceries", max_age_hours=FOOD_MAX_AGE_HOURS)
     food_deals = [
         d for d in food_deals
         if d["votes"] >= FOOD_MIN_VOTES
@@ -1665,9 +1706,9 @@ def main():
     log.info(f"Food threshold filter: {len(food_deals)} passed")
     food_deals = score_lifestyle_deals(food_deals, "Food & Groceries", "🍎")
 
-    # 11e. Home & Appliances deals (separate feeds, no savings threshold)
+    # 11e. Home & Appliances deals (separate feeds, age-capped)
     log.info("── Fetching Home & Appliances deals ──")
-    home_deals = fetch_lifestyle_deals(HOME_APPLIANCE_FEEDS, "Home & Appliances")
+    home_deals = fetch_lifestyle_deals(HOME_APPLIANCE_FEEDS, "Home & Appliances", max_age_hours=HOME_MAX_AGE_HOURS)
     home_deals = [
         d for d in home_deals
         if d["votes"] >= FOOD_MIN_VOTES

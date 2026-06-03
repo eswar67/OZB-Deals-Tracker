@@ -84,66 +84,21 @@ def _score_color(score: int) -> tuple:
 # ── Savings calculation breakdown ─────────────────────────────────────────────
 
 def _savings_breakdown(deal: dict) -> str:
-    """
-    Build a step-by-step table showing how savings were derived.
-    Tries to parse the explanation into a structured row.
-    """
+    """Compact single-line savings callout — replaces the old 4-row table."""
     explanation = deal.get("explanation", "")
     savings     = deal.get("savings", 0)
-    title       = deal.get("title", "")
 
-    # Detect deal type from title keywords for labelling
-    t = title.lower()
-    if any(k in t for k in ["point", "qantas", "velocity", "flybuys"]):
-        deal_type = "Points / Rewards"
-        method    = "Points × value per point"
-    elif any(k in t for k in ["cashback", "shopback", "cashrewards"]):
-        deal_type = "Cashback"
-        method    = "Purchase amount × cashback %"
-    elif any(k in t for k in ["gift card", "voucher", "store credit"]):
-        deal_type = "Gift Card / Credit"
-        method    = "Face value − purchase price"
-    elif any(k in t for k in ["free", "bundled", "included"]):
-        deal_type = "Bundled Free Item"
-        method    = "Retail value of free item(s)"
-    elif any(k in t for k in ["subscription", "membership", "plan"]):
-        deal_type = "Subscription Saving"
-        method    = "(Normal price − deal price) × months"
-    else:
-        deal_type = "Price Discount"
-        method    = "RRP or market price − deal price"
+    if not savings:
+        return '<div style="font-size:12px;color:#888;margin:6px 0;">Check deal for current pricing</div>'
 
-    row_style = "padding:5px 8px;border-bottom:1px solid #f0f0f0;"
-    label_style = f"{row_style}color:#666;font-size:12px;width:140px;"
-    value_style = f"{row_style}font-size:12px;font-weight:600;color:#24292f;"
-
+    calc_html = (
+        f'<span style="font-size:11px;color:#555;margin-left:8px;">{explanation}</span>'
+        if explanation else ""
+    )
     return f"""
-<div style="margin:10px 0;">
-  <div style="font-size:12px;font-weight:700;color:#444;margin-bottom:5px;
-              text-transform:uppercase;letter-spacing:0.5px;">
-    📐 How we calculated this
-  </div>
-  <table style="width:100%;border-collapse:collapse;background:#f9f9f9;
-                border-radius:6px;overflow:hidden;font-family:Arial,sans-serif;">
-    <tr>
-      <td style="{label_style}">Deal type</td>
-      <td style="{value_style}">{deal_type}</td>
-    </tr>
-    <tr style="background:#f4f4f4;">
-      <td style="{label_style}">Method</td>
-      <td style="{value_style}">{method}</td>
-    </tr>
-    <tr>
-      <td style="{label_style}">Calculation</td>
-      <td style="{value_style} color:#1a7f37;">{explanation if explanation else "—"}</td>
-    </tr>
-    <tr style="background:#f4f4f4;">
-      <td style="{label_style}">Est. saving</td>
-      <td style="padding:5px 8px;font-size:14px;font-weight:800;color:#1a7f37;">
-        ~${savings:,} AUD
-      </td>
-    </tr>
-  </table>
+<div style="margin:8px 0;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px;">
+  <span style="font-size:22px;font-weight:800;color:#1a7f37;">~${savings:,} AUD</span>
+  {calc_html}
 </div>"""
 
 
@@ -194,11 +149,13 @@ def _deal_card(deal: dict) -> str:
     bg, light, label = _score_color(score)
     icon = _deal_icon(title)
 
-    # Age
-    age_str = ""
+    # Age + freshness badge
+    age_str   = ""
+    is_new    = False
     if pub_date:
         age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
-        age_str = f"{age_mins//60}h {age_mins%60}m ago" if age_mins >= 60 else f"{age_mins}m ago"
+        age_str  = f"{age_mins//60}h {age_mins%60}m ago" if age_mins >= 60 else f"{age_mins}m ago"
+        is_new   = age_mins < 1440  # posted within last 24 hours
 
     # Flash banner
     flash_html = (
@@ -361,6 +318,7 @@ def _deal_card(deal: dict) -> str:
 
       <!-- Title -->
       <div style="margin-bottom:6px;">
+        {'<span style="background:#0969da;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;margin-right:6px;vertical-align:middle;">🆕 NEW</span>' if is_new else ""}
         <a href="{ozb_link}" style="color:#e05c00;font-weight:800;font-size:15px;
            text-decoration:none;line-height:1.4;">{title}</a>
         {merchant_badge}
@@ -419,9 +377,13 @@ def _cc_travel_card(deal: dict) -> str:
     bg, light, label = _score_color(score)
 
     age_str = ""
+    is_new  = False
     if pub_date:
         age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
-        age_str = f"{age_mins//60}h {age_mins%60}m ago" if age_mins >= 60 else f"{age_mins}m ago"
+        age_str  = f"{age_mins//60}h {age_mins%60}m ago" if age_mins >= 60 else f"{age_mins}m ago"
+        is_new   = age_mins < 1440
+
+    new_badge = '<span style="background:#0969da;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;margin-right:6px;">🆕 NEW</span>' if is_new else ""
 
     # Sub-type badge
     if subtype == "credit_card":
@@ -496,7 +458,7 @@ def _cc_travel_card(deal: dict) -> str:
     <div style="flex:1;min-width:0;">
       {subtype_badge}
       <div style="margin-bottom:4px;">
-        <a href="{ozb_link}" style="color:#1e1b4b;font-weight:800;font-size:14px;
+        {new_badge}<a href="{ozb_link}" style="color:#1e1b4b;font-weight:800;font-size:14px;
            text-decoration:none;line-height:1.4;">{title}</a>
       </div>
       {savings_html}
@@ -528,9 +490,13 @@ def _financial_card(deal: dict) -> str:
     icon = _deal_icon(title)
 
     age_str = ""
+    is_new  = False
     if pub_date:
         age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
-        age_str = f"{age_mins//60}h {age_mins%60}m ago" if age_mins >= 60 else f"{age_mins}m ago"
+        age_str  = f"{age_mins//60}h {age_mins%60}m ago" if age_mins >= 60 else f"{age_mins}m ago"
+        is_new   = age_mins < 1440
+
+    new_badge = '<span style="background:#0969da;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;margin-right:6px;">🆕 NEW</span>' if is_new else ""
 
     bg, light, label = _score_color(score)
 
@@ -565,7 +531,7 @@ def _financial_card(deal: dict) -> str:
   <div style="padding:14px 16px;display:flex;gap:12px;align-items:flex-start;">
     <div style="flex-shrink:0;font-size:36px;width:48px;text-align:center;padding-top:2px;">{icon}</div>
     <div style="flex:1;min-width:0;">
-      <a href="{ozb_link}" style="color:#1a7f37;font-weight:800;font-size:14px;
+      {new_badge}<a href="{ozb_link}" style="color:#1a7f37;font-weight:800;font-size:14px;
          text-decoration:none;line-height:1.4;">{title}</a>
       {savings_html}
       <div style="margin-bottom:8px;">{score_html}</div>
