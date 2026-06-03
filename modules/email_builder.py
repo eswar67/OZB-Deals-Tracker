@@ -157,11 +157,28 @@ def _deal_card(deal: dict) -> str:
         age_str  = f"{age_mins//60}h {age_mins%60}m ago" if age_mins >= 60 else f"{age_mins}m ago"
         is_new   = age_mins < 1440  # posted within last 24 hours
 
-    # Flash banner
-    flash_html = (
-        '<div style="background:#d73a49;color:#fff;font-size:12px;font-weight:bold;'
-        'padding:5px 14px;text-align:center;">⚡ FLASH DEAL — Act Fast!</div>'
-    ) if is_flash else ""
+    # Expiry label
+    expiry_label = deal.get("expiry_label", "")
+    expiry_urgent = expiry_label.startswith("⏰ Expires today") or expiry_label.startswith("⏰ Expires <")
+
+    # Flash / urgency banner
+    if is_flash:
+        flash_html = (
+            '<div style="background:#d73a49;color:#fff;font-size:12px;font-weight:bold;'
+            'padding:5px 14px;text-align:center;">⚡ FLASH DEAL — Act Fast!</div>'
+        )
+    elif expiry_urgent:
+        flash_html = (
+            f'<div style="background:#b45309;color:#fff;font-size:12px;font-weight:bold;'
+            f'padding:5px 14px;text-align:center;">{expiry_label} — Limited time!</div>'
+        )
+    elif savings >= 800 and score >= 7:
+        flash_html = (
+            '<div style="background:#1a7f37;color:#fff;font-size:12px;font-weight:bold;'
+            'padding:5px 14px;text-align:center;">🔥 High-Value Deal — Review Before It Expires</div>'
+        )
+    else:
+        flash_html = ""
 
     # Merchant badge
     merchant_badge = (
@@ -294,10 +311,15 @@ def _deal_card(deal: dict) -> str:
     cta_cb       = f'<a href="{cb_url}" style="{btn}background:#ff6900;color:#fff;">💰 {cb_plat}</a>' if cb_url else ""
 
     # Stats bar
+    expiry_stat = (
+        f'&nbsp; <span style="color:{"#b45309" if expiry_urgent else "#555"};font-weight:{"700" if expiry_urgent else "400"};">'
+        f'{expiry_label}</span>'
+    ) if expiry_label else ""
     stats = (
         f'<span style="color:#888;font-size:12px;">'
         f'👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
         + (f'&nbsp; ⏰ {age_str}' if age_str else "")
+        + expiry_stat
         + '</span>'
     )
 
@@ -450,9 +472,12 @@ def _cc_travel_card(deal: dict) -> str:
     cta_view     = f'<a href="{ozb_link}" style="{btn}background:{badge_bg};color:#fff;">View Deal</a>'
     cta_merchant = f'<a href="{ext_url}" style="{btn}background:#f6f8fa;color:#24292f;border:1px solid #d0d7de;">Go to Offer</a>' if ext_url else ""
 
+    _exp_lbl = deal.get("expiry_label", "")
+    _exp_urg = _exp_lbl.startswith("⏰ Expires today") or _exp_lbl.startswith("⏰ Expires <")
     stats = (
         f'<span style="color:#888;font-size:12px;">👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
         + (f'&nbsp; ⏰ {age_str}' if age_str else "")
+        + (f'&nbsp; <span style="color:{"#b45309" if _exp_urg else "#555"};font-weight:{"700" if _exp_urg else "400"};">{_exp_lbl}</span>' if _exp_lbl else "")
         + '</span>'
     )
 
@@ -527,9 +552,12 @@ def _financial_card(deal: dict) -> str:
     cta_view     = f'<a href="{ozb_link}" style="{btn}background:#1a7f37;color:#fff;">💳 View Deal</a>'
     cta_merchant = f'<a href="{ext_url}" style="{btn}background:#f6f8fa;color:#24292f;border:1px solid #d0d7de;">🏦 Go to Offer</a>' if ext_url else ""
 
+    _exp_lbl = deal.get("expiry_label", "")
+    _exp_urg = _exp_lbl.startswith("⏰ Expires today") or _exp_lbl.startswith("⏰ Expires <")
     stats = (
         f'<span style="color:#888;font-size:12px;">👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
         + (f'&nbsp; ⏰ {age_str}' if age_str else "")
+        + (f'&nbsp; <span style="color:{"#b45309" if _exp_urg else "#555"};font-weight:{"700" if _exp_urg else "400"};">{_exp_lbl}</span>' if _exp_lbl else "")
         + '</span>'
     )
 
@@ -597,9 +625,12 @@ def _lifestyle_card(deal: dict, accent_color: str = "#e67e22") -> str:
         f'<a href="{ext_url}" style="{btn}background:#f6f8fa;color:#24292f;border:1px solid #d0d7de;">Go to Offer</a>'
     ) if ext_url else ""
 
+    _exp_lbl = deal.get("expiry_label", "")
+    _exp_urg = _exp_lbl.startswith("⏰ Expires today") or _exp_lbl.startswith("⏰ Expires <")
     stats = (
         f'<span style="color:#888;font-size:12px;">👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
         + (f'&nbsp; ⏰ {age_str}' if age_str else "")
+        + (f'&nbsp; <span style="color:{"#b45309" if _exp_urg else "#555"};font-weight:{"700" if _exp_urg else "400"};">{_exp_lbl}</span>' if _exp_lbl else "")
         + '</span>'
     )
 

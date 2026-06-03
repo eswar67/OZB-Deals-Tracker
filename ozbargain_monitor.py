@@ -271,6 +271,7 @@ def fetch_all_deals() -> list[dict]:
                     "votes":        int(meta_attr.get("votes-pos",    0)),
                     "comments":     int(meta_attr.get("comment-count", 0)),
                     "clicks":       int(meta_attr.get("click-count",  0)),
+                    "expiry_label": _parse_expiry(meta_attr),
                 })
 
         log.info(f"  Page {page}: {len(items)} items, {page_hits} in window, total={len(all_deals)}")
@@ -705,6 +706,35 @@ FIN_MIN_SAVINGS  = int(os.getenv("FIN_MIN_SAVINGS", "200"))   # min $ value for 
 TRAVEL_MIN_SAVINGS = int(os.getenv("TRAVEL_MIN_SAVINGS", "200"))  # min $ value for travel deals
 
 
+def _parse_expiry(meta_attr: dict) -> str:
+    """Extract expiry datetime string from ozb:meta and return a human-readable label."""
+    raw = meta_attr.get("expiry", "")
+    if not raw:
+        return ""
+    try:
+        from datetime import datetime as _dt
+        # ISO format: 2026-06-10T23:59:00+10:00
+        exp = _dt.fromisoformat(raw)
+        now = datetime.now(exp.tzinfo)
+        delta = exp - now
+        days  = delta.days
+        hours = int(delta.total_seconds() / 3600)
+        if delta.total_seconds() < 0:
+            return "Expired"
+        elif hours < 2:
+            return f"⏰ Expires <2h"
+        elif hours < 24:
+            return f"⏰ Expires today ({exp.strftime('%H:%M')})"
+        elif days == 1:
+            return f"⏰ Expires tomorrow"
+        elif days <= 7:
+            return f"⏰ Expires {exp.strftime('%a %d %b')}"
+        else:
+            return f"Expires {exp.strftime('%d %b')}"
+    except Exception:
+        return ""
+
+
 def _parse_feed_items(xml_text: str, cutoff: datetime, source_label: str) -> list[dict]:
     """Parse RSS XML and return deal dicts for items newer than cutoff."""
     from email.utils import parsedate_to_datetime
@@ -742,6 +772,7 @@ def _parse_feed_items(xml_text: str, cutoff: datetime, source_label: str) -> lis
             "votes":        int(meta_attr.get("votes-pos",    0)),
             "comments":     int(meta_attr.get("comment-count", 0)),
             "clicks":       int(meta_attr.get("click-count",  0)),
+            "expiry_label": _parse_expiry(meta_attr),
             "is_financial": True,
         })
     log.info(f"  {source_label}: {len(items)} items, {len(result)} in window")
@@ -1106,6 +1137,7 @@ def fetch_travel_deals() -> list[dict]:
                 "votes":        int(meta_attr.get("votes-pos",    0)),
                 "comments":     int(meta_attr.get("comment-count", 0)),
                 "clicks":       int(meta_attr.get("click-count",  0)),
+                "expiry_label": _parse_expiry(meta_attr),
                 "is_travel":    True,
                 "deal_subtype": "travel",
             })

@@ -154,8 +154,12 @@ def _probability_of_use(deal: dict, profile: dict) -> tuple[float, str]:
     if "gift card" in combined:
         return (0.8, "Gift cards — flexible, always useful")
 
-    # Default: assume moderate probability for any $200+ deal
-    return (0.7, "Qualified deal — $200+ savings")
+    # Deals with free gifts or high savings — always worth looking at
+    if savings >= 500:
+        return (0.75, f"High-value deal — ~${savings:,} savings")
+    if savings >= 200:
+        return (0.7, "Qualified deal — $200+ savings")
+    return (0.6, "Deal — check if relevant")
 
 
 def _urgency_score(deal: dict) -> tuple[float, str]:
@@ -256,7 +260,14 @@ def score_personal(deal: dict, profile: dict) -> dict:
     raw = savings_factor * relevance * prob_use * urgency * generic_score * 5
     opportunity_score = max(0, min(100, int(raw)))
 
-    # Boost for premium personal-interest signals (points, insurance, premium travel)
+    # Boost: any deal with $500+ savings and generic_score ≥ 7 is at least Tier 2
+    if savings >= 500 and generic_score >= 7:
+        opportunity_score = max(opportunity_score, 30)
+    # Boost: $1000+ savings always at least Tier 2
+    if savings >= 1000:
+        opportunity_score = max(opportunity_score, 35)
+
+    # Boost for premium personal-interest signals
     premium_signals = [
         "lifemiles", "transfer bonus", "business class", "first class",
         "175%", "150%", "200%", "krisflyer", "asia miles",
