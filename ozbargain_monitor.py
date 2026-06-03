@@ -24,6 +24,7 @@ Pipeline:
 
 import os
 import time
+import threading
 import base64
 import logging
 import xml.etree.ElementTree as ET
@@ -173,6 +174,27 @@ SCOPES = [
 ]
 
 OZB_NS = "https://www.ozbargain.com.au"
+
+# ── Claude API rate limiter ───────────────────────────────────────────────────
+# Haiku limit: 50 req/min. We cap at 40 to leave 20% headroom.
+# All parallel Claude calls share this single limiter.
+
+class _RateLimiter:
+    """Token-bucket rate limiter — thread-safe."""
+    def __init__(self, max_per_minute: int):
+        self._interval = 60.0 / max_per_minute   # seconds between requests
+        self._lock     = threading.Lock()
+        self._next_ok  = 0.0                      # earliest time next call is allowed
+
+    def acquire(self):
+        with self._lock:
+            now  = time.monotonic()
+            wait = self._next_ok - now
+            if wait > 0:
+                time.sleep(wait)
+            self._next_ok = time.monotonic() + self._interval
+
+_haiku_limiter = _RateLimiter(max_per_minute=40)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -469,6 +491,7 @@ Examples:
     MAX_SAVINGS_CAP = 7000
 
     try:
+        _haiku_limiter.acquire()
         msg = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=80,
@@ -524,6 +547,7 @@ Reply with EXACTLY: SCORE|REASON|BARRIERS
 Example: 6|Requires existing CBA account which is free to open|CBA Yello required,New customers only"""
 
     try:
+        _haiku_limiter.acquire()
         msg = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=80,
@@ -910,6 +934,7 @@ Examples:
 0|Rate comparison only, no stated saving amount"""
 
     try:
+        _haiku_limiter.acquire()
         msg = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=80,
@@ -1094,6 +1119,7 @@ Examples:
 0|Cashback percentage only, no base price stated"""
 
     try:
+        _haiku_limiter.acquire()
         msg = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=80,
@@ -1451,6 +1477,7 @@ Deals:
 
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        _haiku_limiter.acquire()
         msg = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1024,

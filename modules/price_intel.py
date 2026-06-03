@@ -16,6 +16,14 @@ import urllib.parse
 import requests
 from bs4 import BeautifulSoup
 
+# Shared rate limiter — imported from main module at call time to avoid circular import
+def _get_limiter():
+    try:
+        from ozbargain_monitor import _haiku_limiter
+        return _haiku_limiter
+    except ImportError:
+        return None
+
 log = logging.getLogger(__name__)
 
 HEADERS = {
@@ -319,6 +327,8 @@ Examples:
 0|Specialty/niche product — price unknown"""
 
     try:
+        lim = _get_limiter()
+        if lim: lim.acquire()
         msg = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=60,
