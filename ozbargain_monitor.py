@@ -46,10 +46,12 @@ from modules.price_intel    import analyse_all
 from modules.prefs          import match_all
 from modules.email_builder  import build_email_html
 from modules.value_parser   import parse_all as parse_deal_values
-from modules.personal_score import score_all_personal, build_net_worth_summary
+from modules.personal_score import score_all_personal
 from modules.life_events    import get_life_event_alerts
 from modules.money_audit    import get_money_audit
 from modules.travel_arb     import get_travel_arb
+from modules.negotiation    import add_negotiation_scripts
+from modules.briefing       import build_briefing
 
 # ── Config ────────────────────────────────────────────────────────────────────
 _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
@@ -495,8 +497,8 @@ Examples:
 
 
 def assign_score(client: anthropic.Anthropic, deal: dict) -> dict:
-    """Pass 2 — accessibility/quality score with one-line reasoning (Haiku).
-    Returns {score: int, score_reason: str}
+    """Pass 2 — accessibility/quality score with trust % breakdown (Haiku).
+    Returns {score, score_reason, trust_pct, trust_barriers}
     """
     prompt = f"""You are an Australian deal quality scorer. The dollar value has already been calculated.
 
@@ -505,34 +507,38 @@ Confirmed value: ${deal['savings']} AUD
 How: {deal['explanation']}
 Votes: {deal['votes']} | Comments: {deal['comments']} | Clicks: {deal['clicks']}
 
-Score this deal 1-10 on how ACCESSIBLE and RELIABLE the value is:
+Score this deal 1-10 on ACCESSIBILITY and RELIABILITY:
+10 = Anyone can claim, value guaranteed, no hoops
+8-9 = Minor requirement (specific bank account, free to get)
+6-7 = Moderate effort (CBA Yello customer, trade-in needed)
+4-5 = Significant hoops (limited to 200 people, lottery, requires existing product)
+1-3 = Very restricted, highly targeted, or large upfront spend required
 
-10 = Anyone can claim it, value is guaranteed, no hoops
-8-9 = Minor requirement (e.g. need a specific bank account, free to get)
-6-7 = Moderate effort or some targeting (e.g. CBA Yello customer, trade-in needed)
-4-5 = Significant hoops (e.g. limited to 200 people, lottery, requires existing product)
-1-3 = Very restricted, highly targeted, or requires large upfront spend
+Also list the main BARRIERS to claiming this deal (max 2, comma-separated). Use phrases like:
+"New customers only", "Requires trade-in", "Limited stock", "CBA Yello required",
+"Min spend $X", "Specific state only", "Students only", "Existing product needed"
+Use "None" if no barriers.
 
-Reply with EXACTLY: SCORE|REASON
-- SCORE: single integer 1-10
-- REASON: one sentence (max 15 words) explaining why this score
-
-Example: 8|Free for anyone buying the car; large upfront cost required"""
+Reply with EXACTLY: SCORE|REASON|BARRIERS
+Example: 6|Requires existing CBA account which is free to open|CBA Yello required,New customers only"""
 
     try:
         msg = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=60,
+            max_tokens=80,
             messages=[{"role": "user", "content": prompt}],
         )
         response = msg.content[0].text.strip()
-        parts = response.split("|", 1)
-        score  = max(1, min(10, int("".join(c for c in parts[0] if c.isdigit()) or "0")))
-        reason = parts[1].strip() if len(parts) > 1 else ""
-        return {"score": score, "score_reason": reason}
+        parts = response.split("|")
+        score    = max(1, min(10, int("".join(c for c in (parts[0] if parts else "0") if c.isdigit()) or "0")))
+        reason   = parts[1].strip() if len(parts) > 1 else ""
+        barriers_raw = parts[2].strip() if len(parts) > 2 else ""
+        barriers = [] if barriers_raw.lower() in ("none", "") else [b.strip() for b in barriers_raw.split(",") if b.strip()]
+        trust_pct = score * 10  # 1→10%, 10→100%
+        return {"score": score, "score_reason": reason, "trust_pct": trust_pct, "trust_barriers": barriers}
     except Exception as e:
         log.warning(f"Scoring failed for '{deal['title']}': {e}")
-        return {"score": 0, "score_reason": ""}
+        return {"score": 0, "score_reason": "", "trust_pct": 0, "trust_barriers": []}
 
 
 def score_deals(deals: list[dict]) -> list[dict]:
@@ -564,11 +570,11 @@ def score_deals(deals: list[dict]) -> list[dict]:
     log.info("── Scoring quality/accessibility (Haiku) ──")
     for deal in value_passed:
         result = assign_score(client, deal)
-        deal["score"]        = result["score"]
-        deal["score_reason"] = result["score_reason"]
-        log.info(f"  [{deal['score']}/10] ${deal['savings']:,} — {deal['title'][:55]}")
-        if deal["score_reason"]:
-            log.info(f"           {deal['score_reason']}")
+        deal["score"]          = result["score"]
+        deal["score_reason"]   = result["score_reason"]
+        deal["trust_pct"]      = result["trust_pct"]
+        deal["trust_barriers"] = result["trust_barriers"]
+        log.info(f"  [{deal['score']}/10 trust={result['trust_pct']}%] ${deal['savings']:,} — {deal['title'][:50]}")
         time.sleep(0.2)
 
     return value_passed
@@ -951,6 +957,8 @@ def score_financial_deals(deals: list[dict]) -> list[dict]:
     for deal in scoreable:
         result = assign_score(client, deal)
         deal["score"]        = result["score"]
+        deal["trust_pct"]      = result.get("trust_pct", result["score"] * 10)
+        deal["trust_barriers"] = result.get("trust_barriers", [])
         deal["score_reason"] = result["score_reason"]
         log.info(f"  [{deal['score']}/10] {deal['title'][:60]}")
         time.sleep(0.2)
@@ -1168,6 +1176,8 @@ def score_travel_deals(deals: list[dict]) -> list[dict]:
     for deal in deals:
         result = assign_score(client, deal)
         deal["score"]        = result["score"]
+        deal["trust_pct"]      = result.get("trust_pct", result["score"] * 10)
+        deal["trust_barriers"] = result.get("trust_barriers", [])
         deal["score_reason"] = result["score_reason"]
         log.info(f"  [{deal['score']}/10] ${deal['savings']:,} — {deal['title'][:55]}")
         time.sleep(0.2)
@@ -1288,6 +1298,8 @@ def score_lifestyle_deals(deals: list[dict], category: str, icon: str) -> list[d
     for deal in deals:
         result = assign_score(client, deal)
         deal["score"]        = result["score"]
+        deal["trust_pct"]      = result.get("trust_pct", result["score"] * 10)
+        deal["trust_barriers"] = result.get("trust_barriers", [])
         deal["score_reason"] = result["score_reason"]
         log.info(f"  [{deal['score']}/10] ${deal.get('savings',0):,} — {deal['title'][:55]}")
         time.sleep(0.2)
@@ -1459,10 +1471,10 @@ def send_gmail_alert(
     food_deals: list[dict] = None,
     home_deals: list[dict] = None,
     extra_deals: list[dict] = None,
-    net_worth_summary: dict = None,
     life_event_alerts: list[dict] = None,
     money_audit: list[dict] = None,
     travel_arb: list[dict] = None,
+    briefing: dict = None,
 ):
     if not GMAIL_TO:
         log.warning("GMAIL_TO not set — skipping email")
@@ -1473,10 +1485,10 @@ def send_gmail_alert(
     food_deals      = food_deals      or []
     home_deals         = home_deals         or []
     extra_deals        = extra_deals        or []
-    net_worth_summary  = net_worth_summary  or {}
     life_event_alerts  = life_event_alerts  or []
     money_audit        = money_audit        or []
     travel_arb         = travel_arb         or []
+    briefing           = briefing           or {}
     flash_count        = sum(1 for d in deals if d.get("is_flash"))
     flash_prefix    = "⚡ FLASH + " if flash_count else ""
 
@@ -1490,14 +1502,14 @@ def send_gmail_alert(
     all_categorised = deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     tier1_count   = sum(1 for d in all_categorised if d.get("tier") == "1_action")
     total_deals   = len(all_categorised)
-    relevant_savings = net_worth_summary.get("relevant", sum(d.get("savings", 0) for d in all_categorised))
+    total_savings = sum(d.get("savings", 0) for d in all_categorised)
     tier1_str      = f" · 🔴 {tier1_count} Act-Now" if tier1_count else ""
     intel_count    = len([a for a in life_event_alerts if a.get("urgency") in ("immediate","soon")]) + \
                      len([o for o in money_audit if o.get("estimated_value", 0) >= 500])
     intel_str      = f" · 🧠 {intel_count} intel" if intel_count else ""
     subject = (
         f"🤖 OZB | {flash_prefix}{total_deals} deals{tier1_str}{intel_str}{note_str} "
-        f"· ~${relevant_savings:,} relevant savings"
+        f"· ~${total_savings:,} AUD savings"
     )
 
     service = build("gmail", "v1", credentials=creds)
@@ -1532,10 +1544,10 @@ def send_gmail_alert(
         min_clicks=MIN_CLICKS,
         fin_min_savings=FIN_MIN_SAVINGS,
         travel_min_savings=TRAVEL_MIN_SAVINGS,
-        net_worth_summary=net_worth_summary,
         life_event_alerts=life_event_alerts,
         money_audit=money_audit,
         travel_arb=travel_arb,
+        briefing=briefing,
     )
     msg.attach(MIMEText(html, "html"))
 
@@ -1777,24 +1789,25 @@ def main():
             d.setdefault("_section", section_tag)
         score_all_personal(deal_list)
 
-    # 12c. Net Worth Impact summary for email header
-    all_deals_flat = top_deals + fin_deals + cc_travel_deals + food_deals + home_deals + extra_deals
-    net_worth_summary = build_net_worth_summary(all_deals_flat)
-    log.info(
-        f"Net worth summary — Potential: ${net_worth_summary['potential']:,} | "
-        f"Likely: ${net_worth_summary['likely']:,} | "
-        f"Relevant: ${net_worth_summary['relevant']:,}"
-    )
 
     # 12d. Tier-1 intelligence modules
     log.info("── Life Event Engine ──")
     life_event_alerts = get_life_event_alerts(lookahead_days=120)
+
+    log.info("── Negotiation Scripts ──")
+    life_event_alerts = add_negotiation_scripts(life_event_alerts)
 
     log.info("── Money Left on Table Audit ──")
     money_audit = get_money_audit()
 
     log.info("── Travel Arbitrage Engine ──")
     travel_arb = get_travel_arb()
+
+    log.info("── Morning Briefing ──")
+    all_tier1 = [d for d in (top_deals + fin_deals + cc_travel_deals + food_deals + home_deals + extra_deals)
+                 if d.get("tier") == "1_action"]
+    briefing = build_briefing(all_tier1, life_event_alerts, money_audit)
+    log.info(f"Briefing: {briefing['action_count']} actions · ${briefing['total_value']:,} · {briefing['total_minutes']}min")
 
     creds = get_google_creds()
     send_gmail_alert(
@@ -1804,10 +1817,10 @@ def main():
         food_deals=food_deals,
         home_deals=home_deals,
         extra_deals=extra_deals,
-        net_worth_summary=net_worth_summary,
         life_event_alerts=life_event_alerts,
         money_audit=money_audit,
         travel_arb=travel_arb,
+        briefing=briefing,
     )
 
     # 13. (mark_sent removed — no deduplication)

@@ -336,6 +336,9 @@ def _deal_card(deal: dict) -> str:
       <!-- Personal Opportunity Score -->
       {_opportunity_badge(deal)}
 
+      <!-- Trust Score -->
+      {_trust_badge(deal)}
+
       <!-- Score breakdown -->
       {_score_breakdown(deal)}
 
@@ -467,6 +470,7 @@ def _cc_travel_card(deal: dict) -> str:
       {savings_html}
       {points_html}
       {_opportunity_badge(deal)}
+      {_trust_badge(deal)}
       <div style="margin-bottom:8px;">{score_html}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <div>{cta_view}{cta_merchant}</div>
@@ -689,38 +693,6 @@ def _opportunity_badge(deal: dict) -> str:
 </div>"""
 
 
-def _net_worth_bar(net_worth_summary: dict) -> str:
-    """3-row savings reality check for the email header."""
-    if not net_worth_summary:
-        return ""
-    potential = net_worth_summary.get("potential", 0)
-    likely    = net_worth_summary.get("likely", 0)
-    relevant  = net_worth_summary.get("relevant", 0)
-    return f"""
-  <!-- Net Worth Impact Bar -->
-  <div style="background:#fff;border:1px solid #d0d7de;border-radius:8px;
-              padding:12px 16px;margin-bottom:14px;">
-    <div style="font-size:12px;font-weight:800;color:#444;margin-bottom:8px;">
-      💰 Savings Reality Check
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <tr>
-        <td style="color:#888;padding:2px 0;">Total Potential</td>
-        <td style="text-align:right;color:#888;">${potential:,}</td>
-        <td style="padding-left:8px;font-size:10px;color:#aaa;">all deals, face value</td>
-      </tr>
-      <tr>
-        <td style="color:#555;padding:2px 0;font-weight:600;">Likely Savings</td>
-        <td style="text-align:right;color:#bf8700;font-weight:700;">${likely:,}</td>
-        <td style="padding-left:8px;font-size:10px;color:#aaa;">adjusted for your spending habits</td>
-      </tr>
-      <tr>
-        <td style="color:#1a7f37;padding:2px 0;font-weight:800;">Actually Relevant</td>
-        <td style="text-align:right;color:#1a7f37;font-weight:800;">${relevant:,}</td>
-        <td style="padding-left:8px;font-size:10px;color:#aaa;">Tier 1 + 2 deals only</td>
-      </tr>
-    </table>
-  </div>"""
 
 
 def _life_events_section(alerts: list) -> str:
@@ -738,11 +710,26 @@ def _life_events_section(alerts: list) -> str:
             f'<div style="font-size:11px;color:#0969da;margin-top:4px;font-style:italic;">'
             f'→ {a["action"][:140]}</div>'
         ) if a.get("action") else ""
+        # Negotiation script — collapsed details block
+        script = a.get("script", "")
+        script_html = ""
+        if script:
+            safe = script.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\n","<br>")
+            script_html = (
+                f'<details style="margin-top:6px;">'
+                f'<summary style="font-size:11px;color:#0969da;cursor:pointer;font-weight:700;">'
+                f'📋 View negotiation script</summary>'
+                f'<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;'
+                f'padding:10px;margin-top:6px;font-size:11px;color:#1e3a5f;'
+                f'font-family:monospace;white-space:pre-wrap;line-height:1.5;">{safe}</div>'
+                f'</details>'
+            )
         rows += f"""
 <div style="border-bottom:1px solid #fee2e2;padding:10px 0;{'background:#fff8f8;' if a.get('urgency')=='immediate' else ''}">
   <div style="font-weight:700;font-size:13px;">{icon} {a['headline']}</div>
   {lines_html}
   {action_html}
+  {script_html}
   <div style="margin-top:4px;">{value_str}
     <span style="font-size:10px;color:#888;margin-left:8px;">{a['days_until']} days away</span>
   </div>
@@ -846,6 +833,72 @@ def _travel_arb_section(routes: list) -> str:
   </div>"""
 
 
+def _trust_badge(deal: dict) -> str:
+    """Compact trust % widget shown on every deal card."""
+    trust = deal.get("trust_pct", 0)
+    barriers = deal.get("trust_barriers", [])
+    if not trust:
+        return ""
+    if trust >= 80:
+        color, label = "#1a7f37", "High Trust"
+    elif trust >= 50:
+        color, label = "#bf8700", "Moderate"
+    else:
+        color, label = "#d73a49", "Low Trust"
+    barrier_html = ""
+    if barriers:
+        barrier_html = (
+            '<span style="font-size:10px;color:#555;margin-left:8px;">'
+            + " · ".join(f"⚠️ {b}" for b in barriers[:2])
+            + "</span>"
+        )
+    return (
+        f'<div style="margin:4px 0;display:flex;align-items:center;flex-wrap:wrap;gap:4px;">'
+        f'<span style="background:{color};color:#fff;font-size:10px;font-weight:700;'
+        f'padding:2px 8px;border-radius:8px;">🔐 Trust {trust}% — {label}</span>'
+        f'{barrier_html}</div>'
+    )
+
+
+def _briefing_section(briefing: dict) -> str:
+    """Morning briefing executive summary card."""
+    if not briefing or not briefing.get("actions"):
+        return ""
+    actions = briefing["actions"]
+    rows = ""
+    for i, a in enumerate(actions, 1):
+        script_note = ' <span style="font-size:10px;color:#0969da;">📋 Script ready</span>' if a.get("has_script") else ""
+        rows += (
+            f'<div style="display:flex;align-items:baseline;gap:10px;padding:6px 0;'
+            f'border-bottom:1px solid #f0fdf4;">'
+            f'<span style="font-size:14px;font-weight:800;color:#1a7f37;min-width:18px;">#{i}</span>'
+            f'<div style="flex:1;">'
+            f'<span style="font-weight:700;font-size:12px;">{a["icon"]} {a["title"]}</span>'
+            f'{script_note}'
+            f'<div style="font-size:10px;color:#666;margin-top:1px;">{a["one_liner"]}</div>'
+            f'</div>'
+            f'<span style="font-size:12px;font-weight:800;color:#1a7f37;white-space:nowrap;">'
+            f'~${a["value"]:,}</span>'
+            f'</div>'
+        )
+    return f"""
+  <!-- Morning Briefing -->
+  <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #86efac;
+              border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+      <div>
+        <div style="font-size:17px;font-weight:800;color:#14532d;">
+          ☀️ {briefing.get('date','')} — {briefing['action_count']} action(s) today
+        </div>
+        <div style="font-size:11px;color:#166534;margin-top:2px;">
+          ~${briefing['total_value']:,} total value &nbsp;·&nbsp; est. {briefing['total_minutes']} min
+        </div>
+      </div>
+    </div>
+    {rows}
+  </div>"""
+
+
 def build_email_html(
     deals: list[dict],
     financial_deals: list[dict] = None,
@@ -860,21 +913,21 @@ def build_email_html(
     max_age_hours: int = 24,
     fin_min_savings: int = 200,
     travel_min_savings: int = 200,
-    net_worth_summary: dict = None,
     life_event_alerts: list = None,
     money_audit: list = None,
     travel_arb: list = None,
     extra_deals: list = None,
+    briefing: dict = None,
 ) -> str:
     financial_deals   = financial_deals   or []
     cc_travel_deals   = cc_travel_deals   or []
     food_deals        = food_deals        or []
     home_deals        = home_deals        or []
     extra_deals       = extra_deals       or []
-    net_worth_summary = net_worth_summary or {}
     life_event_alerts = life_event_alerts or []
     money_audit       = money_audit       or []
     travel_arb        = travel_arb        or []
+    briefing          = briefing          or {}
     total_savings = sum(d.get("savings", 0) for d in deals)
     flash_count   = sum(1 for d in deals if d.get("is_flash"))
     now_str       = datetime.now().strftime("%d %b %Y %H:%M AEST")
@@ -917,7 +970,7 @@ def build_email_html(
         d.get("savings", 0)
         for d in deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     )
-    net_worth_bar_html   = _net_worth_bar(net_worth_summary)
+    briefing_html        = _briefing_section(briefing)
     life_events_html     = _life_events_section(life_event_alerts)
     money_audit_html     = _money_audit_section(money_audit)
     travel_arb_html      = _travel_arb_section(travel_arb)
@@ -1129,7 +1182,7 @@ def build_email_html(
     <strong style="color:#1a7f37;">~${all_savings:,} AUD</strong> total possible savings
   </div>
 
-  {net_worth_bar_html}
+  {briefing_html}
   {life_events_html}
   {money_audit_html}
   {travel_arb_html}
