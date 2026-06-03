@@ -176,25 +176,31 @@ SCOPES = [
 OZB_NS = "https://www.ozbargain.com.au"
 
 # ── Claude API rate limiter ───────────────────────────────────────────────────
-# Haiku limit: 50 req/min. We cap at 40 to leave 20% headroom.
-# All parallel Claude calls share this single limiter.
+# Sliding-window rate limiter — allows true parallelism.
+# Multiple threads can be in-flight simultaneously; only blocks when the
+# 60-second window is full. Does NOT serialise calls.
+
+import collections as _collections
 
 class _RateLimiter:
-    """Token-bucket rate limiter — thread-safe."""
     def __init__(self, max_per_minute: int):
-        self._interval = 60.0 / max_per_minute   # seconds between requests
-        self._lock     = threading.Lock()
-        self._next_ok  = 0.0                      # earliest time next call is allowed
+        self._max   = max_per_minute
+        self._lock  = threading.Lock()
+        self._times = _collections.deque()
 
     def acquire(self):
-        with self._lock:
-            now  = time.monotonic()
-            wait = self._next_ok - now
-            if wait > 0:
-                time.sleep(wait)
-            self._next_ok = time.monotonic() + self._interval
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                while self._times and now - self._times[0] >= 60.0:
+                    self._times.popleft()
+                if len(self._times) < self._max:
+                    self._times.append(now)
+                    return                          # slot free — go immediately
+                wait = 60.0 - (now - self._times[0]) + 0.05
+            time.sleep(wait)                        # sleep outside lock
 
-_haiku_limiter = _RateLimiter(max_per_minute=40)
+_haiku_limiter = _RateLimiter(max_per_minute=45)
 
 logging.basicConfig(
     level=logging.INFO,
