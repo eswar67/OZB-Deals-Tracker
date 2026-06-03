@@ -1,43 +1,35 @@
 {
-  "_comment": "Edit this file to personalise your OzBargain deal alerts.",
+  "_comment": "Edit this file to personalise OzBargain deal alerts.",
+
+  "owner": "Eswar",
 
   "preferred_categories": [
-    "Electronics",
-    "Computing",
-    "Home & Garden",
-    "Travel",
-    "Gaming",
-    "Phones",
-    "Appliances",
-    "Supermarket"
+    "Travel", "Credit Cards", "Banking", "Electronics",
+    "Computing", "Home & Garden", "Gaming", "Phones",
+    "Appliances", "Supermarket", "Gift Cards"
   ],
 
   "keyword_watchlist": [
-    "iPad",
-    "MacBook",
-    "Dyson",
-    "Roomba",
-    "Sony",
-    "Samsung",
-    "standing desk",
-    "Nintendo Switch",
-    "AirPods",
-    "Bose",
-    "robot vacuum",
-    "air fryer",
-    "coffee machine",
-    "espresso",
-    "Nespresso"
+    "iPad", "MacBook", "Dyson", "Roomba", "Sony", "Samsung",
+    "standing desk", "Nintendo Switch", "AirPods", "Bose",
+    "robot vacuum", "air fryer", "coffee machine", "espresso", "Nespresso",
+    "lifemiles", "qantas points", "velocity points", "asia miles",
+    "emirates skywards", "singapore airlines", "krisflyer",
+    "business class", "first class", "lounge access",
+    "gift card", "woolworths gift card", "coles gift card",
+    "amex", "american express", "westpac altitude", "anz black",
+    "dubai", "bali", "maldives", "europe flight", "japan flight",
+    "home insurance", "landlord insurance", "car insurance",
+    "refinanc", "offset account", "home loan"
   ],
 
   "excluded_brands": [],
-
   "excluded_merchants": [],
 
   "min_savings_per_category": {
     "Electronics":  200,
     "Computing":    200,
-    "Travel":       200,
+    "Travel":       150,
     "Supermarket":   80,
     "default":      200
   },
@@ -48,5 +40,73 @@
   "flash_deal_min_score": 8,
 
   "alert_mode": "digest",
-  "slack_webhook_url": ""
+  "slack_webhook_url": "",
+
+  "personal_profile": {
+    "_note": "Used for Opportunity Score and Expected Value calculations",
+
+    "monthly_grocery_spend_aud": 600,
+    "monthly_dining_spend_aud":  400,
+
+    "points_ecosystems": {
+      "qantas":    120000,
+      "velocity":   45000,
+      "lifemiles":  80000,
+      "asia_miles": 30000,
+      "amex_mrp":   95000
+    },
+
+    "credit_cards": [
+      "Amex Platinum",
+      "Westpac Altitude Black",
+      "ANZ Rewards Black"
+    ],
+
+    "property": ["Sydney PPOR", "Dubai investment"],
+
+    "high_interest_categories": [
+      "frequent_flyer_points",
+      "premium_cabin_travel",
+      "gift_cards",
+      "credit_cards",
+      "home_insurance",
+      "landlord_insurance",
+      "car_insurance",
+      "family_travel",
+      "dubai_travel",
+      "points_transfer_bonuses",
+      "hotel_status_offers"
+    ],
+
+    "high_interest_keywords": [
+      "lifemiles", "velocity", "qantas points", "asia miles", "krisflyer",
+      "business class", "first class", "premium economy",
+      "emirates", "singapore airlines", "qatar airways", "cathay pacific",
+      "dubai", "family travel", "maldives", "bali", "japan",
+      "gift card", "woolworths gift", "coles gift",
+      "home insurance", "landlord insurance", "car insurance",
+      "refinanc", "offset", "mortgage",
+      "amex", "westpac altitude", "anz black", "points bonus",
+      "transfer bonus", "status match", "lounge"
+    ],
+
+    "low_interest_keywords": [
+      "gaming chair", "skillet", "frying pan", "kettle", "toaster",
+      "desk lamp", "usb hub", "webcam", "mouse pad",
+      "bluetooth speaker", "phone case", "random laptop",
+      "gym equipment", "protein powder", "vitamin",
+      "pet food", "garden hose", "tool kit"
+    ],
+
+    "travel_cpp_targets": {
+      "qantas":    1.8,
+      "velocity":  1.5,
+      "lifemiles": 1.4,
+      "asia_miles": 1.6
+    },
+
+    "insurance_renewal_months": [7, 8],
+
+    "stacking_platforms": ["ShopBack", "Cashrewards", "Qantas Shopping", "Everyday Rewards"]
+  }
 }

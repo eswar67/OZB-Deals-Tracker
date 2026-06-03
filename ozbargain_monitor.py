@@ -42,11 +42,12 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
 # ── Local modules ─────────────────────────────────────────────────────────────
-from modules.storage       import is_flash_deal   # filter_unsent/mark_sent removed — no deduplication
-from modules.price_intel   import analyse_all
-from modules.prefs         import match_all
-from modules.email_builder import build_email_html
-from modules.value_parser  import parse_all as parse_deal_values
+from modules.storage        import is_flash_deal   # filter_unsent/mark_sent removed — no deduplication
+from modules.price_intel    import analyse_all
+from modules.prefs          import match_all
+from modules.email_builder  import build_email_html
+from modules.value_parser   import parse_all as parse_deal_values
+from modules.personal_score import score_all_personal, build_net_worth_summary
 
 # ── Config ────────────────────────────────────────────────────────────────────
 _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
@@ -1421,6 +1422,7 @@ def send_gmail_alert(
     cc_travel_deals: list[dict] = None,
     food_deals: list[dict] = None,
     home_deals: list[dict] = None,
+    net_worth_summary: dict = None,
 ):
     if not GMAIL_TO:
         log.warning("GMAIL_TO not set — skipping email")
@@ -1430,6 +1432,7 @@ def send_gmail_alert(
     cc_travel_deals = cc_travel_deals or []
     food_deals      = food_deals      or []
     home_deals      = home_deals      or []
+    net_worth_summary = net_worth_summary or {}
     flash_count     = sum(1 for d in deals if d.get("is_flash"))
     flash_prefix    = "⚡ FLASH + " if flash_count else ""
 
@@ -1441,11 +1444,13 @@ def send_gmail_alert(
     note_str = " · " + " · ".join(notes) if notes else ""
 
     all_categorised = deals + financial_deals + cc_travel_deals + food_deals + home_deals
+    tier1_count   = sum(1 for d in all_categorised if d.get("tier") == "1_action")
     total_deals   = len(all_categorised)
-    total_savings = sum(d.get("savings", 0) for d in all_categorised)
+    relevant_savings = net_worth_summary.get("relevant", sum(d.get("savings", 0) for d in all_categorised))
+    tier1_str     = f" · 🔴 {tier1_count} Act-Now" if tier1_count else ""
     subject = (
-        f"🤖 OZB Deal Tracking Agent | {flash_prefix}{total_deals} deal(s) found{note_str} "
-        f"· ~${total_savings:,} AUD savings · score≥{MIN_SCORE} · savings≥${MIN_SAVINGS}"
+        f"🤖 OZB | {flash_prefix}{total_deals} deals{tier1_str}{note_str} "
+        f"· ~${relevant_savings:,} relevant savings"
     )
 
     service = build("gmail", "v1", credentials=creds)
@@ -1480,6 +1485,7 @@ def send_gmail_alert(
         max_age_hours=MAX_AGE_HOURS,
         fin_min_savings=FIN_MIN_SAVINGS,
         travel_min_savings=TRAVEL_MIN_SAVINGS,
+        net_worth_summary=net_worth_summary,
     )
     msg.attach(MIMEText(html, "html"))
 
@@ -1730,6 +1736,30 @@ def main():
         top_deals, fin_deals, cc_travel_deals, food_deals, home_deals
     )
 
+    # 12b. Personal opportunity scoring — tags each deal with opportunity_score, tier,
+    #      expected_value, stacking_hint, flight_intel, deal_quality_label
+    log.info("── Personal opportunity scoring ──")
+    all_sections = [
+        (top_deals,       "product"),
+        (fin_deals,       "banking"),
+        (cc_travel_deals, "credit_card"),
+        (food_deals,      "food"),
+        (home_deals,      "home"),
+    ]
+    for deal_list, section_tag in all_sections:
+        for d in deal_list:
+            d.setdefault("_section", section_tag)
+        score_all_personal(deal_list)
+
+    # 12c. Net Worth Impact summary for email header
+    all_deals_flat = top_deals + fin_deals + cc_travel_deals + food_deals + home_deals
+    net_worth_summary = build_net_worth_summary(all_deals_flat)
+    log.info(
+        f"Net worth summary — Potential: ${net_worth_summary['potential']:,} | "
+        f"Likely: ${net_worth_summary['likely']:,} | "
+        f"Relevant: ${net_worth_summary['relevant']:,}"
+    )
+
     creds = get_google_creds()
     send_gmail_alert(
         creds, top_deals,
@@ -1737,12 +1767,16 @@ def main():
         cc_travel_deals=cc_travel_deals,
         food_deals=food_deals,
         home_deals=home_deals,
+        net_worth_summary=net_worth_summary,
     )
 
     # 13. (mark_sent removed — no deduplication)
 
     # 14. Append to Google Sheets
-    append_to_sheets(creds, top_deals + fin_deals + cc_travel_deals + food_deals + home_deals)
+    try:
+        append_to_sheets(creds, top_deals + fin_deals + cc_travel_deals + food_deals + home_deals)
+    except Exception as e:
+        log.warning(f"Google Sheets append failed (non-fatal): {e}")
 
     log.info("=== Done ===")
 

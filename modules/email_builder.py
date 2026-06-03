@@ -333,6 +333,9 @@ def _deal_card(deal: dict) -> str:
       <!-- Savings breakdown -->
       {_savings_breakdown(deal)}
 
+      <!-- Personal Opportunity Score -->
+      {_opportunity_badge(deal)}
+
       <!-- Score breakdown -->
       {_score_breakdown(deal)}
 
@@ -463,6 +466,7 @@ def _cc_travel_card(deal: dict) -> str:
       </div>
       {savings_html}
       {points_html}
+      {_opportunity_badge(deal)}
       <div style="margin-bottom:8px;">{score_html}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <div>{cta_view}{cta_merchant}</div>
@@ -534,6 +538,7 @@ def _financial_card(deal: dict) -> str:
       {new_badge}<a href="{ozb_link}" style="color:#1a7f37;font-weight:800;font-size:14px;
          text-decoration:none;line-height:1.4;">{title}</a>
       {savings_html}
+      {_opportunity_badge(deal)}
       <div style="margin-bottom:8px;">{score_html}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <div>{cta_view}{cta_merchant}</div>
@@ -603,6 +608,7 @@ def _lifestyle_card(deal: dict, accent_color: str = "#e67e22") -> str:
       <a href="{ozb_link}" style="color:{accent_color};font-weight:800;font-size:14px;
          text-decoration:none;line-height:1.4;">{title}</a>
       {savings_html}
+      {_opportunity_badge(deal)}
       <div style="margin-bottom:8px;">{score_html}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <div>{cta_view}{cta_merchant}</div>
@@ -611,6 +617,110 @@ def _lifestyle_card(deal: dict, accent_color: str = "#e67e22") -> str:
     </div>
   </div>
 </div>"""
+
+
+def _opportunity_badge(deal: dict) -> str:
+    """Compact personal opportunity score + tier badge for any card."""
+    opp = deal.get("opportunity_score")
+    if opp is None:
+        return ""
+    tier = deal.get("tier", "3_ignore")
+    ev   = deal.get("expected_value", 0)
+    ev_note = deal.get("ev_note", "")
+
+    if tier == "1_action":
+        bg, color, icon = "#d73a49", "#fff", "🔴"
+    elif tier == "2_watch":
+        bg, color, icon = "#bf8700", "#fff", "🟡"
+    else:
+        bg, color, icon = "#6e7781", "#fff", "⚪"
+
+    reasons_html = ""
+    reasons = deal.get("personal_reasons", [])
+    if reasons:
+        reasons_html = (
+            '<div style="font-size:10px;color:#555;margin-top:3px;">'
+            + " &nbsp;·&nbsp; ".join(reasons[:2])
+            + "</div>"
+        )
+
+    stacking = deal.get("stacking_hint", "")
+    stacking_html = (
+        f'<div style="font-size:10px;color:#4f46e5;margin-top:3px;">⚡ Stack: {stacking}</div>'
+        if stacking else ""
+    )
+
+    quality = deal.get("deal_quality_label", "")
+    quality_html = (
+        f'<div style="font-size:10px;color:#1a7f37;font-weight:700;margin-top:3px;">📊 {quality}</div>'
+        if quality else ""
+    )
+
+    flight = deal.get("flight_intel", {})
+    flight_html = ""
+    if flight and flight.get("best_path"):
+        flight_html = (
+            f'<div style="font-size:10px;color:#0969da;margin-top:3px;">'
+            f'✈️ {flight["best_path"]}</div>'
+            f'<div style="font-size:10px;font-weight:700;color:#d73a49;margin-top:2px;">'
+            f'{flight.get("verdict","")}</div>'
+        )
+
+    ev_html = ""
+    if ev > 0 and ev_note:
+        ev_html = (
+            f'<div style="font-size:10px;color:#555;margin-top:3px;">'
+            f'💡 Expected value: <strong style="color:#1a7f37;">${ev:,}</strong> — {ev_note}</div>'
+        )
+
+    return f"""
+<div style="background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;
+            padding:8px 10px;margin:8px 0 4px 0;">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <span style="background:{bg};color:{color};font-size:11px;font-weight:800;
+                 padding:2px 8px;border-radius:10px;">{icon} Opportunity {opp}/100</span>
+    <span style="font-size:11px;color:#444;font-weight:600;">{deal.get("tier_label","")}</span>
+  </div>
+  {ev_html}
+  {reasons_html}
+  {quality_html}
+  {stacking_html}
+  {flight_html}
+</div>"""
+
+
+def _net_worth_bar(net_worth_summary: dict) -> str:
+    """3-row savings reality check for the email header."""
+    if not net_worth_summary:
+        return ""
+    potential = net_worth_summary.get("potential", 0)
+    likely    = net_worth_summary.get("likely", 0)
+    relevant  = net_worth_summary.get("relevant", 0)
+    return f"""
+  <!-- Net Worth Impact Bar -->
+  <div style="background:#fff;border:1px solid #d0d7de;border-radius:8px;
+              padding:12px 16px;margin-bottom:14px;">
+    <div style="font-size:12px;font-weight:800;color:#444;margin-bottom:8px;">
+      💰 Savings Reality Check
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <tr>
+        <td style="color:#888;padding:2px 0;">Total Potential</td>
+        <td style="text-align:right;color:#888;">${potential:,}</td>
+        <td style="padding-left:8px;font-size:10px;color:#aaa;">all deals, face value</td>
+      </tr>
+      <tr>
+        <td style="color:#555;padding:2px 0;font-weight:600;">Likely Savings</td>
+        <td style="text-align:right;color:#bf8700;font-weight:700;">${likely:,}</td>
+        <td style="padding-left:8px;font-size:10px;color:#aaa;">adjusted for your spending habits</td>
+      </tr>
+      <tr>
+        <td style="color:#1a7f37;padding:2px 0;font-weight:800;">Actually Relevant</td>
+        <td style="text-align:right;color:#1a7f37;font-weight:800;">${relevant:,}</td>
+        <td style="padding-left:8px;font-size:10px;color:#aaa;">Tier 1 + 2 deals only</td>
+      </tr>
+    </table>
+  </div>"""
 
 
 def build_email_html(
@@ -627,24 +737,24 @@ def build_email_html(
     max_age_hours: int = 24,
     fin_min_savings: int = 200,
     travel_min_savings: int = 200,
+    net_worth_summary: dict = None,
 ) -> str:
     financial_deals = financial_deals or []
     cc_travel_deals = cc_travel_deals or []
     food_deals      = food_deals      or []
     home_deals      = home_deals      or []
+    net_worth_summary = net_worth_summary or {}
     total_savings = sum(d.get("savings", 0) for d in deals)
     flash_count   = sum(1 for d in deals if d.get("is_flash"))
     now_str       = datetime.now().strftime("%d %b %Y %H:%M AEST")
 
     LIFESTYLE_TOP_N = 5
 
-    # Flash deals first, then by score desc
-    sorted_deals = sorted(
-        deals,
-        key=lambda d: (d.get("is_flash", False), d.get("score", 0), d.get("savings", 0)),
-        reverse=True,
-    )
+    # Sort by opportunity_score (personal) first, then flash, then generic score
+    def _sort_key(d):
+        return (d.get("opportunity_score", 0), d.get("is_flash", False), d.get("score", 0), d.get("savings", 0))
 
+    sorted_deals = sorted(deals, key=_sort_key, reverse=True)
     cards = "\n".join(_deal_card(d) for d in sorted_deals)
 
     flash_note = (
@@ -676,12 +786,42 @@ def build_email_html(
         d.get("savings", 0)
         for d in deals + financial_deals + cc_travel_deals + food_deals + home_deals
     )
+    net_worth_bar_html = _net_worth_bar(net_worth_summary)
+
+    # ── Tier 1 "Act Now" callout section ───────────────────────────────────────
+    all_flat = deals + financial_deals + cc_travel_deals + food_deals + home_deals
+    tier1_deals = sorted(
+        [d for d in all_flat if d.get("tier") == "1_action"],
+        key=lambda d: d.get("opportunity_score", 0), reverse=True
+    )
+    if tier1_deals:
+        t1_items = "".join(
+            f'<div style="padding:6px 0;border-bottom:1px solid #fecaca;">'
+            f'<span style="font-weight:700;color:#1a1a1a;">{d.get("title","")[:70]}</span>'
+            f'<br><span style="font-size:11px;color:#555;">'
+            f'Score {d.get("opportunity_score",0)}/100 · '
+            f'Expected value ${d.get("expected_value",0):,} · '
+            f'{d.get("ev_note","")}'
+            f'</span></div>'
+            for d in tier1_deals[:5]
+        )
+        tier1_section = f"""
+  <!-- Tier 1 Act Now callout -->
+  <div style="background:#fff5f5;border:2px solid #d73a49;border-radius:10px;
+              padding:14px 18px;margin-bottom:18px;">
+    <div style="font-size:16px;font-weight:800;color:#d73a49;margin-bottom:8px;">
+      🔴 Act Now — Top {len(tier1_deals)} Personal Opportunity Deal(s)
+    </div>
+    {t1_items}
+  </div>"""
+    else:
+        tier1_section = ""
 
     # Financial (banking) section
     if financial_deals:
         sorted_fin = sorted(
             financial_deals,
-            key=lambda d: (d.get("savings", 0), d.get("score", 0)),
+            key=lambda d: (d.get("opportunity_score", 0), d.get("savings", 0), d.get("score", 0)),
             reverse=True,
         )
         fin_cards = "\n".join(_financial_card(d) for d in sorted_fin)
@@ -707,7 +847,7 @@ def build_email_html(
     if cc_travel_deals:
         sorted_cct = sorted(
             cc_travel_deals,
-            key=lambda d: (d.get("savings", 0), d.get("score", 0)),
+            key=lambda d: (d.get("opportunity_score", 0), d.get("savings", 0), d.get("score", 0)),
             reverse=True,
         )
         # Split for sub-section counts
@@ -752,7 +892,7 @@ def build_email_html(
     if food_deals:
         sorted_food = sorted(
             food_deals,
-            key=lambda d: (d.get("score", 0), d.get("savings", 0)),
+            key=lambda d: (d.get("opportunity_score", 0), d.get("score", 0), d.get("savings", 0)),
             reverse=True,
         )[:LIFESTYLE_TOP_N]
         food_cards = "\n".join(_lifestyle_card(d, accent_color="#e67e22") for d in sorted_food)
@@ -778,7 +918,7 @@ def build_email_html(
     if home_deals:
         sorted_home = sorted(
             home_deals,
-            key=lambda d: (d.get("score", 0), d.get("savings", 0)),
+            key=lambda d: (d.get("opportunity_score", 0), d.get("score", 0), d.get("savings", 0)),
             reverse=True,
         )[:LIFESTYLE_TOP_N]
         home_cards = "\n".join(_lifestyle_card(d, accent_color="#8e44ad") for d in sorted_home)
@@ -819,12 +959,14 @@ def build_email_html(
 
   <!-- Summary bar -->
   <div style="background:#fff;border:1px solid #d0d7de;border-top:none;
-              border-radius:0 0 10px 10px;padding:12px 20px;margin-bottom:18px;">
+              border-radius:0 0 10px 10px;padding:12px 20px;margin-bottom:14px;">
     <strong>{len(deals)}</strong> product deal(s) found{flash_note}{cct_note}{fin_note}{food_note}{home_note}
     &nbsp;·&nbsp;
     <strong style="color:#1a7f37;">~${all_savings:,} AUD</strong> total possible savings
   </div>
 
+  {net_worth_bar_html}
+  {tier1_section}
   {deals_section}
   {cct_section}
   {fin_section}
