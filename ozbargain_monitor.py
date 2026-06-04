@@ -155,8 +155,8 @@ MIN_VOTES      = int(os.getenv("MIN_VOTES",    "30"))
 MIN_COMMENTS   = int(os.getenv("MIN_COMMENTS", "10"))
 MIN_CLICKS     = int(os.getenv("MIN_CLICKS",   "200"))
 MAX_AGE_HOURS  = 999999  # No age limit — fetch all available deals
-MIN_SCORE      = int(os.getenv("MIN_SCORE",    "7"))
-MIN_SAVINGS    = int(os.getenv("MIN_SAVINGS",  "200"))
+MIN_SCORE      = int(os.getenv("MIN_SCORE",    "6"))
+MIN_SAVINGS    = int(os.getenv("MIN_SAVINGS",  "100"))
 
 ANTHROPIC_API_KEY  = os.getenv("ANTHROPIC_API_KEY")
 GMAIL_TO           = os.getenv("GMAIL_TO")   # comma-separated for multiple recipients
@@ -740,8 +740,8 @@ FIN_MIN_VOTES    = 10
 FIN_MIN_COMMENTS = 3
 FIN_MIN_CLICKS   = 30
 FIN_MIN_SCORE    = 6
-FIN_MIN_SAVINGS  = int(os.getenv("FIN_MIN_SAVINGS", "200"))   # min $ value for financial deals
-TRAVEL_MIN_SAVINGS = int(os.getenv("TRAVEL_MIN_SAVINGS", "200"))  # min $ value for travel deals
+FIN_MIN_SAVINGS  = int(os.getenv("FIN_MIN_SAVINGS", "100"))   # min $ value for financial deals
+TRAVEL_MIN_SAVINGS = int(os.getenv("TRAVEL_MIN_SAVINGS", "100"))  # min $ value for travel deals
 
 
 def _parse_expiry(meta_attr: dict) -> str:
@@ -1296,8 +1296,8 @@ FOOD_MIN_VOTES    = 20
 FOOD_MIN_COMMENTS = 3
 FOOD_MIN_CLICKS   = 50
 FOOD_MIN_SCORE    = 5
-FOOD_MIN_SAVINGS  = 200   # unified $200 minimum across all categories
-HOME_MIN_SAVINGS  = 200   # unified $200 minimum across all categories
+FOOD_MIN_SAVINGS  = 100   # unified $100 minimum across all categories
+HOME_MIN_SAVINGS  = 100   # unified $100 minimum across all categories
 
 
 def fetch_lifestyle_deals(feeds: list[str], label: str) -> list[dict]:

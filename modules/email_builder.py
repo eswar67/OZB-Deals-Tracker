@@ -415,7 +415,8 @@ def _cc_travel_card(deal: dict) -> str:
         pts_brand = pts_match.group(2).capitalize()
         try:
             pts       = int(pts_raw)
-            cpp       = 0.0135
+            from modules.value_parser import QANTAS_CPP, VELOCITY_CPP
+            cpp       = VELOCITY_CPP if pts_brand.lower() == "velocity" else QANTAS_CPP
             pts_value = int(pts * cpp)
             points_html = f"""
 <div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:6px;
@@ -808,7 +809,6 @@ def build_email_html(
       <div style="font-size:11px;opacity:0.85;margin-top:2px;">
         {len(sorted_cct)} deal(s) · {sub_str}
         &nbsp;·&nbsp; ~${cct_total_savings:,} AUD total value
-        &nbsp;·&nbsp; Points valued at $0.0135/pt (Qantas &amp; Velocity)
       </div>
     </div>
     <div style="background:#f8f7ff;border:1px solid #c7d2fe;border-top:none;
@@ -841,7 +841,7 @@ def build_email_html(
                 padding:14px 20px;color:#fff;">
       <div style="font-size:17px;font-weight:800;">🍎 Food &amp; Groceries</div>
       <div style="font-size:11px;opacity:0.85;margin-top:2px;">
-        Top {len(sorted_food)} of {len(food_deals)} deal(s) · supermarket, meal kits, groceries · score≥5 · savings≥$200
+        Top {len(sorted_food)} of {len(food_deals)} deal(s) · supermarket, meal kits, groceries · score≥5 · savings≥$100
       </div>
     </div>
     <div style="background:#fffaf5;border:1px solid #ffe0b2;border-top:none;
@@ -867,7 +867,7 @@ def build_email_html(
                 padding:14px 20px;color:#fff;">
       <div style="font-size:17px;font-weight:800;">🏠 Home &amp; Appliances</div>
       <div style="font-size:11px;opacity:0.85;margin-top:2px;">
-        Top {len(sorted_home)} of {len(home_deals)} deal(s) · whitegoods, kitchen, vacuum, appliances · score≥5 · savings≥$200
+        Top {len(sorted_home)} of {len(home_deals)} deal(s) · whitegoods, kitchen, vacuum, appliances · score≥5 · savings≥$100
       </div>
     </div>
     <div style="background:#fdf5ff;border:1px solid #e8d5f5;border-top:none;
@@ -897,7 +897,7 @@ def build_email_html(
                 padding:14px 20px;color:#fff;">
       <div style="font-size:17px;font-weight:800;">📦 More Categories</div>
       <div style="font-size:11px;opacity:0.85;margin-top:2px;">
-        Top {len(sorted_extra)} of {len(extra_deals)} deal(s) · {cat_str} · savings≥$200
+        Top {len(sorted_extra)} of {len(extra_deals)} deal(s) · {cat_str} · savings≥$100
       </div>
     </div>
     <div style="background:#f9fafb;border:1px solid #d1d5db;border-top:none;
@@ -946,8 +946,8 @@ def build_email_html(
               border-top:1px solid #e8e8e8;text-align:center;">
     Product filters: score≥{min_score} · savings≥${min_savings:,} · votes≥{min_votes}
     · comments≥{min_comments} · clicks≥{min_clicks} · no age limit
-    <br>CC/Travel &amp; Banking filters: score≥5 · savings≥${fin_min_savings:,} · Qantas/Velocity pts at $0.0135/pt · no age limit
-    <br>Food, Home &amp; Other categories: top 5 · score≥5 · savings≥$200 · votes≥20 · comments≥3 · clicks≥50
+    <br>CC/Travel &amp; Banking filters: score≥5 · savings≥${fin_min_savings:,} · no age limit
+    <br>Food, Home &amp; Other categories: top 5 · score≥5 · savings≥$100 · votes≥20 · comments≥3 · clicks≥50
     <br>
     <a href="https://www.ozbargain.com.au/cat/financial" style="color:#1a7f37;margin-right:12px;">
       Financial deals
