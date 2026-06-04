@@ -705,104 +705,37 @@ def _opportunity_badge(deal: dict) -> str:
 
 
 
-def _award_flights_section(routes: list) -> str:
-    """Live award availability from seats.aero — real dates, seats, miles."""
+def _travel_arb_section(routes: list) -> str:
+    """Free award-search deep-links per route (PointsYeah / AwardTool / seats.aero)."""
     if not routes:
         return ""
 
     route_blocks = ""
     for r in routes:
-        rows = r.get("rows", [])
-        if not rows:
-            route_blocks += f"""
-<div style="border-bottom:2px solid #bfdbfe;padding:10px 0;">
-  <div style="font-weight:800;font-size:14px;color:#1e3a8a;">✈️ {r['label']}</div>
-  <div style="font-size:11px;color:#888;margin-top:3px;">No award seats found in the search window.</div>
-</div>"""
-            continue
-
-        seat_rows = ""
-        for s in rows:
-            cabin_color = "#7c3aed" if s["cabin"] == "Business" else "#1a7f37"
-            direct_tag  = '<span style="color:#1a7f37;font-weight:700;">Direct</span>' if s["direct"] else '<span style="color:#888;">1+ stop</span>'
-            airline     = f' · {s["airline"]}' if s.get("airline") else ""
-            seats_tag   = f'{s["seats"]} seat{"s" if s["seats"] != 1 else ""}' if s.get("seats") else "seats avail"
-            seat_rows += f"""
-<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin:4px 0;
-            border-bottom:1px solid #e0e7ff;padding-bottom:3px;font-size:11px;">
-  <span style="min-width:84px;font-weight:700;color:#1e3a8a;">{s['date']}</span>
-  <span style="min-width:74px;color:{cabin_color};font-weight:700;">{s['cabin']}</span>
-  <span style="min-width:200px;color:#333;">{s['program']}</span>
-  <span style="color:#555;">{s['miles']:,} miles</span>
-  <span style="color:#b45309;font-weight:600;">{seats_tag}</span>
-  <span style="color:#666;font-size:10px;">{direct_tag}{airline}</span>
-</div>"""
-
-        more = f' · {r["total"] - len(rows)} more' if r.get("total", 0) > len(rows) else ""
-        route_blocks += f"""
-<div style="border-bottom:2px solid #bfdbfe;padding:12px 0;margin-bottom:4px;">
-  <div style="font-weight:800;font-size:14px;color:#1e3a8a;">
-    ✈️ {r['label']} <span style="font-size:11px;font-weight:400;color:#6b7280;">
-    {len(rows)} option(s){more}</span>
-  </div>
-  {seat_rows}
-</div>"""
-
-    return f"""
-  <!-- Live award availability (seats.aero) -->
-  <div style="background:#eff6ff;border:2px solid #60a5fa;border-radius:10px;
-              padding:14px 18px;margin-bottom:16px;">
-    <div style="font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:2px;">
-      ✈️ Live Award Availability — SYD to India
-    </div>
-    <div style="font-size:11px;color:#888;margin-bottom:10px;">
-      Real seats from seats.aero · Economy &amp; Business · book directly with the program
-    </div>
-    {route_blocks}
-  </div>"""
-
-
-def _travel_arb_section(routes: list) -> str:
-    """Award redemption booking links — no point/price assumptions."""
-    if not routes:
-        return ""
-
-    # All routes share the same program links — render the program list once.
-    programs = routes[0].get("programs", [])
-    prog_html = ""
-    for p in programs:
-        book_link = (
-            f'<a href="{p["url"]}" style="font-size:11px;color:#0969da;font-weight:700;'
-            f'text-decoration:none;">Search awards →</a>' if p.get("url") else ""
+        links = r.get("links", [])
+        links_html = " &nbsp;·&nbsp; ".join(
+            f'<a href="{l["url"]}" style="color:#0969da;font-weight:700;'
+            f'text-decoration:none;">{l["name"]} →</a> '
+            f'<span style="color:#999;font-size:10px;">({l["note"]})</span>'
+            for l in links
         )
-        prog_html += f"""
-<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin:5px 0;
-            border-bottom:1px solid #e0e7ff;padding-bottom:4px;font-size:12px;">
-  <span style="min-width:200px;font-weight:600;color:#1e3a8a;">{p['label']}</span>
-  <span style="color:#666;font-size:11px;flex:1;">{p.get('note','')}</span>
-  {book_link}
+        route_blocks += f"""
+<div style="border-bottom:1px solid #e0e7ff;padding:8px 0;font-size:12px;">
+  <span style="font-weight:800;color:#1e3a8a;">✈️ {r['label']}</span><br>
+  <span style="font-size:11px;">{links_html}</span>
 </div>"""
 
-    routes_html = "".join(
-        f'<span style="display:inline-block;background:#dbeafe;color:#1e3a8a;'
-        f'font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;'
-        f'margin:3px 4px 3px 0;">✈️ {r["label"]} <span style="font-weight:400;'
-        f'color:#3b82f6;">{r.get("via","")}</span></span>'
-        for r in routes
-    )
-
     return f"""
-  <!-- Award Flight Redemption links -->
+  <!-- Free award-search deep-links -->
   <div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:10px;
               padding:14px 18px;margin-bottom:16px;">
     <div style="font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:2px;">
-      ✈️ Award Flight Redemptions — SYD to India
+      ✈️ Award Flight Search — SYD to India
     </div>
     <div style="font-size:11px;color:#888;margin-bottom:10px;">
-      Search live award availability &amp; pricing directly with each program
+      Click a free tool to see live availability, dates &amp; seats across all programs
     </div>
-    <div style="margin-bottom:10px;">{routes_html}</div>
-    {prog_html}
+    {route_blocks}
   </div>"""
 
 
@@ -885,7 +818,6 @@ def build_email_html(
     fin_min_savings: int = 200,
     travel_min_savings: int = 200,
     travel_arb: list = None,
-    award_flights: list = None,
     extra_deals: list = None,
     briefing: dict = None,
 ) -> str:
@@ -895,7 +827,6 @@ def build_email_html(
     home_deals        = home_deals        or []
     extra_deals       = extra_deals       or []
     travel_arb        = travel_arb        or []
-    award_flights     = award_flights     or []
     briefing          = briefing          or {}
     total_savings = sum(d.get("savings", 0) for d in deals)
     flash_count   = sum(1 for d in deals if d.get("is_flash"))
@@ -940,7 +871,6 @@ def build_email_html(
         for d in deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     )
     briefing_html        = _briefing_section(briefing)
-    award_flights_html   = _award_flights_section(award_flights)
     travel_arb_html      = _travel_arb_section(travel_arb)
 
     # ── Tier 1 "Act Now" callout section ───────────────────────────────────────
@@ -1158,7 +1088,6 @@ def build_email_html(
   {food_section}
   {home_section}
   {extra_section}
-  {award_flights_html}
   {travel_arb_html}
 
   <!-- Footer -->

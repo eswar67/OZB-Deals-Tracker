@@ -28,3 +28,4 @@ __pycache__/
 
 # One-off scripts
 fix_db.py
+deal_history.db
