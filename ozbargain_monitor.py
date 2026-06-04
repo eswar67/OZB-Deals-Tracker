@@ -47,7 +47,6 @@ from modules.price_intel    import analyse_all
 from modules.prefs          import match_all
 from modules.email_builder  import build_email_html
 from modules.value_parser   import parse_all as parse_deal_values
-from modules.personal_score import score_all_personal
 from modules.briefing       import build_briefing
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -1597,12 +1596,10 @@ def send_gmail_alert(
     note_str = " · " + " · ".join(notes) if notes else ""
 
     all_categorised = deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
-    tier1_count   = sum(1 for d in all_categorised if d.get("tier") == "1_action")
     total_deals   = len(all_categorised)
     total_savings = sum(d.get("savings", 0) for d in all_categorised)
-    tier1_str = f" · 🔴 {tier1_count} Act-Now" if tier1_count else ""
     subject = (
-        f"🤖 OZB | {flash_prefix}{total_deals} deals{tier1_str}{note_str} "
+        f"🤖 OZB | {flash_prefix}{total_deals} deals{note_str} "
         f"· ~${total_savings:,} AUD savings"
     )
 
@@ -1847,28 +1844,12 @@ def main():
         top_deals, fin_deals, cc_travel_deals, food_deals, home_deals
     )
 
-    # 12b. Personal opportunity scoring
-    log.info("── Personal opportunity scoring ──")
-    all_sections = [
-        (top_deals,          "product"),
-        (fin_deals,          "banking"),
-        (cc_travel_deals,    "credit_card"),
-        (food_deals,         "food"),
-        (home_deals,         "home"),
-        (extra_deals,        "other"),
-    ]
-    for deal_list, section_tag in all_sections:
-        for d in deal_list:
-            d.setdefault("_section", section_tag)
-        score_all_personal(deal_list)
-
-
-    # 12d. Morning Briefing
+    # 12b. Morning Briefing — top deals by savings across all sections
     log.info("── Morning Briefing ──")
-    all_tier1 = [d for d in (top_deals + fin_deals + cc_travel_deals + food_deals + home_deals + extra_deals)
-                 if d.get("tier") == "1_action"]
-    briefing = build_briefing(all_tier1)
-    log.info(f"Briefing: {briefing['action_count']} actions · ${briefing['total_value']:,} · {briefing['total_minutes']}min")
+    all_flat = top_deals + fin_deals + cc_travel_deals + food_deals + home_deals + extra_deals
+    top_by_savings = sorted(all_flat, key=lambda d: d.get("savings", 0), reverse=True)[:5]
+    briefing = build_briefing(top_by_savings)
+    log.info(f"Briefing: {briefing['action_count']} actions · ${briefing['total_value']:,}")
 
     creds = get_google_creds()
     send_gmail_alert(
