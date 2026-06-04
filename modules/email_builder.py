@@ -687,57 +687,6 @@ def _opportunity_badge(deal: dict) -> str:
 
 
 
-def _life_events_section(alerts: list) -> str:
-    if not alerts:
-        return ""
-    rows = ""
-    for a in alerts:
-        icon      = a.get("urgency_icon", "🔵")
-        value_str = f'<span style="color:#1a7f37;font-weight:700;">~${a["estimated_value"]:,} saving</span>' if a.get("estimated_value") else ""
-        lines_html = "".join(
-            f'<div style="font-size:11px;color:#555;margin-top:2px;">• {l}</div>'
-            for l in a.get("detail_lines", [])[:3] if l
-        )
-        action_html = (
-            f'<div style="font-size:11px;color:#0969da;margin-top:4px;font-style:italic;">'
-            f'→ {a["action"][:140]}</div>'
-        ) if a.get("action") else ""
-        # Negotiation script — collapsed details block
-        script = a.get("script", "")
-        script_html = ""
-        if script:
-            safe = script.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\n","<br>")
-            script_html = (
-                f'<details style="margin-top:6px;">'
-                f'<summary style="font-size:11px;color:#0969da;cursor:pointer;font-weight:700;">'
-                f'📋 View negotiation script</summary>'
-                f'<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;'
-                f'padding:10px;margin-top:6px;font-size:11px;color:#1e3a5f;'
-                f'font-family:monospace;white-space:pre-wrap;line-height:1.5;">{safe}</div>'
-                f'</details>'
-            )
-        rows += f"""
-<div style="border-bottom:1px solid #fee2e2;padding:10px 0;{'background:#fff8f8;' if a.get('urgency')=='immediate' else ''}">
-  <div style="font-weight:700;font-size:13px;">{icon} {a['headline']}</div>
-  {lines_html}
-  {action_html}
-  {script_html}
-  <div style="margin-top:4px;">{value_str}
-    <span style="font-size:10px;color:#888;margin-left:8px;">{a['days_until']} days away</span>
-  </div>
-</div>"""
-    return f"""
-  <!-- Life Events section -->
-  <div style="background:#fff5f5;border:2px solid #fca5a5;border-radius:10px;
-              padding:14px 18px;margin-bottom:16px;">
-    <div style="font-size:15px;font-weight:800;color:#dc2626;margin-bottom:2px;">
-      📅 Life Events — Action Required
-    </div>
-    <div style="font-size:11px;color:#888;margin-bottom:10px;">
-      Upcoming events that create financial opportunities
-    </div>
-    {rows}
-  </div>"""
 
 
 def _money_audit_section(opps: list) -> str:
@@ -859,14 +808,12 @@ def _briefing_section(briefing: dict) -> str:
     actions = briefing["actions"]
     rows = ""
     for i, a in enumerate(actions, 1):
-        script_note = ' <span style="font-size:10px;color:#0969da;">📋 Script ready</span>' if a.get("has_script") else ""
         rows += (
             f'<div style="display:flex;align-items:baseline;gap:10px;padding:6px 0;'
             f'border-bottom:1px solid #f0fdf4;">'
             f'<span style="font-size:14px;font-weight:800;color:#1a7f37;min-width:18px;">#{i}</span>'
             f'<div style="flex:1;">'
             f'<span style="font-weight:700;font-size:12px;">{a["icon"]} {a["title"]}</span>'
-            f'{script_note}'
             f'<div style="font-size:10px;color:#666;margin-top:1px;">{a["one_liner"]}</div>'
             f'</div>'
             f'<span style="font-size:12px;font-weight:800;color:#1a7f37;white-space:nowrap;">'
@@ -905,7 +852,6 @@ def build_email_html(
     max_age_hours: int = 24,
     fin_min_savings: int = 200,
     travel_min_savings: int = 200,
-    life_event_alerts: list = None,
     money_audit: list = None,
     travel_arb: list = None,
     extra_deals: list = None,
@@ -916,7 +862,6 @@ def build_email_html(
     food_deals        = food_deals        or []
     home_deals        = home_deals        or []
     extra_deals       = extra_deals       or []
-    life_event_alerts = life_event_alerts or []
     money_audit       = money_audit       or []
     travel_arb        = travel_arb        or []
     briefing          = briefing          or {}
@@ -963,7 +908,6 @@ def build_email_html(
         for d in deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     )
     briefing_html        = _briefing_section(briefing)
-    life_events_html     = _life_events_section(life_event_alerts)
     money_audit_html     = _money_audit_section(money_audit)
     travel_arb_html      = _travel_arb_section(travel_arb)
 
@@ -1175,7 +1119,6 @@ def build_email_html(
   </div>
 
   {briefing_html}
-  {life_events_html}
   {money_audit_html}
   {travel_arb_html}
   {tier1_section}

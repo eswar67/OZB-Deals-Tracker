@@ -48,10 +48,8 @@ from modules.prefs          import match_all
 from modules.email_builder  import build_email_html
 from modules.value_parser   import parse_all as parse_deal_values
 from modules.personal_score import score_all_personal
-from modules.life_events    import get_life_event_alerts
 from modules.money_audit    import get_money_audit
 from modules.travel_arb     import get_travel_arb
-from modules.negotiation    import add_negotiation_scripts
 from modules.briefing       import build_briefing
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -1564,7 +1562,6 @@ def send_gmail_alert(
     food_deals: list[dict] = None,
     home_deals: list[dict] = None,
     extra_deals: list[dict] = None,
-    life_event_alerts: list[dict] = None,
     money_audit: list[dict] = None,
     travel_arb: list[dict] = None,
     briefing: dict = None,
@@ -1578,7 +1575,6 @@ def send_gmail_alert(
     food_deals      = food_deals      or []
     home_deals         = home_deals         or []
     extra_deals        = extra_deals        or []
-    life_event_alerts  = life_event_alerts  or []
     money_audit        = money_audit        or []
     travel_arb         = travel_arb         or []
     briefing           = briefing           or {}
@@ -1596,12 +1592,9 @@ def send_gmail_alert(
     tier1_count   = sum(1 for d in all_categorised if d.get("tier") == "1_action")
     total_deals   = len(all_categorised)
     total_savings = sum(d.get("savings", 0) for d in all_categorised)
-    tier1_str      = f" · 🔴 {tier1_count} Act-Now" if tier1_count else ""
-    intel_count    = len([a for a in life_event_alerts if a.get("urgency") in ("immediate","soon")]) + \
-                     len([o for o in money_audit if o.get("estimated_value", 0) >= 500])
-    intel_str      = f" · 🧠 {intel_count} intel" if intel_count else ""
+    tier1_str = f" · 🔴 {tier1_count} Act-Now" if tier1_count else ""
     subject = (
-        f"🤖 OZB | {flash_prefix}{total_deals} deals{tier1_str}{intel_str}{note_str} "
+        f"🤖 OZB | {flash_prefix}{total_deals} deals{tier1_str}{note_str} "
         f"· ~${total_savings:,} AUD savings"
     )
 
@@ -1637,7 +1630,6 @@ def send_gmail_alert(
         min_clicks=MIN_CLICKS,
         fin_min_savings=FIN_MIN_SAVINGS,
         travel_min_savings=TRAVEL_MIN_SAVINGS,
-        life_event_alerts=life_event_alerts,
         money_audit=money_audit,
         travel_arb=travel_arb,
         briefing=briefing,
@@ -1864,13 +1856,7 @@ def main():
         score_all_personal(deal_list)
 
 
-    # 12d. Tier-1 intelligence modules
-    log.info("── Life Event Engine ──")
-    life_event_alerts = get_life_event_alerts(lookahead_days=120)
-
-    log.info("── Negotiation Scripts ──")
-    life_event_alerts = add_negotiation_scripts(life_event_alerts)
-
+    # 12d. Intelligence modules
     log.info("── Money Left on Table Audit ──")
     money_audit = get_money_audit()
 
@@ -1880,7 +1866,7 @@ def main():
     log.info("── Morning Briefing ──")
     all_tier1 = [d for d in (top_deals + fin_deals + cc_travel_deals + food_deals + home_deals + extra_deals)
                  if d.get("tier") == "1_action"]
-    briefing = build_briefing(all_tier1, life_event_alerts, money_audit)
+    briefing = build_briefing(all_tier1, [], money_audit)
     log.info(f"Briefing: {briefing['action_count']} actions · ${briefing['total_value']:,} · {briefing['total_minutes']}min")
 
     creds = get_google_creds()
@@ -1891,7 +1877,6 @@ def main():
         food_deals=food_deals,
         home_deals=home_deals,
         extra_deals=extra_deals,
-        life_event_alerts=life_event_alerts,
         money_audit=money_audit,
         travel_arb=travel_arb,
         briefing=briefing,

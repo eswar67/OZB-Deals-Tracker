@@ -28,8 +28,8 @@ def _estimate_time(action_type: str) -> int:
 
 def build_briefing(
     tier1_deals: list[dict],
-    life_event_alerts: list[dict],
-    money_audit: list[dict],   # kept for signature compatibility, not used in briefing
+    life_event_alerts: list[dict] = None,  # unused, kept for compatibility
+    money_audit: list[dict] = None,        # unused, kept for compatibility
 ) -> dict:
     """
     Build the morning briefing from today's actual deals + urgent life events only.
