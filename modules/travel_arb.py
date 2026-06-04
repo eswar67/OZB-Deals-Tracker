@@ -12,6 +12,7 @@ No hardcoded award charts, point costs, or fabricated availability.
 
 import logging
 import urllib.parse
+from datetime import date, timedelta
 
 log = logging.getLogger(__name__)
 
@@ -22,23 +23,43 @@ ROUTES = [
 ]
 
 
+def _gyoza_url(origin: str, dest: str) -> str:
+    """
+    Gyoza Flights deep-link — free Qantas Classic Rewards + Velocity finder (AU).
+    flexibleWithDates=true shows a calendar of availability, so the exact
+    departureDate just anchors the month (we use ~60 days out).
+    """
+    dep = (date.today() + timedelta(days=60)).isoformat()
+    params = {
+        "departureAirportCode": origin,
+        "arrivalAirportCode":   dest,
+        "departureDate":        dep,
+        "usePoints":            "true",
+        "tripType":             "O",          # one-way
+        "flexibleWithDates":    "true",       # show a date range
+        "travelClass":          "ALL",
+        "adults":               "1",
+    }
+    return "https://gyozaflights.com/flights?" + urllib.parse.urlencode(params)
+
+
 def _search_links(origin: str, dest: str) -> list[dict]:
-    """Free award-search deep-links for a route, across all programs."""
+    """Free award-search deep-links for a route."""
     return [
+        {
+            "name": "Gyoza Flights",
+            "note": "free · Qantas + Velocity · flexible dates",
+            "url":  _gyoza_url(origin, dest),
+        },
         {
             "name": "PointsYeah",
             "note": "free login · all programs",
             "url":  f"https://www.pointsyeah.com/search?origin={origin}&destination={dest}",
         },
         {
-            "name": "AwardTool",
-            "note": "free · multi-program",
-            "url":  f"https://www.awardtool.com/?origin={origin}&destination={dest}",
-        },
-        {
             "name": "seats.aero",
             "note": "free web search",
-            "url":  f"https://seats.aero/search?"
+            "url":  "https://seats.aero/search?"
                     + urllib.parse.urlencode({"origin": origin, "destination": dest}),
         },
     ]

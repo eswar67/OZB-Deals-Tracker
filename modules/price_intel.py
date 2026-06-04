@@ -13,8 +13,6 @@ import re
 import logging
 import urllib.parse
 
-import requests
-from bs4 import BeautifulSoup
 
 # Shared rate limiter — imported from main module at call time to avoid circular import
 def _get_limiter():
@@ -98,9 +96,7 @@ def detect_cashback(deal: dict) -> dict:
     deal["cashback_url"]      = cb_url
 
     if platform:
-        log.info(
-            f"  Cashback: {platform} ~{pct}% — {deal['title'][:50]}"
-        )
+        log.info(f"  Cashback available via {platform} — {deal['title'][:50]}")
     return deal
 
 
@@ -127,120 +123,6 @@ def detect_price_beat(deal: dict) -> dict:
 
     deal["price_beat_stores"] = stores[:3]   # top 3
     return deal
-
-
-def _clean_product_query(title: str) -> str:
-    """Build a clean StaticICE search query from a deal title."""
-    q = re.sub(r"\([^)]*\)", "", title)            # remove (Was $X) / (RRP $X) etc
-    q = re.sub(r"\s*@.*$", "", q)                  # remove everything from @ onwards (merchant)
-    q = re.sub(r'["""\'`/\\|:;]', " ", q)          # strip inch marks, quotes, slashes, colons
-    q = re.sub(r"\d+(?:\.\d+)?\s*[\"″]", "", q)   # strip size like 10.9" / 14.6"
-    q = re.sub(
-        r"\$[\d,]+(?:\.\d+)?|[\d]+%|deliver(?:ed|y)?|shipping|"
-        r"\bsave\b|\bdeal\b|\boff\b|\bfree\b|australia[n]?|"
-        r"\bwas\b|\bnow\b|\bwith\b|\bvia\b|\bplus\b|"
-        r"\bwi-?fi\b|\bbluetooth\b|\busb[\w.-]*\b|"    # strip USB specs (USB3.2, USB-C, etc.)
-        r"\bgaming hub\b|\bhub\b|\bstation\b|"          # strip generic product category nouns
-        r"\bwireless\b|\bheadphones?\b|\bearphones?\b|\bearbuds?\b|"
-        r"\bspeaker[s]?\b|\bmonitor[s]?\b|\blaptop[s]?\b|\btablet[s]?\b|"
-        r"\bphone[s]?\b|\bcpu\b|\bgpu\b|\bprocessor\b|\bgraphics\b|\bcard\b|"
-        r"\bc&c\b|\bin-store\b|\bin store\b|\bdelivered\b",
-        " ",
-        q,
-        flags=re.IGNORECASE,
-    )
-    # Strip storage/RAM specs like "6GB/128GB", "256GB", "12GB"
-    q = re.sub(r"\d+\s*[GT]B(?:\s*/\s*\d+\s*[GT]B)?", "", q, flags=re.IGNORECASE)
-    # Strip screen size decimals like "14.6" "10.9" "65.0" (no inch mark needed)
-    q = re.sub(r"\b\d{1,3}\.\d\b", " ", q)
-    # Strip lone punctuation / single-char tokens left behind (dashes, dots, etc.)
-    q = re.sub(r"(?<!\w)[-.](?!\w)", " ", q)
-    words = q.split()
-    return " ".join(words[:7])  # increased from 5 → 7 so model numbers aren't cut off
-
-
-def _UNUSED_parse_staticice_rows(soup, query: str) -> list[dict]:  # kept for reference only
-    """
-    Parse all product+store+price rows from a StaticICE results page.
-
-    StaticICE row structure (2 <td> per <tr>):
-      td[0]: "$399.00"
-      td[1]: "Bose QuietComfort 45 Headphones - Black<store-name>(states)www.store.com updated:..."
-      links: /cgi-bin/redirect.cgi?name=StoreName&linkid=...&newurl=...
-
-    Returns list of {price, store, product, store_url} sorted by price ascending.
-    Relevance-filters to rows that match at least 1/3 of query keywords.
-    """
-    query_words = set(
-        w for w in query.lower().split()
-        if len(w) > 3 and w not in {
-            "with", "from", "that", "this", "plus", "pack",
-            "deal", "sale", "save", "shipped", "delivered",
-        }
-    )
-    MIN_OVERLAP = max(1, len(query_words) // 3)
-
-    entries = []
-    seen = set()
-
-    for row in soup.find_all("tr"):
-        tds = row.find_all("td", recursive=False)
-        if len(tds) < 2:
-            continue
-
-        # Price is in the first td
-        price_text = tds[0].get_text(strip=True)
-        m = re.match(r"\$\s*([\d,]+(?:\.\d+)?)", price_text)
-        if not m:
-            continue
-        try:
-            price = int(float(m.group(1).replace(",", "")))
-        except ValueError:
-            continue
-        if price < 5 or price > 50000:
-            continue
-
-        # Relevance: check td[1] text against query words
-        detail_text = tds[1].get_text(separator=" ", strip=True).lower()
-        overlap = sum(1 for w in query_words if w in detail_text)
-        if overlap < MIN_OVERLAP:
-            continue
-
-        # Store name: extract from redirect link name= param
-        store = ""
-        store_url = ""
-        for a in row.find_all("a", href=True):
-            href = a["href"]
-            nm = re.search(r"name=([^&]+)", href)
-            url_m = re.search(r"newurl=([^&]+)", href)
-            if nm:
-                store = urllib.parse.unquote_plus(nm.group(1))
-                if url_m:
-                    store_url = urllib.parse.unquote_plus(url_m.group(1))
-                break
-
-        # Product name: td[1] text up to the store name
-        product_raw = tds[1].get_text(strip=True)
-        product = product_raw.replace(store, "").strip()[:80] if store else product_raw[:80]
-
-        entries.append({
-            "price":     price,
-            "store":     store,
-            "product":   product,
-            "store_url": store_url,
-        })
-
-    entries.sort(key=lambda x: x["price"])
-
-    # Deduplicate: keep only the cheapest listing per store
-    seen_stores: dict[str, dict] = {}
-    for e in entries:
-        store_key = e["store"].lower().strip()
-        if store_key not in seen_stores:
-            seen_stores[store_key] = e   # already sorted, so first = cheapest
-    deduped = list(seen_stores.values())
-    deduped.sort(key=lambda x: x["price"])
-    return deduped
 
 
 # ── Claude-based market price lookup ─────────────────────────────────────────

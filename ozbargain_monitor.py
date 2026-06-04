@@ -1622,7 +1622,7 @@ def send_gmail_alert(
         f"Value: {d.get('explanation','')}\n"
         f"OZB: {d['link']}\n"
         f"Votes:{d['votes']} Comments:{d['comments']} Clicks:{d['clicks']}"
-        + (f"\nCashback: {d['cashback_platform']} ~{d['cashback_pct']:.0f}%" if d.get('cashback_platform') else "")
+        + (f"\nCashback likely via {d['cashback_platform']} — check rate" if d.get('cashback_platform') else "")
         for d in all_categorised
     )
     msg.attach(MIMEText(plain, "plain"))
