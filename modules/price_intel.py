@@ -314,8 +314,8 @@ def lookup_market_price_claude(deal: dict, client) -> dict:
         return deal
 
     deal_price_hint = f"\nThe deal price is ${deal_price:,}. " \
-                      f"A genuine RRP is typically 1.0x–1.5x the deal price. " \
-                      f"If your price would be more than 1.5x ${deal_price:,} (i.e. over ${int(deal_price*1.5):,}), return 0 instead." if deal_price > 0 else ""
+                      f"A genuine RRP is typically 1.0x–1.8x the deal price. " \
+                      f"If your price would be more than 1.8x ${deal_price:,} (i.e. over ${int(deal_price*1.8):,}), return 0 instead." if deal_price > 0 else ""
 
     prompt = f"""You are an Australian retail price expert. State the current typical Australian retail price (RRP / street price) for the SPECIFIC product in this deal title.
 
@@ -357,12 +357,12 @@ Examples:
         # Absolute bounds
         if price > 0 and (price < 5 or price > 80000):
             price = 0
-        # Relative bound: a real RRP is rarely more than 1.5x the deal price.
+        # Relative bound: a real RRP is rarely more than 1.8x the deal price.
         # Anything higher is treated as a wrong computation / hallucination.
-        if price > 0 and deal_price > 0 and price > deal_price * 1.5:
+        if price > 0 and deal_price > 0 and price > deal_price * 1.8:
             log.info(
                 f"  ⚠️  Rejected implausible market price ${price:,} "
-                f"(>1.5x deal ${deal_price:,}) — {title[:45]}"
+                f"(>1.8x deal ${deal_price:,}) — {title[:45]}"
             )
             price = 0
         # If we rejected the price, clear the note too
