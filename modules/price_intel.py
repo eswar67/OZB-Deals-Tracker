@@ -313,18 +313,27 @@ def lookup_market_price_claude(deal: dict, client) -> dict:
         _apply_market_comparison(deal, deal_price)
         return deal
 
-    prompt = f"""You are an Australian retail price expert. For the product in this deal title, state the current typical Australian market price.
+    deal_price_hint = f"\nThe deal price is ${deal_price:,}. " \
+                      f"A genuine RRP is typically 1.0x–2.5x the deal price — rarely more." if deal_price > 0 else ""
 
-Deal: {title}
+    prompt = f"""You are an Australian retail price expert. State the current typical Australian retail price (RRP / street price) for the SPECIFIC product in this deal title.
+
+Deal: {title}{deal_price_hint}
+
+Rules:
+- Identify the exact product (brand + model + capacity/size). Price THAT product.
+- Use the current street price at major AU retailers (JB Hi-Fi, Harvey Norman, Amazon AU, Officeworks).
+- If you are NOT confident of the real price for this exact model, return 0. Do NOT guess.
+- The market price must be plausible relative to the deal price. Never inflate.
 
 Reply with EXACTLY: PRICE|NOTE
-- PRICE: integer AUD (current street price at major AU retailers like JB Hi-Fi, Harvey Norman, Amazon AU). Use 0 if you cannot determine a reliable price.
-- NOTE: one short phrase like "RRP ~$X at JB Hi-Fi / Amazon" or "Market ~$X" or "Unknown"
+- PRICE: integer AUD, or 0 if not confident.
+- NOTE: short phrase e.g. "RRP ~$X at JB Hi-Fi / Amazon", or "Unknown" if PRICE is 0.
 
 Examples:
 1499|RRP ~$1,499 at JB Hi-Fi / Harvey Norman
 449|Market ~$449 at major AU retailers
-0|Specialty/niche product — price unknown"""
+0|Unknown"""
 
     try:
         lim = _get_limiter()
@@ -340,9 +349,26 @@ Examples:
         price = int(price_str) if price_str else 0
         note  = parts[1].strip() if len(parts) > 1 else ""
 
-        # Sanity: reject if price is suspiciously low or high
+        # ── Sanity guards — reject implausible prices ──────────────────────
+        note_lc = note.lower()
+        if any(w in note_lc for w in ["unknown", "unable", "not sure", "n/a", "cannot", "can't", "uncertain"]):
+            price = 0
+        # Absolute bounds
         if price > 0 and (price < 5 or price > 80000):
-            price, note = 0, ""
+            price = 0
+        # Relative bound: a real RRP is rarely more than 4x the deal price.
+        # This catches hallucinations like "$3,280 RRP" for a $128 product.
+        if price > 0 and deal_price > 0 and price > deal_price * 4:
+            log.info(
+                f"  ⚠️  Rejected implausible market price ${price:,} "
+                f"(>4x deal ${deal_price:,}) — {title[:45]}"
+            )
+            price = 0
+        # If we rejected the price, clear the note too
+        if price == 0:
+            note = ""
+        elif not note:
+            note = f"Market ~${price:,} AUD"   # fallback when Claude omits the note
 
         result = {"market_price": price, "market_note": note}
         _market_price_cache[cache_key] = result

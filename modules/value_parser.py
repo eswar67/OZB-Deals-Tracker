@@ -382,18 +382,38 @@ MATCHERS = [
 def _extract_deal_price(title: str) -> int:
     """
     Best-effort extraction of the actual deal/sale price from the title.
-    Returns the lowest *positive* dollar amount that looks like a deal price.
-    Excludes $0 (e.g. "$0 delivery", "$0 annual fee") and very low noise values.
-    Used downstream for market price comparison.
+
+    The deal price is the HEADLINE price — the first significant price that
+    appears in the title, before "Delivered/Shipped/@" and outside any
+    parenthetical plan/condition text.
+
+    Excludes:
+      - $0 (e.g. "$0 delivery", "$0 annual fee")
+      - Prices inside parentheses (often RRP, plan rates, conditions)
+      - Recurring plan rates ($X/month, $X/28-day, from $X, $X p.a.)
+      - Trivially small noise values (< $5)
     """
-    prices = _all_prices(title)
-    # Filter out $0 and trivially small amounts (e.g. "$1 handling fee")
-    meaningful = [p for p in prices if p >= 5]
-    if not meaningful:
-        return 0
-    # Heuristic: the lowest meaningful price is the deal price
-    # (e.g. "$399 + Delivery ($0 Prime)" → 399, not 0)
-    return min(meaningful)
+    # 1. Cut everything from "@" onwards (merchant name + its prices)
+    head = re.split(r"\s@\s", title, maxsplit=1)[0]
+
+    # 2. Remove parenthetical content (RRP, plan conditions, "Was $X", etc.)
+    head_no_parens = re.sub(r"\([^)]*\)", " ", head)
+
+    # 3. Remove recurring-rate prices: "$30/28-Day", "$30/month", "from $30/mo"
+    head_clean = re.sub(
+        r"(?:from\s+)?\$\s*[\d,]+(?:\.\d+)?\s*(?:/|p\.?a\.?|per\s+|a\s+)"
+        r"\s*(?:\d+[- ]?)?(?:day|days|week|month|mth|year|yr|28[- ]?day)",
+        " ",
+        head,
+        flags=re.IGNORECASE,
+    )
+
+    # First price from the cleaned headline (no parens, no plan rates)
+    for source in (re.sub(r"\([^)]*\)", " ", head_clean), head_no_parens, head, title):
+        prices = [p for p in _all_prices(source) if p >= 5]
+        if prices:
+            return prices[0]   # headline = FIRST significant price, not lowest
+    return 0
 
 
 def parse_deal_value(deal: dict, live_gift_lookup: bool = False) -> dict:
