@@ -35,32 +35,15 @@ HEADERS = {
 
 # ── Cashback detection ────────────────────────────────────────────────────────
 
-# Known merchants and their approximate ShopBack/Cashrewards cashback %
-# (conservative estimates — actual rates change; used for flagging only)
-CASHBACK_MERCHANTS: dict[str, tuple[str, float]] = {
-    # merchant keyword → (platform, approx %)
-    "amazon":        ("ShopBack",     5.0),
-    "ebay":          ("ShopBack",     1.0),
-    "catch":         ("Cashrewards",  3.0),
-    "kogan":         ("ShopBack",     3.5),
-    "jb hi-fi":      ("Cashrewards",  1.5),
-    "jbhifi":        ("Cashrewards",  1.5),
-    "harvey norman": ("Cashrewards",  2.0),
-    "harveynorman":  ("Cashrewards",  2.0),
-    "the good guys": ("Cashrewards",  2.0),
-    "myer":          ("ShopBack",     5.0),
-    "david jones":   ("ShopBack",     4.0),
-    "mwave":         ("Cashrewards",  3.0),
-    "centrecom":     ("Cashrewards",  2.0),
-    "officeworks":   ("ShopBack",     2.0),
-    "bcf":           ("ShopBack",     4.0),
-    "rebel":         ("ShopBack",     4.0),
-    "nike":          ("ShopBack",     8.0),
-    "adidas":        ("ShopBack",     8.0),
-    "booking.com":   ("ShopBack",     6.0),
-    "hotels.com":    ("Cashrewards",  5.0),
-    "agoda":         ("ShopBack",     6.0),
-    "expedia":       ("ShopBack",     6.0),
+# Merchants typically available on ShopBack/Cashrewards. We only FLAG that
+# cashback is usually available — we do NOT estimate a % (rates change daily;
+# any hardcoded number would be wrong). The user checks the live rate via the link.
+CASHBACK_MERCHANTS = {
+    "amazon", "ebay", "catch", "kogan", "jb hi-fi", "jbhifi",
+    "harvey norman", "harveynorman", "the good guys", "myer",
+    "david jones", "mwave", "centrecom", "officeworks", "bcf",
+    "rebel", "nike", "adidas", "booking.com", "hotels.com",
+    "agoda", "expedia",
 }
 
 # Keywords in deal title/description that hint at cashback being mentioned
@@ -93,39 +76,25 @@ def detect_cashback(deal: dict) -> dict:
     merchant_name = deal.get("merchant_name", "").lower()
     external_url  = deal.get("external_url", "").lower()
 
-    # 1) Check if deal title/desc explicitly mentions cashback
+    # 1) Cashback explicitly mentioned in the deal text?
     explicitly_mentioned = any(kw in title_lower for kw in CASHBACK_KEYWORDS)
 
-    # 2) Match merchant against known cashback partners
-    platform, pct = "", 0.0
-    for merchant_key, (plat, rate) in CASHBACK_MERCHANTS.items():
-        if (
-            merchant_key in title_lower
-            or merchant_key in merchant_name
-            or merchant_key in external_url
-        ):
-            platform, pct = plat, rate
-            break
+    # 2) Is this a merchant usually available on ShopBack/Cashrewards?
+    available = explicitly_mentioned or any(
+        m in title_lower or m in merchant_name or m in external_url
+        for m in CASHBACK_MERCHANTS
+    )
 
-    # If not found via merchant DB but mentioned in text, flag generically
-    if not platform and explicitly_mentioned:
-        platform = "ShopBack/Cashrewards"
-        pct = 2.0   # conservative unknown rate
+    platform = "ShopBack/Cashrewards" if available else ""
 
-    # Build cashback URL (ShopBack search for simplicity)
+    # Build cashback search URL so user checks the live rate
     cb_url = ""
-    if platform and deal.get("external_url"):
-        encoded = urllib.parse.quote(deal["external_url"])
-        if "ShopBack" in platform:
-            cb_url = f"https://www.shopback.com.au/search?query={urllib.parse.quote(deal.get('merchant_name',''))}"
-        else:
-            cb_url = f"https://www.cashrewards.com.au/search?query={urllib.parse.quote(deal.get('merchant_name',''))}"
+    if platform:
+        q = urllib.parse.quote(deal.get("merchant_name", "") or title_lower[:30])
+        cb_url = f"https://www.shopback.com.au/search?query={q}"
 
-    # Rough cashback $ estimate (only if we can guess the deal price from savings)
-    # We approximate: if total cost ≈ savings × (1 / discount fraction)
-    # But we don't know deal price reliably, so skip $ estimate
     deal["cashback_platform"] = platform
-    deal["cashback_pct"]      = pct
+    deal["cashback_pct"]      = 0.0   # no estimate — rates change; check the link
     deal["cashback_url"]      = cb_url
 
     if platform:

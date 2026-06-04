@@ -48,7 +48,6 @@ from modules.prefs          import match_all
 from modules.email_builder  import build_email_html
 from modules.value_parser   import parse_all as parse_deal_values
 from modules.personal_score import score_all_personal
-from modules.money_audit    import get_money_audit
 from modules.travel_arb     import get_travel_arb
 from modules.briefing       import build_briefing
 
@@ -748,10 +747,14 @@ TRAVEL_MIN_SAVINGS = int(os.getenv("TRAVEL_MIN_SAVINGS", "200"))  # min $ value 
 
 
 def _parse_expiry(meta_attr: dict) -> str:
-    """Extract expiry datetime string from ozb:meta and return a human-readable label."""
+    """
+    Extract expiry from ozb:meta and return a human-readable label.
+    Returns "No expiry date listed" when OzBargain has no expiry for the deal,
+    so the email is always explicit about expiry status.
+    """
     raw = meta_attr.get("expiry", "")
     if not raw:
-        return ""
+        return "No expiry date listed"
     try:
         from datetime import datetime as _dt
         # ISO format: 2026-06-10T23:59:00+10:00
@@ -760,20 +763,23 @@ def _parse_expiry(meta_attr: dict) -> str:
         delta = exp - now
         days  = delta.days
         hours = int(delta.total_seconds() / 3600)
+        date_str = exp.strftime('%a %d %b')   # e.g. "Wed 10 Jun"
         if delta.total_seconds() < 0:
             return "Expired"
         elif hours < 2:
-            return f"⏰ Expires <2h"
+            return f"⏰ Expires in <2h ({exp.strftime('%H:%M')})"
         elif hours < 24:
             return f"⏰ Expires today ({exp.strftime('%H:%M')})"
         elif days == 1:
-            return f"⏰ Expires tomorrow"
-        elif days <= 7:
-            return f"⏰ Expires {exp.strftime('%a %d %b')}"
+            return f"⏰ Expires tomorrow ({date_str})"
+        elif days <= 5:
+            return f"⏰ Expires in {days} days ({date_str})"
+        elif days <= 14:
+            return f"Expires {date_str} ({days} days)"
         else:
-            return f"Expires {exp.strftime('%d %b')}"
+            return f"Expires {exp.strftime('%d %b %Y')}"
     except Exception:
-        return ""
+        return "No expiry date listed"
 
 
 def _parse_feed_items(xml_text: str, cutoff: datetime, source_label: str) -> list[dict]:
@@ -1569,7 +1575,6 @@ def send_gmail_alert(
     food_deals: list[dict] = None,
     home_deals: list[dict] = None,
     extra_deals: list[dict] = None,
-    money_audit: list[dict] = None,
     travel_arb: list[dict] = None,
     briefing: dict = None,
 ):
@@ -1582,7 +1587,6 @@ def send_gmail_alert(
     food_deals      = food_deals      or []
     home_deals         = home_deals         or []
     extra_deals        = extra_deals        or []
-    money_audit        = money_audit        or []
     travel_arb         = travel_arb         or []
     briefing           = briefing           or {}
     flash_count        = sum(1 for d in deals if d.get("is_flash"))
@@ -1637,7 +1641,6 @@ def send_gmail_alert(
         min_clicks=MIN_CLICKS,
         fin_min_savings=FIN_MIN_SAVINGS,
         travel_min_savings=TRAVEL_MIN_SAVINGS,
-        money_audit=money_audit,
         travel_arb=travel_arb,
         briefing=briefing,
     )
@@ -1864,17 +1867,14 @@ def main():
         score_all_personal(deal_list)
 
 
-    # 12d. Intelligence modules
-    log.info("── Money Left on Table Audit ──")
-    money_audit = get_money_audit()
-
-    log.info("── Travel Arbitrage Engine ──")
+    # 12d. Award flight redemption links + morning briefing
+    log.info("── Award Flight Redemption links ──")
     travel_arb = get_travel_arb()
 
     log.info("── Morning Briefing ──")
     all_tier1 = [d for d in (top_deals + fin_deals + cc_travel_deals + food_deals + home_deals + extra_deals)
                  if d.get("tier") == "1_action"]
-    briefing = build_briefing(all_tier1, [], money_audit)
+    briefing = build_briefing(all_tier1)
     log.info(f"Briefing: {briefing['action_count']} actions · ${briefing['total_value']:,} · {briefing['total_minutes']}min")
 
     creds = get_google_creds()
@@ -1885,7 +1885,6 @@ def main():
         food_deals=food_deals,
         home_deals=home_deals,
         extra_deals=extra_deals,
-        money_audit=money_audit,
         travel_arb=travel_arb,
         briefing=briefing,
     )

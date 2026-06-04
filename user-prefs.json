@@ -1,5 +1,5 @@
 {
-  "_comment": "Edit this file to personalise OzBargain deal alerts.",
+  "_comment": "Edit this file to personalise OzBargain deal alerts. Only contains preferences and tunable constants — no assumed personal financial data.",
 
   "owner": "Eswar",
 
@@ -42,41 +42,19 @@
   "alert_mode": "digest",
   "slack_webhook_url": "",
 
+  "points_value_per_point_aud": {
+    "_note": "AUD value per frequent-flyer point — used to convert points bonuses on deals into a dollar estimate. Edit these to your own redemption values.",
+    "qantas":     0.0135,
+    "velocity":   0.0135,
+    "lifemiles":  0.012,
+    "asia_miles": 0.014,
+    "krisflyer":  0.014,
+    "amex_mrp":   0.007,
+    "default":    0.01
+  },
+
   "personal_profile": {
-    "_note": "Used for Opportunity Score and Expected Value calculations",
-
-    "monthly_grocery_spend_aud": 600,
-    "monthly_dining_spend_aud":  400,
-
-    "points_ecosystems": {
-      "qantas":    120000,
-      "velocity":   45000,
-      "lifemiles":  80000,
-      "asia_miles": 30000,
-      "amex_mrp":   95000
-    },
-
-    "credit_cards": [
-      "Amex Platinum",
-      "Westpac Altitude Black",
-      "ANZ Rewards Black"
-    ],
-
-    "property": ["Sydney PPOR", "Dubai investment"],
-
-    "high_interest_categories": [
-      "frequent_flyer_points",
-      "premium_cabin_travel",
-      "gift_cards",
-      "credit_cards",
-      "home_insurance",
-      "landlord_insurance",
-      "car_insurance",
-      "family_travel",
-      "dubai_travel",
-      "points_transfer_bonuses",
-      "hotel_status_offers"
-    ],
+    "_note": "Interest keywords only — drives relevance scoring. No assumed balances, holdings, or spending.",
 
     "high_interest_keywords": [
       "lifemiles", "velocity", "qantas points", "asia miles", "krisflyer",
@@ -98,208 +76,6 @@
       "pet food", "garden hose", "tool kit"
     ],
 
-    "travel_cpp_targets": {
-      "qantas":    1.8,
-      "velocity":  1.5,
-      "lifemiles": 1.4,
-      "asia_miles": 1.6
-    },
-
-    "insurance_renewal_months": [7, 8],
-
-    "stacking_platforms": ["ShopBack", "Cashrewards", "Qantas Shopping", "Everyday Rewards"],
-
-    "life_events": [
-      {
-        "name": "Home Insurance Renewal",
-        "date": "2026-08-01",
-        "type": "insurance",
-        "current_provider": "Youi",
-        "current_premium_aud": 2480,
-        "notes": "Sydney PPOR — home & contents"
-      },
-      {
-        "name": "Landlord Insurance Renewal",
-        "date": "2026-08-15",
-        "type": "insurance",
-        "current_provider": "EBM RentCover",
-        "current_premium_aud": 1200,
-        "notes": "Dubai investment property"
-      },
-      {
-        "name": "Car Insurance Renewal",
-        "date": "2026-09-01",
-        "type": "insurance",
-        "current_provider": "NRMA",
-        "current_premium_aud": 1800,
-        "notes": "Comprehensive"
-      },
-      {
-        "name": "Dubai Family Trip",
-        "date": "2026-12-20",
-        "type": "travel",
-        "notes": "Christmas school holidays — family of 4, business or premium economy"
-      },
-      {
-        "name": "Amex Platinum Annual Fee",
-        "date": "2026-07-15",
-        "type": "credit_card_fee",
-        "card": "Amex Platinum",
-        "annual_fee_aud": 1450,
-        "notes": "Decide retain or cancel — check retention offer first"
-      },
-      {
-        "name": "Westpac Altitude Black Annual Fee",
-        "date": "2026-10-01",
-        "type": "credit_card_fee",
-        "card": "Westpac Altitude Black",
-        "annual_fee_aud": 250,
-        "notes": "Points earning card"
-      }
-    ],
-
-    "credit_card_portfolio": [
-      {
-        "card": "Amex Platinum",
-        "issuer": "American Express",
-        "held_since": "2025-07-15",
-        "annual_fee_aud": 1450,
-        "points_program": "amex_mrp",
-        "earn_rate": 2.25,
-        "notes": "Travel insurance, lounge access, hotel status"
-      },
-      {
-        "card": "Westpac Altitude Black",
-        "issuer": "Westpac",
-        "held_since": "2024-03-01",
-        "annual_fee_aud": 250,
-        "points_program": "qantas",
-        "earn_rate": 0.75,
-        "notes": "Qantas earning on everyday spend"
-      },
-      {
-        "card": "ANZ Rewards Black",
-        "issuer": "ANZ",
-        "held_since": "2024-08-01",
-        "annual_fee_aud": 375,
-        "points_program": "velocity",
-        "earn_rate": 1.5,
-        "notes": "Velocity earning"
-      }
-    ],
-
-    "cc_churn_targets": [
-      {
-        "card": "NAB Qantas Rewards Signature",
-        "issuer": "NAB",
-        "bonus_points": 120000,
-        "annual_fee_aud": 395,
-        "min_spend_aud": 3000,
-        "min_spend_months": 3,
-        "points_program": "qantas",
-        "eligible_after_months": 18,
-        "notes": "Previously held? Check 18-month rule"
-      },
-      {
-        "card": "Citi Prestige",
-        "issuer": "Citibank",
-        "bonus_points": 200000,
-        "annual_fee_aud": 700,
-        "min_spend_aud": 5000,
-        "min_spend_months": 3,
-        "points_program": "velocity",
-        "eligible_after_months": 18,
-        "notes": "4th night free hotel benefit"
-      },
-      {
-        "card": "CommBank Ultimate Awards",
-        "issuer": "CommBank",
-        "bonus_points": 100000,
-        "annual_fee_aud": 420,
-        "min_spend_aud": 5000,
-        "min_spend_months": 3,
-        "points_program": "qantas",
-        "eligible_after_months": 12,
-        "notes": "Points transfer to Qantas 2:1"
-      }
-    ],
-
-    "savings_accounts": [
-      {
-        "bank": "ING Savings Maximiser",
-        "balance_aud": 50000,
-        "current_rate_pct": 4.5,
-        "notes": "Main savings — need to meet monthly conditions"
-      },
-      {
-        "bank": "Offset Account (Westpac)",
-        "balance_aud": 80000,
-        "current_rate_pct": 6.14,
-        "notes": "Linked to home loan — effective rate = home loan rate"
-      }
-    ],
-
-    "savings_benchmarks": [
-      { "bank": "ING Savings Maximiser",   "rate_pct": 5.5,  "conditions": "Deposit $1,000+, grow balance, 5 transactions" },
-      { "bank": "Macquarie Savings",        "rate_pct": 5.35, "conditions": "No conditions for first 4 months" },
-      { "bank": "Rabobank PremiumSaver",    "rate_pct": 5.6,  "conditions": "Grow balance each month" },
-      { "bank": "UBank Save Account",       "rate_pct": 5.5,  "conditions": "Deposit $200+/month" },
-      { "bank": "BOQ Future Saver",         "rate_pct": 5.8,  "conditions": "Age 14–35 only" }
-    ],
-
-    "travel_routes": [
-      {
-        "route": "SYD-DXB",
-        "label": "Sydney → Dubai",
-        "pax": 2,
-        "cabin": "business",
-        "typical_cash_aud": 6000,
-        "programs": {
-          "qantas":    { "points": 108000, "taxes_aud": 350 },
-          "velocity":  { "points": 96000,  "taxes_aud": 280 },
-          "lifemiles": { "points": 80000,  "taxes_aud": 120 },
-          "asia_miles":{ "points": 90000,  "taxes_aud": 200 }
-        }
-      },
-      {
-        "route": "SYD-LAX",
-        "label": "Sydney → Los Angeles",
-        "pax": 2,
-        "cabin": "business",
-        "typical_cash_aud": 7500,
-        "programs": {
-          "qantas":    { "points": 96000,  "taxes_aud": 280 },
-          "velocity":  { "points": 108000, "taxes_aud": 350 },
-          "lifemiles": { "points": 68000,  "taxes_aud": 120 },
-          "asia_miles":{ "points": 100000, "taxes_aud": 200 }
-        }
-      },
-      {
-        "route": "SYD-SIN",
-        "label": "Sydney → Singapore",
-        "pax": 4,
-        "cabin": "premium_economy",
-        "typical_cash_aud": 4800,
-        "programs": {
-          "qantas":    { "points": 54000,  "taxes_aud": 240 },
-          "velocity":  { "points": 48000,  "taxes_aud": 180 },
-          "lifemiles": { "points": 42000,  "taxes_aud": 100 },
-          "asia_miles":{ "points": 40000,  "taxes_aud": 150 }
-        }
-      },
-      {
-        "route": "SYD-NRT",
-        "label": "Sydney → Tokyo",
-        "pax": 4,
-        "cabin": "premium_economy",
-        "typical_cash_aud": 5200,
-        "programs": {
-          "qantas":    { "points": 54000,  "taxes_aud": 280 },
-          "velocity":  { "points": 54000,  "taxes_aud": 220 },
-          "lifemiles": { "points": 45000,  "taxes_aud": 110 },
-          "asia_miles":{ "points": 42000,  "taxes_aud": 160 }
-        }
-      }
-    ]
+    "stacking_platforms": ["ShopBack", "Cashrewards", "Qantas Shopping", "Everyday Rewards"]
   }
 }

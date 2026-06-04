@@ -26,19 +26,10 @@ def _estimate_time(action_type: str) -> int:
     return TIME_ESTIMATES.get(action_type, 5)
 
 
-def build_briefing(
-    tier1_deals: list[dict],
-    life_event_alerts: list[dict] = None,  # unused, kept for compatibility
-    money_audit: list[dict] = None,        # unused, kept for compatibility
-) -> dict:
-    """
-    Build the morning briefing from today's actual deals + urgent life events only.
-    Money audit items are excluded — they live in their own email section.
-    """
-    actions = []
-
-    # 1. Today's Tier 1 deals — these are real OZB deals found this run
-    for d in sorted(tier1_deals, key=lambda x: x.get("opportunity_score", 0), reverse=True)[:4]:
+def build_briefing(tier1_deals: list[dict]) -> dict:
+    """Build the morning briefing from today's actual Tier-1 OZB deals."""
+    combined = []
+    for d in sorted(tier1_deals, key=lambda x: x.get("opportunity_score", 0), reverse=True)[:5]:
         savings = d.get("savings", 0)
         title   = d.get("title", "")[:65]
         note    = d.get("ev_note") or d.get("explanation", "")[:80]
@@ -46,39 +37,13 @@ def build_briefing(
         one_liner = note
         if expiry and "Expires" in expiry:
             one_liner = f"{expiry} · {note}" if note else expiry
-        actions.append({
-            "rank_key":    savings,
+        combined.append({
             "icon":        "🔴",
             "title":       title,
             "value":       savings,
             "action_type": "deal",
             "one_liner":   one_liner,
-            "has_script":  False,
-            "source":      "deal",
         })
-
-    # 2. Urgent life events (immediate or soon) — real upcoming deadlines
-    for a in life_event_alerts:
-        if a.get("urgency") in ("immediate", "soon") and a.get("estimated_value", 0) > 0:
-            actions.append({
-                "rank_key":    a.get("estimated_value", 0),
-                "icon":        a.get("urgency_icon", "🟡"),
-                "title":       a.get("event_name", ""),
-                "value":       a.get("estimated_value", 0),
-                "action_type": a.get("alert_type", "insurance"),
-                "one_liner":   f"{a['days_until']} days away — {a.get('action','')[:70]}",
-                "has_script":  bool(a.get("script")),
-                "source":      "life_event",
-            })
-
-    # Sort deals first (by savings), then life events (by value)
-    deal_actions  = sorted([a for a in actions if a["source"] == "deal"],
-                           key=lambda x: x["rank_key"], reverse=True)
-    event_actions = sorted([a for a in actions if a["source"] == "life_event"],
-                           key=lambda x: x["rank_key"], reverse=True)
-
-    # Interleave: up to 3 deals + up to 2 life events, capped at 5 total
-    combined = (deal_actions[:3] + event_actions[:2])[:5]
 
     total_value   = sum(a["value"] for a in combined)
     total_minutes = sum(_estimate_time(a["action_type"]) for a in combined)

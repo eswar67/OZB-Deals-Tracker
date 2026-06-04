@@ -38,26 +38,6 @@ def _load_profile() -> dict:
     return {}
 
 
-# ── Known deal benchmarks (historical context) ───────────────────────────────
-DEAL_BENCHMARKS = {
-    "lifemiles": [
-        (100, "Average"), (125, "Good"), (150, "Great"),
-        (175, "Exceptional"), (200, "Rare — act immediately"),
-    ],
-    "velocity": [
-        (15, "Average"), (20, "Good"), (25, "Great"), (30, "Exceptional"),
-    ],
-    "qantas points": [
-        (15, "Average"), (20, "Good"), (30, "Great"),
-    ],
-    "asia miles": [
-        (100, "Average"), (125, "Good"), (150, "Great"), (175, "Exceptional"),
-    ],
-    "qantas wine": [
-        (10000, "Below average"), (15000, "Average"), (20000, "Good"), (25000, "Excellent"),
-    ],
-}
-
 # ── Stacking combinations ─────────────────────────────────────────────────────
 STACKING_PATTERNS = [
     {
@@ -126,35 +106,27 @@ def _probability_of_use(deal: dict, profile: dict) -> tuple[float, str]:
     combined = (deal.get("title", "") + " " + deal.get("description", "")).lower()
     savings  = deal.get("savings", 0)
 
-    # Grocery/supermarket — check against actual spend
-    if any(k in combined for k in ["woolworths", "coles", "aldi", "supermarket", "grocery"]):
-        monthly_grocery = profile.get("monthly_grocery_spend_aud", 400)
-        if savings > monthly_grocery * 2:
-            return (0.4, f"High min-spend vs ~${monthly_grocery:,}/month grocery budget")
-        return (0.8, f"Aligns with ~${monthly_grocery:,}/month grocery spend")
-
-    # Credit card sign-up bonuses
+    # Credit card sign-up bonuses — bigger bonus = more worth the effort
     if "credit card" in combined or deal.get("deal_subtype") == "credit_card":
-        existing = len(profile.get("credit_cards", []))
         if savings >= 800:
-            return (0.7, f"Strong bonus — worth adding despite {existing} existing cards")
+            return (0.7, "Strong sign-up bonus")
         if savings >= 400:
-            return (0.5, f"Moderate bonus; already hold {existing} cards")
-        return (0.3, f"Low bonus; already hold {existing} cards")
+            return (0.5, "Moderate sign-up bonus")
+        return (0.3, "Low sign-up bonus")
 
-    # Points / travel — high probability given profile
+    # Points / travel
     if any(k in combined for k in ["flight", "hotel", "points", "miles", "lounge", "cruise"]):
-        return (0.8, "Travel/points — strong match with your profile")
-
-    # Insurance
-    if any(k in combined for k in ["insurance"]):
-        return (0.6, "Insurance — useful but check renewal timing")
+        return (0.8, "Travel/points — strong match with your interests")
 
     # Gift cards — flexible, high utility
     if "gift card" in combined:
         return (0.8, "Gift cards — flexible, always useful")
 
-    # Deals with free gifts or high savings — always worth looking at
+    # Insurance
+    if "insurance" in combined:
+        return (0.6, "Insurance — useful but check timing")
+
+    # General: bigger savings = more worth acting on
     if savings >= 500:
         return (0.75, f"High-value deal — ~${savings:,} savings")
     if savings >= 200:
@@ -186,59 +158,6 @@ def _detect_stacking(deal: dict) -> str:
         if any(t in combined for t in p["triggers"]):
             return p["hint"]
     return ""
-
-
-def _benchmark_label(deal: dict) -> str:
-    combined = (deal.get("title", "") + " " + deal.get("description", "")).lower()
-    for keyword, thresholds in DEAL_BENCHMARKS.items():
-        if keyword in combined:
-            nums = re.findall(r'(\d+)(?:%|\s*bonus|\s*points|\s*pts|k\s*points)', combined)
-            if nums:
-                val   = int(nums[0])
-                label = thresholds[0][1]
-                for threshold, lbl in thresholds:
-                    if val >= threshold:
-                        label = lbl
-                return f"{label} for {keyword.title()} deal"
-    return ""
-
-
-def _flight_intelligence(deal: dict, profile: dict) -> dict:
-    combined = (deal.get("title", "") + " " + deal.get("description", "")).lower()
-    if not any(k in combined for k in ["flight", "syd", "mel", "bne", "lax", "dxb", "sin", "nrt"]):
-        return {}
-    savings = deal.get("savings", 0)
-    if savings < 200:
-        return {}
-
-    cpp_targets = profile.get("travel_cpp_targets", {})
-    ecosystems  = profile.get("points_ecosystems", {})
-
-    route_hints = []
-    for a, b in [("syd","lax"),("syd","lhr"),("syd","dxb"),("syd","sin"),("mel","lax"),("bne","lax")]:
-        if a in combined and b in combined:
-            route_hints.append(f"{a.upper()}–{b.upper()}")
-
-    best_path = ""
-    if "lifemiles" in combined or savings > 1500:
-        pts = ecosystems.get("lifemiles", 0)
-        target = cpp_targets.get("lifemiles", 1.4)
-        if pts >= 60000:
-            best_path = f"LifeMiles ({pts:,} pts) — SYD–LAX biz ~68k pts + ~$120 taxes"
-    if not best_path and "qantas" in combined:
-        pts = ecosystems.get("qantas", 0)
-        best_path = f"Qantas FF ({pts:,} pts) — check classic reward availability"
-
-    verdict = ("Book immediately" if savings >= 3000
-               else "Compare points vs cash" if savings >= 1500
-               else "Good deal — worth considering")
-
-    return {
-        "route":     ", ".join(route_hints) if route_hints else "Route detected",
-        "best_path": best_path,
-        "verdict":   verdict,
-        "cash_saving": savings,
-    }
 
 
 def score_personal(deal: dict, profile: dict) -> dict:
@@ -295,8 +214,8 @@ def score_personal(deal: dict, profile: dict) -> dict:
     deal["tier_label"]         = tier_label
     deal["personal_reasons"]   = personal_reasons
     deal["stacking_hint"]      = _detect_stacking(deal)
-    deal["flight_intel"]       = _flight_intelligence(deal, profile)
-    deal["deal_quality_label"] = _benchmark_label(deal)
+    deal["flight_intel"]       = {}     # removed — relied on assumed points balances
+    deal["deal_quality_label"] = ""     # removed — relied on hardcoded benchmarks
     deal["urgency_note"]       = urgency_note
 
     return deal

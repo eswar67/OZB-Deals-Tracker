@@ -29,6 +29,23 @@ def _format_age(age_mins: int) -> str:
     return f"{age_mins // 1440}d ago"   # 48h+ → days
 
 
+def _expiry_is_urgent(label: str) -> bool:
+    """Urgent = expires within ~5 days (labels prefixed with the ⏰ clock)."""
+    return label.startswith("⏰")
+
+
+def _expiry_html(label: str) -> str:
+    """Inline expiry chip for the stats bar. Always shown so status is explicit."""
+    if not label:
+        return ""
+    urgent  = _expiry_is_urgent(label)
+    no_date = label == "No expiry date listed"
+    color   = "#b45309" if urgent else "#999" if no_date else "#555"
+    weight  = "700" if urgent else "400"
+    return (f'&nbsp; <span style="color:{color};font-weight:{weight};font-size:11px;">'
+            f'{label}</span>')
+
+
 # ── Deal type icon ────────────────────────────────────────────────────────────
 
 _ICON_RULES = [
@@ -167,7 +184,7 @@ def _deal_card(deal: dict) -> str:
 
     # Expiry label
     expiry_label = deal.get("expiry_label", "")
-    expiry_urgent = expiry_label.startswith("⏰ Expires today") or expiry_label.startswith("⏰ Expires <")
+    expiry_urgent = _expiry_is_urgent(expiry_label)
 
     # Flash / urgency banner
     if is_flash:
@@ -211,14 +228,14 @@ def _deal_card(deal: dict) -> str:
         for c in cats[:3]
     )
 
-    # Cashback badge
+    # Cashback badge — availability only, no % (check live rate via link)
     cb_html = ""
     if cb_plat:
         cb_href = f'href="{cb_url}"' if cb_url else ""
         cb_html = (
             f'<a {cb_href} style="display:inline-block;background:#ff6900;color:#fff;'
             f'font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;'
-            f'text-decoration:none;margin:6px 0;">💰 {cb_plat} ~{cb_pct:.0f}% cashback</a>'
+            f'text-decoration:none;margin:6px 0;">💰 Cashback likely via {cb_plat} — check rate</a>'
         )
 
     # Market price panel (Claude-sourced)
@@ -282,15 +299,11 @@ def _deal_card(deal: dict) -> str:
     cta_cb       = f'<a href="{cb_url}" style="{btn}background:#ff6900;color:#fff;">💰 {cb_plat}</a>' if cb_url else ""
 
     # Stats bar
-    expiry_stat = (
-        f'&nbsp; <span style="color:{"#b45309" if expiry_urgent else "#555"};font-weight:{"700" if expiry_urgent else "400"};">'
-        f'{expiry_label}</span>'
-    ) if expiry_label else ""
     stats = (
         f'<span style="color:#888;font-size:12px;">'
         f'👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
         + (f'&nbsp; ⏰ {age_str}' if age_str else "")
-        + expiry_stat
+        + _expiry_html(expiry_label)
         + '</span>'
     )
 
@@ -442,12 +455,10 @@ def _cc_travel_card(deal: dict) -> str:
     cta_view     = f'<a href="{ozb_link}" style="{btn}background:{badge_bg};color:#fff;">View Deal</a>'
     cta_merchant = f'<a href="{ext_url}" style="{btn}background:#f6f8fa;color:#24292f;border:1px solid #d0d7de;">Go to Offer</a>' if ext_url else ""
 
-    _exp_lbl = deal.get("expiry_label", "")
-    _exp_urg = _exp_lbl.startswith("⏰ Expires today") or _exp_lbl.startswith("⏰ Expires <")
     stats = (
         f'<span style="color:#888;font-size:12px;">👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
         + (f'&nbsp; ⏰ {age_str}' if age_str else "")
-        + (f'&nbsp; <span style="color:{"#b45309" if _exp_urg else "#555"};font-weight:{"700" if _exp_urg else "400"};">{_exp_lbl}</span>' if _exp_lbl else "")
+        + _expiry_html(deal.get("expiry_label", ""))
         + '</span>'
     )
 
@@ -522,12 +533,10 @@ def _financial_card(deal: dict) -> str:
     cta_view     = f'<a href="{ozb_link}" style="{btn}background:#1a7f37;color:#fff;">💳 View Deal</a>'
     cta_merchant = f'<a href="{ext_url}" style="{btn}background:#f6f8fa;color:#24292f;border:1px solid #d0d7de;">🏦 Go to Offer</a>' if ext_url else ""
 
-    _exp_lbl = deal.get("expiry_label", "")
-    _exp_urg = _exp_lbl.startswith("⏰ Expires today") or _exp_lbl.startswith("⏰ Expires <")
     stats = (
         f'<span style="color:#888;font-size:12px;">👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
         + (f'&nbsp; ⏰ {age_str}' if age_str else "")
-        + (f'&nbsp; <span style="color:{"#b45309" if _exp_urg else "#555"};font-weight:{"700" if _exp_urg else "400"};">{_exp_lbl}</span>' if _exp_lbl else "")
+        + _expiry_html(deal.get("expiry_label", ""))
         + '</span>'
     )
 
@@ -595,12 +604,10 @@ def _lifestyle_card(deal: dict, accent_color: str = "#e67e22") -> str:
         f'<a href="{ext_url}" style="{btn}background:#f6f8fa;color:#24292f;border:1px solid #d0d7de;">Go to Offer</a>'
     ) if ext_url else ""
 
-    _exp_lbl = deal.get("expiry_label", "")
-    _exp_urg = _exp_lbl.startswith("⏰ Expires today") or _exp_lbl.startswith("⏰ Expires <")
     stats = (
         f'<span style="color:#888;font-size:12px;">👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
         + (f'&nbsp; ⏰ {age_str}' if age_str else "")
-        + (f'&nbsp; <span style="color:{"#b45309" if _exp_urg else "#555"};font-weight:{"700" if _exp_urg else "400"};">{_exp_lbl}</span>' if _exp_lbl else "")
+        + _expiry_html(deal.get("expiry_label", ""))
         + '</span>'
     )
 
@@ -698,103 +705,47 @@ def _opportunity_badge(deal: dict) -> str:
 
 
 
-def _money_audit_section(opps: list) -> str:
-    if not opps:
-        return ""
-    total = sum(o.get("estimated_value", 0) for o in opps)
-    rows = ""
-    for o in opps[:5]:
-        icon = o.get("urgency_icon", "🔵")
-        lines_html = "".join(
-            f'<div style="font-size:11px;color:#555;margin-top:2px;">• {l}</div>'
-            for l in o.get("detail_lines", [])[:3] if l
-        )
-        action_html = (
-            f'<div style="font-size:11px;color:#0969da;margin-top:4px;font-style:italic;">'
-            f'→ {o["action"][:140]}</div>'
-        ) if o.get("action") else ""
-        rows += f"""
-<div style="border-bottom:1px solid #fde68a;padding:10px 0;">
-  <div style="font-weight:700;font-size:13px;">{o['headline']}</div>
-  {lines_html}
-  {action_html}
-  <div style="font-size:11px;color:#92400e;font-weight:700;margin-top:4px;">
-    Est. value: ~${o.get('estimated_value',0):,} AUD
-  </div>
-</div>"""
-    return f"""
-  <!-- Money Audit section -->
-  <div style="background:#fffbeb;border:2px solid #fbbf24;border-radius:10px;
-              padding:14px 18px;margin-bottom:16px;">
-    <div style="font-size:15px;font-weight:800;color:#92400e;margin-bottom:2px;">
-      💸 Money Left on the Table — ~${total:,} AUD
-    </div>
-    <div style="font-size:11px;color:#888;margin-bottom:10px;">
-      Financial opportunities you're currently missing
-    </div>
-    {rows}
-  </div>"""
-
-
 def _travel_arb_section(routes: list) -> str:
+    """Award redemption booking links — no point/price assumptions."""
     if not routes:
         return ""
 
-    route_blocks = ""
-    for r in routes:
-        label = r["label"]
-        via   = r.get("via", "")
-        cabin_html = ""
-
-        for cabin_name, cabin_data in r.get("cabins", {}).items():
-            cash    = cabin_data["cash_aud"]
-            options = cabin_data["options"]
-            cabin_label = cabin_name.replace("_", " ").title()
-
-            opts_html = ""
-            for opt in options:
-                cpp_color = "#1a7f37" if opt["cpp"] >= 1.4 else "#bf8700" if opt["cpp"] >= 0.8 else "#888"
-                book_link = (
-                    f'<a href="{opt["booking_url"]}" style="font-size:10px;color:#0969da;'
-                    f'text-decoration:none;margin-left:6px;">Book →</a>'
-                    if opt["booking_url"] else ""
-                )
-                opts_html += f"""
-<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin:4px 0;font-size:11px;border-bottom:1px solid #e0e7ff;padding-bottom:3px;">
-  <span style="min-width:160px;font-weight:600;color:#1e3a8a;">{opt['label']}</span>
-  <span style="color:#333;">{opt['cost_str']}</span>
-  <span style="color:{cpp_color};font-weight:700;">{opt['cpp']:.2f}¢/pt</span>
-  <span style="color:#666;font-size:10px;flex:1;">{opt['notes']}</span>
+    # All routes share the same program links — render the program list once.
+    programs = routes[0].get("programs", [])
+    prog_html = ""
+    for p in programs:
+        book_link = (
+            f'<a href="{p["url"]}" style="font-size:11px;color:#0969da;font-weight:700;'
+            f'text-decoration:none;">Search awards →</a>' if p.get("url") else ""
+        )
+        prog_html += f"""
+<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin:5px 0;
+            border-bottom:1px solid #e0e7ff;padding-bottom:4px;font-size:12px;">
+  <span style="min-width:200px;font-weight:600;color:#1e3a8a;">{p['label']}</span>
+  <span style="color:#666;font-size:11px;flex:1;">{p.get('note','')}</span>
   {book_link}
 </div>"""
 
-            cabin_html += f"""
-<div style="margin:8px 0;">
-  <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:4px;">
-    {cabin_label} &nbsp;<span style="font-weight:400;color:#888;">Cash ~${cash:,} AUD one-way</span>
-  </div>
-  {opts_html}
-</div>"""
-
-        route_blocks += f"""
-<div style="border-bottom:2px solid #bfdbfe;padding:12px 0;margin-bottom:4px;">
-  <div style="font-weight:800;font-size:14px;color:#1e3a8a;">
-    ✈️ {label} <span style="font-size:11px;font-weight:400;color:#6b7280;">{via}</span>
-  </div>
-  {cabin_html}
-</div>"""
+    routes_html = "".join(
+        f'<span style="display:inline-block;background:#dbeafe;color:#1e3a8a;'
+        f'font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;'
+        f'margin:3px 4px 3px 0;">✈️ {r["label"]} <span style="font-weight:400;'
+        f'color:#3b82f6;">{r.get("via","")}</span></span>'
+        for r in routes
+    )
 
     return f"""
-  <!-- Travel Arbitrage section -->
+  <!-- Award Flight Redemption links -->
   <div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:10px;
               padding:14px 18px;margin-bottom:16px;">
     <div style="font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:2px;">
       ✈️ Award Flight Redemptions — SYD to India
     </div>
     <div style="font-size:11px;color:#888;margin-bottom:10px;">
-      One-way per person · CPP = cents per point · Click Book → to search availability
+      Search live award availability &amp; pricing directly with each program
     </div>
-    {route_blocks}
+    <div style="margin-bottom:10px;">{routes_html}</div>
+    {prog_html}
   </div>"""
 
 
@@ -876,7 +827,6 @@ def build_email_html(
     max_age_hours: int = 24,
     fin_min_savings: int = 200,
     travel_min_savings: int = 200,
-    money_audit: list = None,
     travel_arb: list = None,
     extra_deals: list = None,
     briefing: dict = None,
@@ -886,7 +836,6 @@ def build_email_html(
     food_deals        = food_deals        or []
     home_deals        = home_deals        or []
     extra_deals       = extra_deals       or []
-    money_audit       = money_audit       or []
     travel_arb        = travel_arb        or []
     briefing          = briefing          or {}
     total_savings = sum(d.get("savings", 0) for d in deals)
@@ -932,7 +881,6 @@ def build_email_html(
         for d in deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     )
     briefing_html        = _briefing_section(briefing)
-    money_audit_html     = _money_audit_section(money_audit)
     travel_arb_html      = _travel_arb_section(travel_arb)
 
     # ── Tier 1 "Act Now" callout section ───────────────────────────────────────
@@ -1143,7 +1091,6 @@ def build_email_html(
   </div>
 
   {briefing_html}
-  {money_audit_html}
   {tier1_section}
   {deals_section}
   {cct_section}

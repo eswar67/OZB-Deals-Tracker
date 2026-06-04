@@ -217,8 +217,22 @@ def _match_free_bundle(t: str, use_live_lookup: bool = False):
     return None
 
 
-QANTAS_CPP   = 0.0135   # AUD per Qantas FF point
-VELOCITY_CPP = 0.0135   # AUD per Virgin Velocity point
+# Point valuations loaded from user-prefs.json (no hardcoded constants).
+def _load_point_values() -> dict:
+    """Load AUD-per-point values from user-prefs.json points_value_per_point_aud."""
+    import json
+    from pathlib import Path
+    prefs_file = Path(__file__).parent.parent / "user-prefs.json"
+    try:
+        cfg = json.loads(prefs_file.read_text()).get("points_value_per_point_aud", {})
+        return {k: v for k, v in cfg.items() if not k.startswith("_")}
+    except Exception as e:
+        log.warning(f"Could not load point values from user-prefs.json: {e}")
+        return {}
+
+_POINT_VALUES = _load_point_values()
+QANTAS_CPP   = _POINT_VALUES.get("qantas",   _POINT_VALUES.get("default", 0.0135))
+VELOCITY_CPP = _POINT_VALUES.get("velocity", _POINT_VALUES.get("default", 0.0135))
 
 
 def _match_points(t: str):
