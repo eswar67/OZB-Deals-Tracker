@@ -20,6 +20,15 @@ Summary header + footer with filter settings
 from datetime import datetime, timezone
 
 
+def _format_age(age_mins: int) -> str:
+    """Human-readable age: minutes < 1h, hours < 48h, otherwise days."""
+    if age_mins < 60:
+        return f"{age_mins}m ago"
+    if age_mins < 2880:   # < 48 hours
+        return f"{age_mins // 60}h {age_mins % 60}m ago"
+    return f"{age_mins // 1440}d ago"   # 48h+ → days
+
+
 # ── Deal type icon ────────────────────────────────────────────────────────────
 
 _ICON_RULES = [
@@ -153,7 +162,7 @@ def _deal_card(deal: dict) -> str:
     is_new    = False
     if pub_date:
         age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
-        age_str  = f"{age_mins//60}h {age_mins%60}m ago" if age_mins >= 60 else f"{age_mins}m ago"
+        age_str = _format_age(age_mins)
         is_new   = age_mins < 1440  # posted within last 24 hours
 
     # Expiry label
@@ -369,7 +378,7 @@ def _cc_travel_card(deal: dict) -> str:
     is_new  = False
     if pub_date:
         age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
-        age_str  = f"{age_mins//60}h {age_mins%60}m ago" if age_mins >= 60 else f"{age_mins}m ago"
+        age_str = _format_age(age_mins)
         is_new   = age_mins < 1440
 
     new_badge = '<span style="background:#0969da;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;margin-right:6px;">🆕 NEW</span>' if is_new else ""
@@ -487,7 +496,7 @@ def _financial_card(deal: dict) -> str:
     is_new  = False
     if pub_date:
         age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
-        age_str  = f"{age_mins//60}h {age_mins%60}m ago" if age_mins >= 60 else f"{age_mins}m ago"
+        age_str = _format_age(age_mins)
         is_new   = age_mins < 1440
 
     new_badge = '<span style="background:#0969da;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;margin-right:6px;">🆕 NEW</span>' if is_new else ""
@@ -562,7 +571,7 @@ def _lifestyle_card(deal: dict, accent_color: str = "#e67e22") -> str:
     age_str = ""
     if pub_date:
         age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
-        age_str = f"{age_mins//60}h {age_mins%60}m ago" if age_mins >= 60 else f"{age_mins}m ago"
+        age_str = _format_age(age_mins)
 
     savings_html = (
         f'<div style="font-size:20px;font-weight:800;color:#1a7f37;margin:5px 0;">'
@@ -1041,7 +1050,7 @@ def build_email_html(
                 padding:14px 20px;color:#fff;">
       <div style="font-size:17px;font-weight:800;">🍎 Food &amp; Groceries</div>
       <div style="font-size:11px;opacity:0.85;margin-top:2px;">
-        Top {len(sorted_food)} of {len(food_deals)} deal(s) · supermarket, meal kits, groceries · score≥5 only
+        Top {len(sorted_food)} of {len(food_deals)} deal(s) · supermarket, meal kits, groceries · score≥5 · savings≥$200
       </div>
     </div>
     <div style="background:#fffaf5;border:1px solid #ffe0b2;border-top:none;
@@ -1067,7 +1076,7 @@ def build_email_html(
                 padding:14px 20px;color:#fff;">
       <div style="font-size:17px;font-weight:800;">🏠 Home &amp; Appliances</div>
       <div style="font-size:11px;opacity:0.85;margin-top:2px;">
-        Top {len(sorted_home)} of {len(home_deals)} deal(s) · whitegoods, kitchen, vacuum, appliances · score≥5 only
+        Top {len(sorted_home)} of {len(home_deals)} deal(s) · whitegoods, kitchen, vacuum, appliances · score≥5 · savings≥$200
       </div>
     </div>
     <div style="background:#fdf5ff;border:1px solid #e8d5f5;border-top:none;
@@ -1150,7 +1159,7 @@ def build_email_html(
     Product filters: score≥{min_score} · savings≥${min_savings:,} · votes≥{min_votes}
     · comments≥{min_comments} · clicks≥{min_clicks} · no age limit
     <br>CC/Travel &amp; Banking filters: score≥5 · savings≥${fin_min_savings:,} · Qantas/Velocity pts at $0.0135/pt · no age limit
-    <br>Food &amp; Home: top 5 · score≥5 · no savings minimum · votes≥20 · comments≥3 · clicks≥50
+    <br>Food, Home &amp; Other categories: top 5 · score≥5 · savings≥$200 · votes≥20 · comments≥3 · clicks≥50
     <br>
     <a href="https://www.ozbargain.com.au/cat/financial" style="color:#1a7f37;margin-right:12px;">
       Financial deals

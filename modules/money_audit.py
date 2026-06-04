@@ -190,7 +190,8 @@ def _check_idle_points(profile: dict) -> list[dict]:
             pts_needed = best_route["programs"][program]["points"]
             taxes      = best_route["programs"][program]["taxes_aud"]
             cash_equiv = best_route.get("typical_cash_aud", 0)
-            cpp_actual = (cash_equiv - taxes) / pts_needed if pts_needed else 0
+            # cents per point = (dollar value / points) × 100
+            cpp_actual = ((cash_equiv - taxes) / pts_needed * 100) if pts_needed else 0
             target_cpp = profile.get("travel_cpp_targets", {}).get(program, 1.5)
 
             if balance >= pts_needed:

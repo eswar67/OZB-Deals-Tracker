@@ -417,11 +417,14 @@ OOS_TITLE_SIGNALS = [
 
 
 def oos_filter(deals: list[dict]) -> list[dict]:
-    """Drop deals whose titles indicate they are expired or out of stock."""
+    """Drop deals that are expired or out of stock — by title signal OR ozb:meta expiry."""
     kept, dropped = [], []
     for d in deals:
         title_lower = d["title"].lower()
         signal = next((s for s in OOS_TITLE_SIGNALS if s in title_lower), None)
+        # Also drop deals whose ozb:meta expiry date has already passed
+        if not signal and d.get("expiry_label") == "Expired":
+            signal = "expiry date passed"
         if signal:
             dropped.append((d["title"], signal))
         else:
@@ -542,13 +545,13 @@ Score this deal 1-10 on ACCESSIBILITY and RELIABILITY:
 4-5 = Significant hoops (limited to 200 people, lottery, requires existing product)
 1-3 = Very restricted, highly targeted, or large upfront spend required
 
-Also list the main BARRIERS to claiming this deal (max 2, comma-separated). Use phrases like:
+Also list the main BARRIERS to claiming this deal (max 2, separated by SEMICOLONS not commas). Use phrases like:
 "New customers only", "Requires trade-in", "Limited stock", "CBA Yello required",
 "Min spend $X", "Specific state only", "Students only", "Existing product needed"
-Use "None" if no barriers.
+Use "None" if no barriers. Do NOT use commas inside or between barriers.
 
 Reply with EXACTLY: SCORE|REASON|BARRIERS
-Example: 6|Requires existing CBA account which is free to open|CBA Yello required,New customers only"""
+Example: 6|Requires existing CBA account which is free to open|CBA Yello required; New customers only"""
 
     try:
         _haiku_limiter.acquire()
@@ -562,7 +565,8 @@ Example: 6|Requires existing CBA account which is free to open|CBA Yello require
         score    = max(1, min(10, int("".join(c for c in (parts[0] if parts else "0") if c.isdigit()) or "0")))
         reason   = parts[1].strip() if len(parts) > 1 else ""
         barriers_raw = parts[2].strip() if len(parts) > 2 else ""
-        barriers = [] if barriers_raw.lower() in ("none", "") else [b.strip() for b in barriers_raw.split(",") if b.strip()]
+        # Split on semicolons (commas appear inside numbers like "$6,000")
+        barriers = [] if barriers_raw.lower() in ("none", "") else [b.strip() for b in barriers_raw.split(";") if b.strip()]
         trust_pct = score * 10  # 1→10%, 10→100%
         return {"score": score, "score_reason": reason, "trust_pct": trust_pct, "trust_barriers": barriers}
     except Exception as e:
@@ -872,12 +876,15 @@ def filter_financial_deals(deals: list[dict]) -> list[dict]:
     ]
     log.info(f"Financial threshold filter: {len(kept)}/{len(deals)} passed")
 
-    # OOS filter
+    # OOS filter — title signals + expired-by-meta
     kept2 = []
     for d in kept:
         tl = d["title"].lower()
-        if not any(s in tl for s in OOS_TITLE_SIGNALS):
-            kept2.append(d)
+        if any(s in tl for s in OOS_TITLE_SIGNALS):
+            continue
+        if d.get("expiry_label") == "Expired":
+            continue
+        kept2.append(d)
     log.info(f"Financial OOS filter: {len(kept2)}/{len(kept)} passed")
     return kept2
 
@@ -1769,7 +1776,8 @@ def main():
         deals = [d for d in deals
                  if d["votes"] >= TRAVEL_MIN_VOTES
                  and d["comments"] >= TRAVEL_MIN_COMMENTS
-                 and d["clicks"] >= TRAVEL_MIN_CLICKS]
+                 and d["clicks"] >= TRAVEL_MIN_CLICKS
+                 and d.get("expiry_label") != "Expired"]
         return score_travel_deals(deals)
 
     section_tasks = {
