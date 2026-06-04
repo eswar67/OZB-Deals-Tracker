@@ -1629,7 +1629,7 @@ def send_gmail_alert(
     total_deals   = len(all_categorised)
     total_savings = sum(d.get("savings", 0) for d in all_categorised)
     subject = (
-        f"🤖 OZB | {flash_prefix}{total_deals} deals{note_str} "
+        f"🤖 OZ Bargain Deal Tracking Agent | {flash_prefix}{total_deals} deals{note_str} "
         f"· ~${total_savings:,} AUD savings"
     )
 
