@@ -232,39 +232,66 @@ def fetch_feed(url: str) -> str:
 
 
 def fetch_all_deals() -> list[dict]:
-    """Paginate OzBargain RSS (sorted by hot score, not date).
+    """Paginate OzBargain RSS and collect EVERY deal it serves.
 
-    Keeps fetching until MAX_CONSECUTIVE_OLD_PAGES consecutive pages have
-    zero deals inside the MAX_AGE_HOURS window.
+    No age limit. Retries transient page errors and only stops after several
+    consecutive failed/empty pages, so a single 500 mid-feed can't truncate
+    the archive.
     """
     from email.utils import parsedate_to_datetime
 
     cutoff = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
-    # Cap at 50 pages — OZB RSS naturally runs out of content and the
-    # MAX_CONSECUTIVE_OLD_PAGES guard will stop early anyway
-    max_pages = 50
-    MAX_CONSECUTIVE_OLD_PAGES = 3
+    # No age limit — fetch every page OZB's RSS will serve.
+    # Stop only after several CONSECUTIVE failures/empties (transient 500s on a
+    # single page must not truncate the whole archive).
+    max_pages = 200
+    MAX_CONSECUTIVE_FAILURES = 4   # stop after 4 pages in a row that fail or are empty
 
     all_deals = []
-    consecutive_old = 0
+    consecutive_fail = 0
     page = 0
 
     while page < max_pages:
         url = f"{FEED_URL}?page={page}"
-        log.info(f"Fetching page {page}/{max_pages-1}: {url}")
-        try:
-            xml_text = fetch_feed(url)
-        except Exception as e:
-            log.warning(f"Failed to fetch page {page}: {e}")
-            break
+        log.info(f"Fetching page {page}: {url}")
 
-        root = ET.fromstring(xml_text)
-        channel = root.find("channel")
-        items = channel.findall("item")
+        # Retry transient errors once before giving up on this page
+        xml_text = None
+        for attempt in range(2):
+            try:
+                xml_text = fetch_feed(url)
+                break
+            except Exception as e:
+                if attempt == 0:
+                    log.info(f"  Page {page} error ({e}); retrying…")
+                    time.sleep(1.0)
+                else:
+                    log.warning(f"  Page {page} failed twice: {e}")
+
+        if xml_text is None:
+            consecutive_fail += 1
+            if consecutive_fail >= MAX_CONSECUTIVE_FAILURES:
+                log.info(f"{MAX_CONSECUTIVE_FAILURES} consecutive failures — end of feed.")
+                break
+            page += 1
+            continue   # skip this page, keep going — don't truncate
+
+        try:
+            root = ET.fromstring(xml_text)
+            channel = root.find("channel")
+            items = channel.findall("item") if channel is not None else []
+        except Exception as e:
+            log.warning(f"  Page {page} parse error: {e}")
+            items = []
 
         if not items:
-            log.info(f"Empty page {page} — stopping")
-            break
+            consecutive_fail += 1
+            if consecutive_fail >= MAX_CONSECUTIVE_FAILURES:
+                log.info(f"{MAX_CONSECUTIVE_FAILURES} consecutive empty/failed pages — end of feed.")
+                break
+            page += 1
+            continue
+        consecutive_fail = 0   # good page — reset the failure counter
 
         page_hits = 0
         for item in items:
@@ -297,16 +324,7 @@ def fetch_all_deals() -> list[dict]:
                     "expiry_label": _parse_expiry(meta_attr),
                 })
 
-        log.info(f"  Page {page}: {len(items)} items, {page_hits} in window, total={len(all_deals)}")
-
-        if page_hits == 0:
-            consecutive_old += 1
-            if consecutive_old >= MAX_CONSECUTIVE_OLD_PAGES:
-                log.info(f"{MAX_CONSECUTIVE_OLD_PAGES} consecutive empty pages — stopping")
-                break
-        else:
-            consecutive_old = 0
-
+        log.info(f"  Page {page}: {len(items)} items, total={len(all_deals)}")
         page += 1
 
     # Deduplicate by link
@@ -1159,23 +1177,38 @@ def fetch_travel_deals() -> list[dict]:
 
     cutoff = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
     deals  = []
+    consecutive_fail = 0
 
-    for page in range(0, 7):  # more pages to cover 14-day window
+    for page in range(0, 200):  # fetch the whole travel feed (no age limit)
         url = f"{TRAVEL_FEED_URL}?page={page}"
         log.info(f"Travel feed page {page}: {url}")
-        try:
-            xml_text = fetch_feed(url)
-        except Exception as e:
-            log.warning(f"Travel feed page {page} failed: {e}")
-            break
 
-        root    = ET.fromstring(xml_text)
-        channel = root.find("channel")
-        items   = channel.findall("item")
+        xml_text = None
+        for attempt in range(2):
+            try:
+                xml_text = fetch_feed(url)
+                break
+            except Exception as e:
+                if attempt == 0:
+                    time.sleep(1.0)
+                else:
+                    log.warning(f"Travel page {page} failed twice: {e}")
+
+        items = []
+        if xml_text is not None:
+            try:
+                channel = ET.fromstring(xml_text).find("channel")
+                items   = channel.findall("item") if channel is not None else []
+            except Exception:
+                items = []
+
         if not items:
-            break
+            consecutive_fail += 1
+            if consecutive_fail >= 4:
+                break
+            continue
+        consecutive_fail = 0
 
-        page_hits = 0
         for item in items:
             def text(tag):
                 el = item.find(tag)
@@ -1195,7 +1228,6 @@ def fetch_travel_deals() -> list[dict]:
             if pub_dt < cutoff:
                 continue
 
-            page_hits += 1
             deals.append({
                 "title":        text("title"),
                 "link":         text("link"),
@@ -1209,9 +1241,7 @@ def fetch_travel_deals() -> list[dict]:
                 "deal_subtype": "travel",
             })
 
-        log.info(f"  Travel page {page}: {len(items)} items, {page_hits} in window")
-        if page_hits == 0:
-            break
+        log.info(f"  Travel page {page}: {len(items)} items, total={len(deals)}")
 
     seen, unique = set(), []
     for d in deals:
