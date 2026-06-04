@@ -730,34 +730,49 @@ def _money_audit_section(opps: list) -> str:
 def _travel_arb_section(routes: list) -> str:
     if not routes:
         return ""
-    rows = ""
-    for r in routes:
-        best = r.get("best") or {}
-        cabin_label = r.get("cabin", "").replace("_", " ").title()
-        verdict = r.get("verdict", "")
 
-        opts_html = ""
-        for opt in r.get("program_options", [])[:4]:
-            bar_color = "#1a7f37" if opt["recommended"] and opt["can_afford"] else \
-                        "#bf8700" if opt["can_afford"] else "#d0d7de"
-            opts_html += f"""
-<div style="display:flex;align-items:baseline;gap:8px;margin:3px 0;font-size:11px;">
-  <span style="min-width:90px;font-weight:600;color:#333;">{opt['label']}</span>
-  <span style="color:#555;">{opt['total_cost_str']}</span>
-  <span style="color:{bar_color};font-weight:700;">{opt['cpp']:.2f}¢/pt</span>
-  <span style="color:#888;font-size:10px;">{opt['verdict_line']}</span>
+    route_blocks = ""
+    for r in routes:
+        label = r["label"]
+        via   = r.get("via", "")
+        cabin_html = ""
+
+        for cabin_name, cabin_data in r.get("cabins", {}).items():
+            cash    = cabin_data["cash_aud"]
+            options = cabin_data["options"]
+            cabin_label = cabin_name.replace("_", " ").title()
+
+            opts_html = ""
+            for opt in options:
+                cpp_color = "#1a7f37" if opt["cpp"] >= 1.4 else "#bf8700" if opt["cpp"] >= 0.8 else "#888"
+                book_link = (
+                    f'<a href="{opt["booking_url"]}" style="font-size:10px;color:#0969da;'
+                    f'text-decoration:none;margin-left:6px;">Book →</a>'
+                    if opt["booking_url"] else ""
+                )
+                opts_html += f"""
+<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin:4px 0;font-size:11px;border-bottom:1px solid #e0e7ff;padding-bottom:3px;">
+  <span style="min-width:160px;font-weight:600;color:#1e3a8a;">{opt['label']}</span>
+  <span style="color:#333;">{opt['cost_str']}</span>
+  <span style="color:{cpp_color};font-weight:700;">{opt['cpp']:.2f}¢/pt</span>
+  <span style="color:#666;font-size:10px;flex:1;">{opt['notes']}</span>
+  {book_link}
 </div>"""
 
-        rows += f"""
-<div style="border-bottom:1px solid #bfdbfe;padding:10px 0;">
-  <div style="font-weight:800;font-size:13px;color:#1e3a8a;">
-    ✈️ {r['label']} — {cabin_label} × {r['pax']}pax
-  </div>
-  <div style="font-size:11px;color:#555;margin:3px 0;">
-    Cash fare: ~${r['cash_total']:,} AUD
+            cabin_html += f"""
+<div style="margin:8px 0;">
+  <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:4px;">
+    {cabin_label} &nbsp;<span style="font-weight:400;color:#888;">Cash ~${cash:,} AUD one-way</span>
   </div>
   {opts_html}
-  <div style="font-size:12px;font-weight:700;color:#1e3a8a;margin-top:6px;">{verdict}</div>
+</div>"""
+
+        route_blocks += f"""
+<div style="border-bottom:2px solid #bfdbfe;padding:12px 0;margin-bottom:4px;">
+  <div style="font-weight:800;font-size:14px;color:#1e3a8a;">
+    ✈️ {label} <span style="font-size:11px;font-weight:400;color:#6b7280;">{via}</span>
+  </div>
+  {cabin_html}
 </div>"""
 
     return f"""
@@ -765,12 +780,12 @@ def _travel_arb_section(routes: list) -> str:
   <div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:10px;
               padding:14px 18px;margin-bottom:16px;">
     <div style="font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:2px;">
-      ✈️ Travel Arbitrage — Best Redemption Today
+      ✈️ Award Flight Redemptions — SYD to India
     </div>
     <div style="font-size:11px;color:#888;margin-bottom:10px;">
-      Cash vs points across all your programs · CPP = cents per point
+      One-way per person · CPP = cents per point · Click Book → to search availability
     </div>
-    {rows}
+    {route_blocks}
   </div>"""
 
 
@@ -1113,14 +1128,13 @@ def build_email_html(
   <!-- Summary bar -->
   <div style="background:#fff;border:1px solid #d0d7de;border-top:none;
               border-radius:0 0 10px 10px;padding:12px 20px;margin-bottom:14px;">
-    <strong>{len(deals)}</strong> product deal(s) found{flash_note}{cct_note}{fin_note}{food_note}{home_note}
+    {'<strong>' + str(len(deals)) + '</strong> product deal(s)' if deals else ''}{flash_note}{cct_note}{fin_note}{food_note}{home_note}
     &nbsp;·&nbsp;
     <strong style="color:#1a7f37;">~${all_savings:,} AUD</strong> total possible savings
   </div>
 
   {briefing_html}
   {money_audit_html}
-  {travel_arb_html}
   {tier1_section}
   {deals_section}
   {cct_section}
@@ -1128,6 +1142,7 @@ def build_email_html(
   {food_section}
   {home_section}
   {extra_section}
+  {travel_arb_html}
 
   <!-- Footer -->
   <div style="font-size:11px;color:#999;margin-top:16px;padding:12px;
