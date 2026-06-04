@@ -705,6 +705,63 @@ def _opportunity_badge(deal: dict) -> str:
 
 
 
+def _award_flights_section(routes: list) -> str:
+    """Live award availability from seats.aero — real dates, seats, miles."""
+    if not routes:
+        return ""
+
+    route_blocks = ""
+    for r in routes:
+        rows = r.get("rows", [])
+        if not rows:
+            route_blocks += f"""
+<div style="border-bottom:2px solid #bfdbfe;padding:10px 0;">
+  <div style="font-weight:800;font-size:14px;color:#1e3a8a;">✈️ {r['label']}</div>
+  <div style="font-size:11px;color:#888;margin-top:3px;">No award seats found in the search window.</div>
+</div>"""
+            continue
+
+        seat_rows = ""
+        for s in rows:
+            cabin_color = "#7c3aed" if s["cabin"] == "Business" else "#1a7f37"
+            direct_tag  = '<span style="color:#1a7f37;font-weight:700;">Direct</span>' if s["direct"] else '<span style="color:#888;">1+ stop</span>'
+            airline     = f' · {s["airline"]}' if s.get("airline") else ""
+            seats_tag   = f'{s["seats"]} seat{"s" if s["seats"] != 1 else ""}' if s.get("seats") else "seats avail"
+            seat_rows += f"""
+<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin:4px 0;
+            border-bottom:1px solid #e0e7ff;padding-bottom:3px;font-size:11px;">
+  <span style="min-width:84px;font-weight:700;color:#1e3a8a;">{s['date']}</span>
+  <span style="min-width:74px;color:{cabin_color};font-weight:700;">{s['cabin']}</span>
+  <span style="min-width:200px;color:#333;">{s['program']}</span>
+  <span style="color:#555;">{s['miles']:,} miles</span>
+  <span style="color:#b45309;font-weight:600;">{seats_tag}</span>
+  <span style="color:#666;font-size:10px;">{direct_tag}{airline}</span>
+</div>"""
+
+        more = f' · {r["total"] - len(rows)} more' if r.get("total", 0) > len(rows) else ""
+        route_blocks += f"""
+<div style="border-bottom:2px solid #bfdbfe;padding:12px 0;margin-bottom:4px;">
+  <div style="font-weight:800;font-size:14px;color:#1e3a8a;">
+    ✈️ {r['label']} <span style="font-size:11px;font-weight:400;color:#6b7280;">
+    {len(rows)} option(s){more}</span>
+  </div>
+  {seat_rows}
+</div>"""
+
+    return f"""
+  <!-- Live award availability (seats.aero) -->
+  <div style="background:#eff6ff;border:2px solid #60a5fa;border-radius:10px;
+              padding:14px 18px;margin-bottom:16px;">
+    <div style="font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:2px;">
+      ✈️ Live Award Availability — SYD to India
+    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px;">
+      Real seats from seats.aero · Economy &amp; Business · book directly with the program
+    </div>
+    {route_blocks}
+  </div>"""
+
+
 def _travel_arb_section(routes: list) -> str:
     """Award redemption booking links — no point/price assumptions."""
     if not routes:
@@ -828,6 +885,7 @@ def build_email_html(
     fin_min_savings: int = 200,
     travel_min_savings: int = 200,
     travel_arb: list = None,
+    award_flights: list = None,
     extra_deals: list = None,
     briefing: dict = None,
 ) -> str:
@@ -837,6 +895,7 @@ def build_email_html(
     home_deals        = home_deals        or []
     extra_deals       = extra_deals       or []
     travel_arb        = travel_arb        or []
+    award_flights     = award_flights     or []
     briefing          = briefing          or {}
     total_savings = sum(d.get("savings", 0) for d in deals)
     flash_count   = sum(1 for d in deals if d.get("is_flash"))
@@ -881,6 +940,7 @@ def build_email_html(
         for d in deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     )
     briefing_html        = _briefing_section(briefing)
+    award_flights_html   = _award_flights_section(award_flights)
     travel_arb_html      = _travel_arb_section(travel_arb)
 
     # ── Tier 1 "Act Now" callout section ───────────────────────────────────────
@@ -1098,6 +1158,7 @@ def build_email_html(
   {food_section}
   {home_section}
   {extra_section}
+  {award_flights_html}
   {travel_arb_html}
 
   <!-- Footer -->

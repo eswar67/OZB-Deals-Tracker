@@ -49,6 +49,7 @@ from modules.email_builder  import build_email_html
 from modules.value_parser   import parse_all as parse_deal_values
 from modules.personal_score import score_all_personal
 from modules.travel_arb     import get_travel_arb
+from modules.award_flights  import get_award_availability
 from modules.briefing       import build_briefing
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -1576,6 +1577,7 @@ def send_gmail_alert(
     home_deals: list[dict] = None,
     extra_deals: list[dict] = None,
     travel_arb: list[dict] = None,
+    award_flights: list[dict] = None,
     briefing: dict = None,
 ):
     if not GMAIL_TO:
@@ -1588,6 +1590,7 @@ def send_gmail_alert(
     home_deals         = home_deals         or []
     extra_deals        = extra_deals        or []
     travel_arb         = travel_arb         or []
+    award_flights      = award_flights      or []
     briefing           = briefing           or {}
     flash_count        = sum(1 for d in deals if d.get("is_flash"))
     flash_prefix    = "⚡ FLASH + " if flash_count else ""
@@ -1642,6 +1645,7 @@ def send_gmail_alert(
         fin_min_savings=FIN_MIN_SAVINGS,
         travel_min_savings=TRAVEL_MIN_SAVINGS,
         travel_arb=travel_arb,
+        award_flights=award_flights,
         briefing=briefing,
     )
     msg.attach(MIMEText(html, "html"))
@@ -1867,9 +1871,10 @@ def main():
         score_all_personal(deal_list)
 
 
-    # 12d. Award flight redemption links + morning briefing
-    log.info("── Award Flight Redemption links ──")
-    travel_arb = get_travel_arb()
+    # 12d. Award flights — live availability (seats.aero) + booking links
+    log.info("── Award Flight availability (seats.aero) ──")
+    award_flights = get_award_availability()   # [] if no API key
+    travel_arb    = get_travel_arb()           # booking links (always)
 
     log.info("── Morning Briefing ──")
     all_tier1 = [d for d in (top_deals + fin_deals + cc_travel_deals + food_deals + home_deals + extra_deals)
@@ -1886,6 +1891,7 @@ def main():
         home_deals=home_deals,
         extra_deals=extra_deals,
         travel_arb=travel_arb,
+        award_flights=award_flights,
         briefing=briefing,
     )
 
