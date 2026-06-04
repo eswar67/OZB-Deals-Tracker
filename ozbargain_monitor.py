@@ -48,7 +48,6 @@ from modules.prefs          import match_all
 from modules.email_builder  import build_email_html
 from modules.value_parser   import parse_all as parse_deal_values
 from modules.personal_score import score_all_personal
-from modules.travel_arb     import get_travel_arb
 from modules.briefing       import build_briefing
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -1575,7 +1574,6 @@ def send_gmail_alert(
     food_deals: list[dict] = None,
     home_deals: list[dict] = None,
     extra_deals: list[dict] = None,
-    travel_arb: list[dict] = None,
     briefing: dict = None,
 ):
     if not GMAIL_TO:
@@ -1587,7 +1585,6 @@ def send_gmail_alert(
     food_deals      = food_deals      or []
     home_deals         = home_deals         or []
     extra_deals        = extra_deals        or []
-    travel_arb         = travel_arb         or []
     briefing           = briefing           or {}
     flash_count        = sum(1 for d in deals if d.get("is_flash"))
     flash_prefix    = "⚡ FLASH + " if flash_count else ""
@@ -1641,7 +1638,6 @@ def send_gmail_alert(
         min_clicks=MIN_CLICKS,
         fin_min_savings=FIN_MIN_SAVINGS,
         travel_min_savings=TRAVEL_MIN_SAVINGS,
-        travel_arb=travel_arb,
         briefing=briefing,
     )
     msg.attach(MIMEText(html, "html"))
@@ -1867,10 +1863,7 @@ def main():
         score_all_personal(deal_list)
 
 
-    # 12d. Award flight search — free aggregator deep-links per route
-    log.info("── Award Flight search links ──")
-    travel_arb = get_travel_arb()
-
+    # 12d. Morning Briefing
     log.info("── Morning Briefing ──")
     all_tier1 = [d for d in (top_deals + fin_deals + cc_travel_deals + food_deals + home_deals + extra_deals)
                  if d.get("tier") == "1_action"]
@@ -1885,7 +1878,6 @@ def main():
         food_deals=food_deals,
         home_deals=home_deals,
         extra_deals=extra_deals,
-        travel_arb=travel_arb,
         briefing=briefing,
     )
 

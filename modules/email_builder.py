@@ -705,40 +705,6 @@ def _opportunity_badge(deal: dict) -> str:
 
 
 
-def _travel_arb_section(routes: list) -> str:
-    """Free award-search deep-links per route (PointsYeah / AwardTool / seats.aero)."""
-    if not routes:
-        return ""
-
-    route_blocks = ""
-    for r in routes:
-        links = r.get("links", [])
-        links_html = " &nbsp;·&nbsp; ".join(
-            f'<a href="{l["url"]}" style="color:#0969da;font-weight:700;'
-            f'text-decoration:none;">{l["name"]} →</a> '
-            f'<span style="color:#999;font-size:10px;">({l["note"]})</span>'
-            for l in links
-        )
-        route_blocks += f"""
-<div style="border-bottom:1px solid #e0e7ff;padding:8px 0;font-size:12px;">
-  <span style="font-weight:800;color:#1e3a8a;">✈️ {r['label']}</span><br>
-  <span style="font-size:11px;">{links_html}</span>
-</div>"""
-
-    return f"""
-  <!-- Free award-search deep-links -->
-  <div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:10px;
-              padding:14px 18px;margin-bottom:16px;">
-    <div style="font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:2px;">
-      ✈️ Award Flight Search — SYD to India
-    </div>
-    <div style="font-size:11px;color:#888;margin-bottom:10px;">
-      Click a free tool to see live availability, dates &amp; seats across all programs
-    </div>
-    {route_blocks}
-  </div>"""
-
-
 def _trust_badge(deal: dict) -> str:
     """Compact trust % widget shown on every deal card."""
     trust = deal.get("trust_pct", 0)
@@ -817,7 +783,6 @@ def build_email_html(
     max_age_hours: int = 24,
     fin_min_savings: int = 200,
     travel_min_savings: int = 200,
-    travel_arb: list = None,
     extra_deals: list = None,
     briefing: dict = None,
 ) -> str:
@@ -826,7 +791,6 @@ def build_email_html(
     food_deals        = food_deals        or []
     home_deals        = home_deals        or []
     extra_deals       = extra_deals       or []
-    travel_arb        = travel_arb        or []
     briefing          = briefing          or {}
     total_savings = sum(d.get("savings", 0) for d in deals)
     flash_count   = sum(1 for d in deals if d.get("is_flash"))
@@ -871,7 +835,6 @@ def build_email_html(
         for d in deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     )
     briefing_html        = _briefing_section(briefing)
-    travel_arb_html      = _travel_arb_section(travel_arb)
 
     # ── Tier 1 "Act Now" callout section ───────────────────────────────────────
     all_flat = deals + financial_deals + cc_travel_deals + food_deals + home_deals
@@ -1088,7 +1051,6 @@ def build_email_html(
   {food_section}
   {home_section}
   {extra_section}
-  {travel_arb_html}
 
   <!-- Footer -->
   <div style="font-size:11px;color:#999;margin-top:16px;padding:12px;
