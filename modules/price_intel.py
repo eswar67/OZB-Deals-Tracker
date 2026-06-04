@@ -299,11 +299,19 @@ def lookup_market_price_claude(deal: dict, client) -> dict:
 
     title      = deal.get("title", "")
     deal_price = deal.get("deal_price", 0)
+    title_lc   = title.lower()
 
     # Only look up product deals (not financial/insurance/gift-card deals)
     skip_signals = ["credit card", "insurance", "cashback", "% p.a.", "gift card",
                     "points", "voucher", "hotel", "flight", "cruise", "superannuation"]
-    if any(s in title.lower() for s in skip_signals):
+    if any(s in title_lc for s in skip_signals):
+        return deal
+
+    # Skip Claude lookup when the title already states a reference price
+    # (Was $X / RRP $X / Save $X / X% off) — the regex parser handles those
+    # reliably, so there's no need to ask Claude (avoids hallucinations + saves API calls).
+    if re.search(r"\bwas\s*\$|\brrp\b|\bsave\s*\$|\d+%\s*off|\(\s*\$[\d,]+\s*\)", title_lc):
+        log.debug(f"  Skipping Claude market lookup — title has reference price: {title[:50]}")
         return deal
 
     cache_key = title.lower()[:80]
