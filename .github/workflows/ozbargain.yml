@@ -2,14 +2,22 @@ name: OzBargain Monitor
 
 on:
   schedule:
-    # 7 PM AEST = 09:00 UTC
-    - cron: '0 9 * * *'
+    # 7:17 PM AEST = 09:17 UTC. Non-zero minute avoids peak GitHub cron delays.
+    # During AEDT this runs at 8:17 PM local; GitHub cron is UTC-only.
+    - cron: '17 9 * * *'
   workflow_dispatch:   # allow manual trigger from GitHub UI
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ozbargain-monitor
+  cancel-in-progress: false
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +29,9 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m unittest discover -s tests
 
       - name: Write Google credentials
         run: |
@@ -34,4 +45,9 @@ jobs:
           SEATS_AERO_API_KEY: ${{ secrets.SEATS_AERO_API_KEY }}
           TOKEN_FILE:         token.json
           CREDENTIALS_FILE:   credentials.json
+          MIN_SAVINGS:        200
+          OZB_MAX_PAGES:      200
+          ENABLE_MARKET_PRICE_LOOKUP: false
+          ENABLE_QUALITY_SCORING: false
+          ENABLE_PRE_SEND_REVIEW: false
         run: python ozbargain_monitor.py

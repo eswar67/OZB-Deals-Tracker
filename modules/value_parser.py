@@ -501,10 +501,10 @@ def parse_deal_value(deal: dict, live_gift_lookup: bool = False) -> dict:
     return {"savings": total, "explanation": explanation, "deal_price": deal_price}
 
 
-def parse_all(deals: list, live_gift_lookup: bool = True) -> list:
+def parse_all(deals: list, live_gift_lookup: bool = False) -> list:
     """
     Parse savings for all deals.
-    live_gift_lookup=True (default): queries StaticICE for free gift prices.
+    live_gift_lookup=True: queries Claude for free gift prices.
     """
     log.info(f"── Value parsing: {len(deals)} deals (live gift lookup: {live_gift_lookup}) ──")
     for deal in deals:

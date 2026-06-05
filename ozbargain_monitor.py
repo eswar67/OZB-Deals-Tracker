@@ -5,14 +5,13 @@ Fetches popular deals, scores via Claude, alerts via Gmail, logs to Google Sheet
 Runs once daily at 7:00 PM via launchd (com.ozbargain.monitor).
 
 Pipeline:
-  fetch_all_deals()
-  → filter_deals()              # votes / comments / clicks thresholds (no age limit)
-  → keyword_filter()            # blocklist pre-filter
-  → oos_filter()                # drop expired/OOS by title signals
-  → price_intel.analyse()       # cashback detection, price-beat hints, StaticICE lookup
-  → score_deals()               # two-pass Claude: value calculation then quality score
+  fetch_all_deals()             # HTML crawl; RSS is capped after page 10
+  → oos_filter()                # drop expired/OOS by title/card signals
+  → value_parser.parse_all()    # deterministic savings extraction first
+  → price_intel.analyse()       # cashback/price-beat; optional market lookup
+  → score_deals()               # savings threshold; optional quality score
   → prefs.match_all()           # relevance tagging against user-prefs.json
-  → top_deals filter            # score≥MIN_SCORE + savings≥MIN_SAVINGS ($200)
+  → top_deals filter            # savings≥MIN_SAVINGS ($200 default)
   → flash deal flagging
   → fetch_financial_deals()     # banking, CC, insurance — tag feeds, no age limit
   → fetch_travel_deals()        # flights, hotels, cruises — no age limit
@@ -28,6 +27,8 @@ import threading
 import base64
 import logging
 import xml.etree.ElementTree as ET
+import re
+import urllib.parse
 from datetime import datetime, timezone, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -58,6 +59,7 @@ for _k, _v in dotenv_values(_env_path).items():
         os.environ[_k] = _v
 
 FEED_URL           = "https://www.ozbargain.com.au/deals/feed"
+DEALS_URL          = "https://www.ozbargain.com.au/deals"
 FINANCIAL_FEED_URL = "https://www.ozbargain.com.au/cat/financial/feed"
 TRAVEL_FEED_URL    = "https://www.ozbargain.com.au/cat/travel/feed"
 
@@ -156,7 +158,18 @@ MIN_COMMENTS   = int(os.getenv("MIN_COMMENTS", "10"))
 MIN_CLICKS     = int(os.getenv("MIN_CLICKS",   "200"))
 MAX_AGE_HOURS  = 999999  # No age limit — fetch all available deals
 MIN_SCORE      = int(os.getenv("MIN_SCORE",    "6"))
-MIN_SAVINGS    = int(os.getenv("MIN_SAVINGS",  "100"))
+MIN_SAVINGS    = int(os.getenv("MIN_SAVINGS",  "200"))
+OZB_MAX_PAGES  = int(os.getenv("OZB_MAX_PAGES", "200"))
+
+ENABLE_MARKET_PRICE_LOOKUP = os.getenv("ENABLE_MARKET_PRICE_LOOKUP", "false").lower() in ("1", "true", "yes", "on")
+LIVE_GIFT_VALUE_LOOKUP     = os.getenv("LIVE_GIFT_VALUE_LOOKUP", "false").lower() in ("1", "true", "yes", "on")
+ENABLE_QUALITY_SCORING     = os.getenv("ENABLE_QUALITY_SCORING", "false").lower() in ("1", "true", "yes", "on")
+ENABLE_PRE_SEND_REVIEW     = os.getenv("ENABLE_PRE_SEND_REVIEW", "false").lower() in ("1", "true", "yes", "on")
+MAX_PRODUCT_SCORE_DEALS    = int(os.getenv("MAX_PRODUCT_SCORE_DEALS", "40"))
+MAX_FINANCIAL_VALUE_DEALS  = int(os.getenv("MAX_FINANCIAL_VALUE_DEALS", "20"))
+MAX_FINANCIAL_SCORE_DEALS  = int(os.getenv("MAX_FINANCIAL_SCORE_DEALS", "20"))
+MAX_TRAVEL_VALUE_DEALS     = int(os.getenv("MAX_TRAVEL_VALUE_DEALS", "20"))
+MAX_SECTION_SCORE_DEALS    = int(os.getenv("MAX_SECTION_SCORE_DEALS", "12"))
 
 ANTHROPIC_API_KEY  = os.getenv("ANTHROPIC_API_KEY")
 GMAIL_TO           = os.getenv("GMAIL_TO")   # comma-separated for multiple recipients
@@ -204,6 +217,46 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+
+def _deal_priority(deal: dict) -> tuple:
+    """Cheap ranking signal used before spending Claude tokens."""
+    return (
+        deal.get("savings", 0),
+        deal.get("votes", 0),
+        deal.get("comments", 0),
+        deal.get("clicks", 0),
+    )
+
+
+def _cap_claude_candidates(deals: list[dict], limit: int, label: str) -> list[dict]:
+    """Keep the strongest candidates when a Claude stage has a budget cap."""
+    if limit <= 0 or len(deals) <= limit:
+        return deals
+    ranked = sorted(deals, key=_deal_priority, reverse=True)
+    log.info(f"  Claude budget: {label} capped {len(deals)}→{limit} candidates")
+    return ranked[:limit]
+
+
+def _apply_savings_metrics(deal: dict) -> dict:
+    """Infer market price and savings percent when deal price + savings are known."""
+    savings = int(deal.get("savings", 0) or 0)
+    deal_price = int(deal.get("deal_price", 0) or 0)
+    market = int(deal.get("market_price", 0) or 0)
+
+    if market <= 0 and savings > 0 and deal_price > 0:
+        market = deal_price + savings
+        deal["market_price"] = market
+        deal.setdefault("market_note", f"Inferred from parsed saving: ${market:,}")
+
+    if market > 0 and savings > 0:
+        deal["savings_percent"] = round((savings / market) * 100, 1)
+    else:
+        deal["savings_percent"] = 0.0
+
+    if savings > 0 and not deal.get("value_confidence"):
+        deal["value_confidence"] = "explicit_title_or_description"
+    return deal
+
 # ── Google auth ───────────────────────────────────────────────────────────────
 
 def get_google_creds() -> Credentials:
@@ -231,35 +284,123 @@ def fetch_feed(url: str) -> str:
     return r.text
 
 
+def fetch_html(url: str) -> str:
+    r = requests.get(url, timeout=30, headers={"User-Agent": "OzBargainMonitor/2.0"})
+    r.raise_for_status()
+    return r.text
+
+
+def _abs_ozb_url(path: str) -> str:
+    return urllib.parse.urljoin("https://www.ozbargain.com.au", path or "")
+
+
+def _parse_html_posted_at(text: str):
+    m = re.search(r"\bon\s+(\d{2}/\d{2}/\d{4})\s*-\s*(\d{1,2}:\d{2})", text or "")
+    if not m:
+        return datetime.now(timezone.utc)
+    try:
+        local = datetime.strptime(f"{m.group(1)} {m.group(2)}", "%d/%m/%Y %H:%M")
+        # OzBargain is Australia/Sydney; use +10 as a stable fallback for UTC conversion.
+        return local.replace(tzinfo=timezone(timedelta(hours=10))).astimezone(timezone.utc)
+    except Exception:
+        return datetime.now(timezone.utc)
+
+
+def _parse_html_expiry(card) -> str:
+    expiry = card.select_one(".nodeexpiry")
+    if not expiry:
+        return "No expiry date listed"
+    text = expiry.get_text(" ", strip=True)
+    if "expired" in expiry.get("class", []) or "expired" in text.lower():
+        return "Expired"
+    return text or "No expiry date listed"
+
+
+def _parse_int_text(el) -> int:
+    if not el:
+        return 0
+    m = re.search(r"-?\d+", el.get_text(" ", strip=True))
+    return int(m.group(0)) if m else 0
+
+
+def parse_html_deal_cards(html_text: str) -> list[dict]:
+    """Parse OzBargain /deals HTML cards into the deal dict shape used downstream."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html_text, "html.parser")
+    deals = []
+    for card in soup.select("div.node-ozbdeal"):
+        node_id = (card.get("id") or "").replace("node", "")
+        title_el = card.select_one("h2.title")
+        if not title_el:
+            continue
+
+        title = title_el.get("data-title") or title_el.get_text(" ", strip=True)
+        link_el = title_el.select_one('a[href^="/node/"]')
+        ozb_link = _abs_ozb_url(link_el.get("href")) if link_el else _abs_ozb_url(f"/node/{node_id}")
+
+        goto_el = card.select_one('.foxshot-container a[href^="/goto/"], .submitted .via a[href^="/goto/"]')
+        external_url = ""
+        if goto_el:
+            title_attr = goto_el.get("title", "")
+            if title_attr.lower().startswith("go to "):
+                external_url = title_attr[6:].strip()
+            else:
+                external_url = _abs_ozb_url(goto_el.get("href", ""))
+
+        description_el = card.select_one(".content")
+        categories = [a.get_text(" ", strip=True) for a in card.select(".links .tag a")]
+        merchant = ""
+        via_el = card.select_one(".submitted .via a")
+        if via_el:
+            merchant = via_el.get_text(" ", strip=True)
+
+        pub_dt = _parse_html_posted_at(card.select_one(".submitted").get_text(" ", strip=True) if card.select_one(".submitted") else "")
+        is_expired = "expired" in card.get("class", [])
+        is_oos = "soldout" in card.get("class", []) or "out of stock" in title_el.get_text(" ", strip=True).lower()
+
+        deals.append({
+            "node_id":      node_id,
+            "title":        title,
+            "link":         ozb_link,
+            "external_url": external_url,
+            "description":  description_el.get_text(" ", strip=True) if description_el else "",
+            "pubDate":      pub_dt,
+            "votes":        _parse_int_text(card.select_one(".voteup span")),
+            "comments":     _parse_int_text(card.select_one(".links .fa-comment").parent if card.select_one(".links .fa-comment") else None),
+            "clicks":       0,
+            "expiry_label": _parse_html_expiry(card),
+            "is_expired":   is_expired,
+            "is_oos":       is_oos,
+            "categories":   categories,
+            "merchant_name": merchant,
+            "source":       "html",
+        })
+    return deals
+
+
 def fetch_all_deals() -> list[dict]:
-    """Paginate OzBargain RSS and collect EVERY deal it serves.
+    """Paginate OzBargain HTML deal pages and collect every deal card available.
 
-    No age limit. Retries transient page errors and only stops after several
-    consecutive failed/empty pages, so a single 500 mid-feed can't truncate
-    the archive.
+    RSS is capped at page 10 by OzBargain, while /deals?page=N keeps working
+    beyond that. Use HTML as the canonical source for broad coverage.
     """
-    from email.utils import parsedate_to_datetime
-
     cutoff = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
-    # No age limit — fetch every page OZB's RSS will serve.
-    # Stop only after several CONSECUTIVE failures/empties (transient 500s on a
-    # single page must not truncate the whole archive).
-    max_pages = 200
     MAX_CONSECUTIVE_FAILURES = 4   # stop after 4 pages in a row that fail or are empty
 
     all_deals = []
+    seen = set()
     consecutive_fail = 0
     page = 0
 
-    while page < max_pages:
-        url = f"{FEED_URL}?page={page}"
+    while page < OZB_MAX_PAGES:
+        url = DEALS_URL if page == 0 else f"{DEALS_URL}?page={page}"
         log.info(f"Fetching page {page}: {url}")
 
-        # Retry transient errors once before giving up on this page
-        xml_text = None
+        html_text = None
         for attempt in range(2):
             try:
-                xml_text = fetch_feed(url)
+                html_text = fetch_html(url)
                 break
             except Exception as e:
                 if attempt == 0:
@@ -268,23 +409,23 @@ def fetch_all_deals() -> list[dict]:
                 else:
                     log.warning(f"  Page {page} failed twice: {e}")
 
-        if xml_text is None:
+        if html_text is None:
             consecutive_fail += 1
             if consecutive_fail >= MAX_CONSECUTIVE_FAILURES:
                 log.info(f"{MAX_CONSECUTIVE_FAILURES} consecutive failures — end of feed.")
                 break
             page += 1
-            continue   # skip this page, keep going — don't truncate
+            continue
 
-        try:
-            root = ET.fromstring(xml_text)
-            channel = root.find("channel")
-            items = channel.findall("item") if channel is not None else []
-        except Exception as e:
-            log.warning(f"  Page {page} parse error: {e}")
-            items = []
+        items = parse_html_deal_cards(html_text)
+        new_items = []
+        for deal in items:
+            key = deal.get("link") or deal.get("node_id")
+            if key and key not in seen:
+                seen.add(key)
+                new_items.append(deal)
 
-        if not items:
+        if not items or not new_items:
             consecutive_fail += 1
             if consecutive_fail >= MAX_CONSECUTIVE_FAILURES:
                 log.info(f"{MAX_CONSECUTIVE_FAILURES} consecutive empty/failed pages — end of feed.")
@@ -293,65 +434,23 @@ def fetch_all_deals() -> list[dict]:
             continue
         consecutive_fail = 0   # good page — reset the failure counter
 
-        page_hits = 0
-        for item in items:
-            def text(tag):
-                el = item.find(tag)
-                return el.text.strip() if el is not None and el.text else ""
+        in_window = [d for d in new_items if d.get("pubDate", datetime.now(timezone.utc)) >= cutoff]
+        if not in_window and MAX_AGE_HOURS < 999999:
+            log.info(f"  Page {page}: all {len(new_items)} new item(s) older than age window; stopping")
+            break
 
-            meta = item.find(f"{{{OZB_NS}}}meta")
-            meta_attr = meta.attrib if meta is not None else {}
-
-            pub_raw = text("pubDate")
-            try:
-                pub_dt = parsedate_to_datetime(pub_raw)
-                if pub_dt.tzinfo is None:
-                    pub_dt = pub_dt.replace(tzinfo=timezone.utc)
-            except Exception:
-                pub_dt = datetime.now(timezone.utc)
-
-            if pub_dt >= cutoff:
-                page_hits += 1
-                all_deals.append({
-                    "title":        text("title"),
-                    "link":         text("link"),
-                    "external_url": meta_attr.get("url", ""),
-                    "description":  text("description"),
-                    "pubDate":      pub_dt,
-                    "votes":        int(meta_attr.get("votes-pos",    0)),
-                    "comments":     int(meta_attr.get("comment-count", 0)),
-                    "clicks":       int(meta_attr.get("click-count",  0)),
-                    "expiry_label": _parse_expiry(meta_attr),
-                })
-
-        log.info(f"  Page {page}: {len(items)} items, total={len(all_deals)}")
+        all_deals.extend(in_window)
+        log.info(f"  Page {page}: {len(items)} items, {len(new_items)} new, total={len(all_deals)}")
         page += 1
 
-    # Deduplicate by link
-    seen = set()
-    unique = []
-    for d in all_deals:
-        if d["link"] not in seen:
-            seen.add(d["link"])
-            unique.append(d)
-
-    log.info(f"Fetched {len(unique)} unique deals across {page} page(s) (no age limit)")
-    return unique
+    log.info(f"Fetched {len(all_deals)} unique deals across {page} page(s) (HTML crawl)")
+    return all_deals
 
 # ── Threshold filter ──────────────────────────────────────────────────────────
 
 def filter_deals(deals: list[dict]) -> list[dict]:
-    filtered = [
-        d for d in deals
-        if d["votes"]    >= MIN_VOTES
-        and d["comments"] >= MIN_COMMENTS
-        and d["clicks"]   >= MIN_CLICKS
-    ]
-    log.info(
-        f"{len(filtered)} deals pass threshold filters "
-        f"(votes≥{MIN_VOTES}, comments≥{MIN_COMMENTS}, clicks≥{MIN_CLICKS})"
-    )
-    return filtered
+    log.info(f"Popularity filters disabled; keeping all {len(deals)} deal(s)")
+    return deals
 
 # ── Keyword pre-filter ────────────────────────────────────────────────────────
 
@@ -592,20 +691,22 @@ Example: 6|Requires existing CBA account which is free to open|CBA Yello require
 def score_deals(deals: list[dict]) -> list[dict]:
     """
     Step 1 — regex value parsing (no API, instant).
-    Step 2 — Claude Haiku accessibility score (only for deals passing MIN_SAVINGS).
+    Step 2 — optional Claude Haiku accessibility score.
     """
-    if not ANTHROPIC_API_KEY:
-        raise RuntimeError("ANTHROPIC_API_KEY not set in .env")
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = None
+    if ENABLE_QUALITY_SCORING:
+        if not ANTHROPIC_API_KEY:
+            raise RuntimeError("ANTHROPIC_API_KEY not set in .env")
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
     # Step 1: parse savings from title — only for deals not yet valued.
-    # Do NOT overwrite savings already set by the StaticICE market-price
-    # comparison in main() (step 7c); that data is more accurate than title regex.
+    # Do NOT overwrite savings already set by market-price comparison in main().
     from modules.value_parser import parse_deal_value as _pdv
     for d in deals:
         if d.get("savings", 0) == 0:
-            result = _pdv(d, live_gift_lookup=True)
+            result = _pdv(d, live_gift_lookup=LIVE_GIFT_VALUE_LOOKUP)
             d.update(result)
+        _apply_savings_metrics(d)
 
     value_passed = [d for d in deals if d["savings"] >= MIN_SAVINGS]
     dropped = len(deals) - len(value_passed)
@@ -613,6 +714,17 @@ def score_deals(deals: list[dict]) -> list[dict]:
 
     if not value_passed:
         return []
+
+    if not ENABLE_QUALITY_SCORING:
+        for deal in value_passed:
+            deal.setdefault("score", 10)
+            deal.setdefault("score_reason", "Savings threshold met")
+            deal.setdefault("trust_pct", 100)
+            deal.setdefault("trust_barriers", [])
+        log.info("Quality scoring disabled; including deals based on quantified savings only")
+        return value_passed
+
+    value_passed = _cap_claude_candidates(value_passed, MAX_PRODUCT_SCORE_DEALS, "product scoring")
 
     # Step 2: Haiku accessibility score — parallel (I/O bound)
     log.info("── Scoring quality/accessibility (Haiku, parallel) ──")
@@ -889,25 +1001,16 @@ def fetch_financial_deals() -> list[dict]:
 
 
 def filter_financial_deals(deals: list[dict]) -> list[dict]:
-    """Apply relaxed thresholds and OOS filter to financial deals."""
-    kept   = [
-        d for d in deals
-        if d["votes"]    >= FIN_MIN_VOTES
-        and d["comments"] >= FIN_MIN_COMMENTS
-        and d["clicks"]   >= FIN_MIN_CLICKS
-    ]
-    log.info(f"Financial threshold filter: {len(kept)}/{len(deals)} passed")
-
-    # OOS filter — title signals + expired-by-meta
+    """Apply OOS filtering only. Popularity is not used for inclusion."""
     kept2 = []
-    for d in kept:
+    for d in deals:
         tl = d["title"].lower()
         if any(s in tl for s in OOS_TITLE_SIGNALS):
             continue
         if d.get("expiry_label") == "Expired":
             continue
         kept2.append(d)
-    log.info(f"Financial OOS filter: {len(kept2)}/{len(kept)} passed")
+    log.info(f"Financial OOS filter: {len(kept2)}/{len(deals)} passed")
     return kept2
 
 
@@ -1029,12 +1132,20 @@ def score_financial_deals(deals: list[dict]) -> list[dict]:
     # Step 2: for deals where regex found nothing, use Claude financial prompt
     # Skip pure rate-announcement deals (HISA) — they never have extractable savings
     RATE_ONLY_SIGNALS = ["% p.a.", "p.a. interest", "interest on balance", "interest rate"]
-    no_value = [
+    no_value_uncapped = [
         d for d in deals
         if d["savings"] == 0
         and not any(sig in d.get("title", "").lower() for sig in RATE_ONLY_SIGNALS)
     ]
-    rate_only_skipped = [d for d in deals if d["savings"] == 0 and d not in no_value]
+    no_value = _cap_claude_candidates(no_value_uncapped, MAX_FINANCIAL_VALUE_DEALS, "financial value fallback")
+    rate_only_skipped = [
+        d for d in deals
+        if d["savings"] == 0
+        and any(sig in d.get("title", "").lower() for sig in RATE_ONLY_SIGNALS)
+    ]
+    budget_skipped = len(no_value_uncapped) - len(no_value)
+    if budget_skipped:
+        log.info(f"  Skipping Claude value fallback for {budget_skipped} financial deal(s) due to budget cap")
     if rate_only_skipped:
         log.info(f"  Skipping Claude for {len(rate_only_skipped)} rate-only HISA deal(s) (savings always $0)")
     if no_value:
@@ -1056,6 +1167,7 @@ def score_financial_deals(deals: list[dict]) -> list[dict]:
 
     # Step 3: Haiku score — parallel
     scoreable = [d for d in deals if d.get("savings", 0) >= FIN_MIN_SAVINGS]
+    scoreable = _cap_claude_candidates(scoreable, MAX_FINANCIAL_SCORE_DEALS, "financial scoring")
     skipped_score = len(deals) - len(scoreable)
     if skipped_score:
         log.info(f"  Skipping scoring for {skipped_score} deal(s) with savings<${FIN_MIN_SAVINGS}")
@@ -1284,6 +1396,7 @@ def score_travel_deals(deals: list[dict]) -> list[dict]:
     from concurrent.futures import ThreadPoolExecutor, as_completed as _asc
 
     no_value = [d for d in deals if d["savings"] == 0]
+    no_value = _cap_claude_candidates(no_value, MAX_TRAVEL_VALUE_DEALS, "travel value fallback")
     if no_value:
         log.info(f"── Travel: Claude value fallback {len(no_value)} deals (parallel) ──")
         def _tv(deal): return deal, calculate_travel_value(client, deal)
@@ -1296,10 +1409,15 @@ def score_travel_deals(deals: list[dict]) -> list[dict]:
                 except Exception as e:
                     log.warning(f"Travel value error: {e}")
 
-    log.info(f"── Travel: Haiku scoring {len(deals)} deals (parallel) ──")
+    scoreable = [d for d in deals if d.get("savings", 0) >= TRAVEL_MIN_SAVINGS]
+    scoreable = _cap_claude_candidates(scoreable, MAX_SECTION_SCORE_DEALS, "travel scoring")
+    skipped_score = len(deals) - len(scoreable)
+    if skipped_score:
+        log.info(f"  Skipping travel scoring for {skipped_score} deal(s) below savings/budget cutoff")
+    log.info(f"── Travel: Haiku scoring {len(scoreable)} deals (parallel) ──")
     def _ts(deal): return deal, assign_score(client, deal)
     with ThreadPoolExecutor(max_workers=6) as ex:
-        for f in _asc({ex.submit(_ts, d): d for d in deals}):
+        for f in _asc({ex.submit(_ts, d): d for d in scoreable}):
             try:
                 deal, r = f.result()
                 deal["score"]          = r["score"]
@@ -1419,13 +1537,20 @@ def score_lifestyle_deals(deals: list[dict], category: str, icon: str) -> list[d
     # Regex parse savings (catches "Was $X, Now $Y", "Save $X", etc.)
     parse_deal_values(deals)
 
-    # Haiku score all deals — parallel
-    log.info(f"── {category}: Haiku scoring {len(deals)} deals (parallel) ──")
+    min_sav = HOME_MIN_SAVINGS if "home" in category.lower() or "appliance" in category.lower() else FOOD_MIN_SAVINGS
+    scoreable = [d for d in deals if d.get("savings", 0) >= min_sav]
+    scoreable = _cap_claude_candidates(scoreable, MAX_SECTION_SCORE_DEALS, f"{category} scoring")
+    skipped_score = len(deals) - len(scoreable)
+    if skipped_score:
+        log.info(f"  Skipping {category} scoring for {skipped_score} deal(s) below savings/budget cutoff")
+
+    # Haiku score only deals that have enough regex savings to matter.
+    log.info(f"── {category}: Haiku scoring {len(scoreable)} deals (parallel) ──")
     from concurrent.futures import ThreadPoolExecutor, as_completed as _asc
 
     def _sc(deal): return deal, assign_score(client, deal)
     with ThreadPoolExecutor(max_workers=6) as ex:
-        for f in _asc({ex.submit(_sc, d): d for d in deals}):
+        for f in _asc({ex.submit(_sc, d): d for d in scoreable}):
             try:
                 deal, r = f.result()
                 deal["score"]          = r["score"]
@@ -1435,10 +1560,9 @@ def score_lifestyle_deals(deals: list[dict], category: str, icon: str) -> list[d
             except Exception as e:
                 log.warning(f"{category} scoring error: {e}")
 
-    scored = [d for d in deals if d["score"] >= FOOD_MIN_SCORE]
+    scored = [d for d in scoreable if d["score"] >= FOOD_MIN_SCORE]
 
     # Apply savings minimums to remove trivial discounts
-    min_sav = HOME_MIN_SAVINGS if "home" in category.lower() or "appliance" in category.lower() else FOOD_MIN_SAVINGS
     passed = [d for d in scored if d.get("savings", 0) >= min_sav]
     log.info(
         f"{category}: {len(passed)}/{len(deals)} deals passed "
@@ -1691,30 +1815,19 @@ def send_gmail_alert(
 def main():
     log.info("=== OzBargain Monitor v2 starting ===")
 
-    # 1. Fetch RSS
+    # 1. Fetch all available OzBargain deal cards from HTML pagination.
     deals = fetch_all_deals()
-
-    # 2. Threshold filter
-    deals = filter_deals(deals)
     if not deals:
-        log.info("No deals passed threshold filters — nothing to do.")
+        log.info("No deals fetched — nothing to do.")
         return
 
-    # 3. Keyword blocklist
-    deals = keyword_filter(deals)
-    if not deals:
-        log.info("All deals dropped by keyword filter — nothing to do.")
-        return
-
-    # 4. OOS / expired title filter (Cloudflare blocks page scraping, so detect from title)
+    # 2. OOS / expired filter. Do not filter by votes/comments/clicks.
     deals = oos_filter(deals)
     if not deals:
         log.info("All deals are OOS/expired — nothing to do.")
         return
 
-    # 5. (Deduplication removed — all qualifying deals are sent every run)
-
-    # 6. Set default enrichment fields (OZB blocks all scraping with Cloudflare)
+    # 3. Set default enrichment fields.
     for d in deals:
         d.setdefault("thumbnail", "")
         d.setdefault("description", "")
@@ -1724,15 +1837,17 @@ def main():
         d.setdefault("categories", [])
         d.setdefault("merchant_name", "")
 
-    # 7. Pre-parse deal prices so StaticICE accessory filter has correct deal_price
-    #    (score_deals also calls parse_deal_values later, but analyse_all needs it first)
+    # 4. Pre-parse deal prices and explicit savings before any optional Claude work.
     parse_deal_values(deals)
 
-    # 7b. Price intelligence: cashback, price-beat, Claude market price
-    claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    # 5. Price intelligence: cashback and price-beat are instant.
+    # Market price lookup is optional because it spends one Claude call per priced deal.
+    claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ENABLE_MARKET_PRICE_LOOKUP else None
+    if not ENABLE_MARKET_PRICE_LOOKUP:
+        log.info("Market price lookup disabled (set ENABLE_MARKET_PRICE_LOOKUP=true to enable)")
     deals = analyse_all(deals, client=claude_client)
 
-    # 7c. Recalculate savings using Claude market price when available
+    # 6. Recalculate savings using market price when available.
     for d in deals:
         market = d.get("market_price", 0)
         deal_price_guess = d.get("deal_price", 0)
@@ -1759,17 +1874,17 @@ def main():
                         f"(market baseline) — {d['title'][:50]}"
                     )
 
-    # 8. Two-pass Claude scoring (RSS-only — OZB page scraping blocked)
+    # 7. Savings-first inclusion. Optional quality scoring is off by default.
     deals = score_deals(deals)
 
-    # 8. Apply score + savings threshold
-    top_deals = [
-        d for d in deals
-        if d["score"] >= MIN_SCORE and d.get("savings", 0) >= MIN_SAVINGS
-    ]
-    log.info(f"{len(top_deals)} deal(s) scored {MIN_SCORE}+ with savings ≥ ${MIN_SAVINGS}")
+    top_deals = sorted(
+        (d for d in deals if d.get("savings", 0) >= MIN_SAVINGS),
+        key=lambda d: d.get("savings", 0),
+        reverse=True,
+    )
+    log.info(f"{len(top_deals)} deal(s) have quantified savings ≥ ${MIN_SAVINGS}")
 
-    # 9. Flash deal flagging
+    # 8. Flash deal flagging
     for d in top_deals:
         d["is_flash"] = is_flash_deal(d, flash_hours=6.0, flash_min_score=8)
 
@@ -1777,124 +1892,28 @@ def main():
     if flash:
         log.info(f"⚡ {len(flash)} flash deal(s) detected")
 
-    # 10. Preference matching + relevance tagging
+    # 9. Preference matching + relevance tagging
     top_deals = match_all(top_deals)
 
-    # 11. Fetch + score all secondary sections in parallel
-    #     Each section is independent — run them all concurrently.
-    from concurrent.futures import ThreadPoolExecutor, as_completed as _asc
-
-    def _lifestyle_pipeline(feeds, label, icon):
-        raw = fetch_lifestyle_deals(feeds, label)
-        raw = [d for d in raw if d["votes"] >= FOOD_MIN_VOTES
-               and d["comments"] >= FOOD_MIN_COMMENTS
-               and d["clicks"] >= FOOD_MIN_CLICKS]
-        raw = oos_filter(raw)
-        return score_lifestyle_deals(raw, label, icon)
-
-    def _financial_pipeline():
-        deals = fetch_financial_deals()
-        deals = filter_financial_deals(deals)
-        return score_financial_deals(deals)
-
-    def _travel_pipeline():
-        deals = fetch_travel_deals()
-        deals = [d for d in deals
-                 if d["votes"] >= TRAVEL_MIN_VOTES
-                 and d["comments"] >= TRAVEL_MIN_COMMENTS
-                 and d["clicks"] >= TRAVEL_MIN_CLICKS
-                 and d.get("expiry_label") != "Expired"]
-        return score_travel_deals(deals)
-
-    section_tasks = {
-        "financial":   (_financial_pipeline, ),
-        "travel":      (_travel_pipeline, ),
-        "food":        (_lifestyle_pipeline, FOOD_FEEDS, "Food & Groceries", "🍎"),
-        "home":        (_lifestyle_pipeline, HOME_APPLIANCE_FEEDS, "Home & Appliances", "🏠"),
-        "computing":   (_lifestyle_pipeline, COMPUTING_FEEDS, "Computing", "💻"),
-        "gaming":      (_lifestyle_pipeline, GAMING_FEEDS, "Gaming", "🎮"),
-        "mobile":      (_lifestyle_pipeline, MOBILE_FEEDS, "Mobile", "📱"),
-        "electrical":  (_lifestyle_pipeline, ELECTRICAL_FEEDS, "Electrical & Electronics", "⚡"),
-        "automotive":  (_lifestyle_pipeline, AUTOMOTIVE_FEEDS, "Automotive", "🚗"),
-        "health":      (_lifestyle_pipeline, HEALTH_BEAUTY_FEEDS, "Health & Beauty", "💊"),
-        "entertainment":(_lifestyle_pipeline, ENTERTAINMENT_FEEDS, "Entertainment", "🎬"),
-        "internet":    (_lifestyle_pipeline, INTERNET_FEEDS, "Internet & Telco", "🌐"),
-        "toys":        (_lifestyle_pipeline, TOYS_FEEDS, "Toys & Kids", "🧸"),
-        "pets":        (_lifestyle_pipeline, PETS_FEEDS, "Pets", "🐾"),
-    }
-
-    section_results = {}
-    log.info(f"── Fetching + scoring {len(section_tasks)} sections in parallel ──")
-    with ThreadPoolExecutor(max_workers=6) as ex:
-        futures = {}
-        for name, task in section_tasks.items():
-            fn, *args = task
-            futures[ex.submit(fn, *args)] = name
-        for f in _asc(futures):
-            name = futures[f]
-            try:
-                section_results[name] = f.result()
-                log.info(f"  ✓ {name}: {len(section_results[name])} deals")
-            except Exception as e:
-                log.warning(f"  ✗ {name} pipeline error: {e}")
-                section_results[name] = []
-
-    fin_all    = section_results.get("financial", [])
-    travel_deals = section_results.get("travel", [])
-    food_deals   = section_results.get("food", [])
-    home_deals   = section_results.get("home", [])
-
-    # 11b. Split financial → banking vs CC/travel
-    cc_travel_from_fin = [d for d in fin_all if d.get("deal_subtype") in ("credit_card", "travel")]
-    fin_deals          = [d for d in fin_all if d.get("deal_subtype") == "banking"]
-    cc_travel_deals    = cc_travel_from_fin + travel_deals
-
-    extra_deals = (
-        section_results.get("computing", []) +
-        section_results.get("gaming", []) +
-        section_results.get("mobile", []) +
-        section_results.get("electrical", []) +
-        section_results.get("automotive", []) +
-        section_results.get("health", []) +
-        section_results.get("entertainment", []) +
-        section_results.get("internet", []) +
-        section_results.get("toys", []) +
-        section_results.get("pets", [])
-    )
-    log.info(f"Extra categories total: {len(extra_deals)} deals")
-
-    # 12. Send Gmail alert (always send if any list has deals)
-    if not top_deals and not fin_deals and not cc_travel_deals and not food_deals and not home_deals and not extra_deals:
-        log.info("No qualifying deals in any feed — no email sent.")
+    if not top_deals:
+        log.info("No deals with quantified savings above threshold — no email sent.")
         return
 
-    # 12a. Pre-send review: single Claude pass to catch data errors before email goes out
-    log.info("── Pre-send quality review ──")
-    top_deals, fin_deals, cc_travel_deals, food_deals, home_deals = review_and_fix_deals(
-        top_deals, fin_deals, cc_travel_deals, food_deals, home_deals
-    )
+    if ENABLE_PRE_SEND_REVIEW:
+        log.info("── Pre-send quality review ──")
+        top_deals, _, _, _, _ = review_and_fix_deals(top_deals, [], [], [], [])
 
-    # 12b. Morning Briefing — top deals by savings across all sections
+    # 10. Morning Briefing — top deals by savings.
     log.info("── Morning Briefing ──")
-    all_flat = top_deals + fin_deals + cc_travel_deals + food_deals + home_deals + extra_deals
-    top_by_savings = sorted(all_flat, key=lambda d: d.get("savings", 0), reverse=True)[:5]
+    top_by_savings = top_deals[:5]
     briefing = build_briefing(top_by_savings)
     log.info(f"Briefing: {briefing['action_count']} actions · ${briefing['total_value']:,}")
 
     creds = get_google_creds()
     send_gmail_alert(
         creds, top_deals,
-        financial_deals=fin_deals,
-        cc_travel_deals=cc_travel_deals,
-        food_deals=food_deals,
-        home_deals=home_deals,
-        extra_deals=extra_deals,
         briefing=briefing,
     )
-
-    # 13. (mark_sent removed — no deduplication)
-
-    log.info("=== Done ===")
 
     log.info("=== Done ===")
 

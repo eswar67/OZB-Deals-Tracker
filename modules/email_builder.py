@@ -113,10 +113,15 @@ def _savings_breakdown(deal: dict) -> str:
     """Compact single-line savings callout — replaces the old 4-row table."""
     explanation = deal.get("explanation", "")
     savings     = deal.get("savings", 0)
+    savings_pct = deal.get("savings_percent", 0)
 
     if not savings:
         return '<div style="font-size:12px;color:#888;margin:6px 0;">Check deal for current pricing</div>'
 
+    pct_html = (
+        f'<span style="font-size:12px;font-weight:700;color:#1a7f37;">({savings_pct:.1f}% off)</span>'
+        if savings_pct else ""
+    )
     calc_html = (
         f'<span style="font-size:11px;color:#555;margin-left:8px;">{explanation}</span>'
         if explanation else ""
@@ -124,6 +129,7 @@ def _savings_breakdown(deal: dict) -> str:
     return f"""
 <div style="margin:8px 0;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px;">
   <span style="font-size:22px;font-weight:800;color:#1a7f37;">~${savings:,} AUD</span>
+  {pct_html}
   {calc_html}
 </div>"""
 
@@ -723,7 +729,33 @@ def build_email_html(
         return (d.get("is_flash", False), d.get("savings", 0), d.get("score", 0))
 
     sorted_deals = sorted(deals, key=_sort_key, reverse=True)
-    cards = "\n".join(_deal_card(d) for d in sorted_deals)
+    grouped_cards = []
+    if sorted_deals:
+        from collections import defaultdict
+        grouped = defaultdict(list)
+        for d in sorted_deals:
+            cats = d.get("categories") or ["Other"]
+            grouped[cats[0] or "Other"].append(d)
+
+        for category, cat_deals in sorted(
+            grouped.items(),
+            key=lambda item: sum(d.get("savings", 0) for d in item[1]),
+            reverse=True,
+        ):
+            cat_savings = sum(d.get("savings", 0) for d in cat_deals)
+            cat_cards = "\n".join(_deal_card(d) for d in cat_deals)
+            grouped_cards.append(f"""
+  <div style="margin-top:18px;">
+    <div style="background:#24292f;color:#fff;border-radius:8px 8px 0 0;
+                padding:10px 14px;font-size:15px;font-weight:800;">
+      {category} · {len(cat_deals)} deal(s) · ~${cat_savings:,} AUD savings
+    </div>
+    <div style="background:#fff;border:1px solid #d0d7de;border-top:none;
+                border-radius:0 0 8px 8px;padding:12px;">
+      {cat_cards}
+    </div>
+  </div>""")
+    cards = "\n".join(grouped_cards)
 
     flash_note = (
         f'&nbsp;·&nbsp;<span style="color:#d73a49;font-weight:700;">'
@@ -822,7 +854,7 @@ def build_email_html(
     deals_section = f"""
   <!-- Main deals section -->
   <div style="margin-bottom:8px;font-size:13px;font-weight:700;color:#444;">
-    🛍 Product &amp; Service Deals
+    🛍 Deals with Quantified Savings ≥ ${min_savings:,}
   </div>
   {cards}""" if deals else ""
 
@@ -944,10 +976,8 @@ def build_email_html(
   <!-- Footer -->
   <div style="font-size:11px;color:#999;margin-top:16px;padding:12px;
               border-top:1px solid #e8e8e8;text-align:center;">
-    Product filters: score≥{min_score} · savings≥${min_savings:,} · votes≥{min_votes}
-    · comments≥{min_comments} · clicks≥{min_clicks} · no age limit
-    <br>CC/Travel &amp; Banking filters: score≥5 · savings≥${fin_min_savings:,} · no age limit
-    <br>Food, Home &amp; Other categories: top 5 · score≥5 · savings≥$100 · votes≥20 · comments≥3 · clicks≥50
+    Inclusion rule: quantified savings ≥ ${min_savings:,} · no votes/comments/clicks filter · HTML crawl across OzBargain deal pages
+    <br>Market price and savings percentage are inferred from explicit title/description prices when available.
     <br>
     <a href="https://www.ozbargain.com.au/cat/financial" style="color:#1a7f37;margin-right:12px;">
       Financial deals
