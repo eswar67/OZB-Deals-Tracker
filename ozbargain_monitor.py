@@ -1811,6 +1811,15 @@ def send_gmail_alert(
 
 def main():
     log.info("=== OzBargain Monitor v2 starting ===")
+    log.info(
+        "Runtime mode: source=HTML /deals pages, min_savings=$%s, "
+        "market_lookup=%s, quality_scoring=%s, pre_send_review=%s, live_gift_lookup=%s",
+        MIN_SAVINGS,
+        ENABLE_MARKET_PRICE_LOOKUP,
+        ENABLE_QUALITY_SCORING,
+        ENABLE_PRE_SEND_REVIEW,
+        LIVE_GIFT_VALUE_LOOKUP,
+    )
 
     # 1. Fetch all available OzBargain deal cards from HTML pagination.
     deals = fetch_all_deals()
