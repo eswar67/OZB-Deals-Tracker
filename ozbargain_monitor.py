@@ -13,10 +13,7 @@ Pipeline:
   → prefs.match_all()           # relevance tagging against user-prefs.json
   → top_deals filter            # savings≥MIN_SAVINGS ($200 default)
   → flash deal flagging
-  → fetch_financial_deals()     # banking, CC, insurance — tag feeds, no age limit
-  → fetch_travel_deals()        # flights, hotels, cruises — no age limit
-  → fetch_lifestyle_deals()     # food/groceries + home/appliances — top 5 each
-  → review_and_fix_deals()      # single Claude Sonnet pre-send quality pass
+  → review_and_fix_deals()      # optional Claude Sonnet pre-send quality pass
   → email_builder.build()       # rich HTML deal card email
   → send_gmail_alert()
 """
