@@ -1,698 +1,275 @@
 """
 modules/email_builder.py
-Rich HTML deal card email.
 
-Each card shows:
-  - Deal type icon (emoji, derived from title keywords — no image scraping needed)
-  - Bold title + merchant badge
-  - Savings amount (large, green)
-  - 📐 How we calculated this — step-by-step breakdown table
-  - 🎯 Score panel — score badge + rubric position + Claude's one-line reason
-  - Cashback badge (if detected)
-  - StaticICE price (only when a real price was found)
-  - Top comment (if enrichment worked)
-  - Relevance tags
-  - CTA buttons: View Deal + Merchant (+ Cashback if available)
-  - Flash Deal banner
-Summary header + footer with filter settings
+Email-client-safe HTML renderer for OzBargain deal alerts.
+
+The layout intentionally uses simple tables and inline styles. That is less
+fashionable than flexbox, but it is far more reliable in Gmail, Apple Mail,
+Outlook, and mobile clients.
 """
 
+from collections import defaultdict
 from datetime import datetime, timezone
+from html import escape
+
+
+BRAND = "#e05c00"
+INK = "#24292f"
+MUTED = "#667085"
+BORDER = "#d0d7de"
+BG = "#f6f8fa"
+GREEN = "#1a7f37"
+RED = "#cf222e"
+AMBER = "#b45309"
+
+
+def _money(value) -> str:
+    try:
+        return f"${int(value):,}"
+    except (TypeError, ValueError):
+        return "$0"
 
 
 def _format_age(age_mins: int) -> str:
-    """Human-readable age: minutes < 1h, hours < 48h, otherwise days."""
     if age_mins < 60:
         return f"{age_mins}m ago"
-    if age_mins < 2880:   # < 48 hours
+    if age_mins < 2880:
         return f"{age_mins // 60}h {age_mins % 60}m ago"
-    return f"{age_mins // 1440}d ago"   # 48h+ → days
+    return f"{age_mins // 1440}d ago"
 
 
-def _expiry_is_urgent(label: str) -> bool:
-    """Urgent = expires within ~5 days (labels prefixed with the ⏰ clock)."""
-    return label.startswith("⏰")
-
-
-def _expiry_html(label: str) -> str:
-    """Inline expiry chip for the stats bar. Always shown so status is explicit."""
-    if not label:
+def _age_label(deal: dict) -> str:
+    pub_date = deal.get("pubDate")
+    if not pub_date:
         return ""
-    urgent  = _expiry_is_urgent(label)
-    no_date = label == "No expiry date listed"
-    color   = "#b45309" if urgent else "#999" if no_date else "#555"
-    weight  = "700" if urgent else "400"
-    return (f'&nbsp; <span style="color:{color};font-weight:{weight};font-size:11px;">'
-            f'{label}</span>')
+    try:
+        age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
+        return _format_age(max(age_mins, 0))
+    except Exception:
+        return ""
 
-
-# ── Deal type icon ────────────────────────────────────────────────────────────
-
-_ICON_RULES = [
-    (["credit card", "credit-card"],                              "💳"),
-    (["home loan", "mortgage", "refinanc", "offset"],            "🏠"),
-    (["savings account", "high interest", "hisa"],               "🏦"),
-    (["superannuation", "super fund", "smsf"],                   "🦺"),
-    (["share", "etf", "brokerage", "trading", "asx", "invest"], "📈"),
-    (["insurance", "cover", "policy", "premium"],                "🛡️"),
-    (["loan", "personal loan", "car loan", "finance"],           "💵"),
-    (["bank bonus", "bank account", "transaction account"],      "🏦"),
-    (["laptop", "macbook", "notebook", "chromebook"],           "💻"),
-    (["ipad", "tablet"],                                        "📱"),
-    (["iphone", "phone", "samsung galaxy", "pixel"],            "📱"),
-    (["tv", "television", "monitor", "oled", "qled"],          "📺"),
-    (["headphone", "earphone", "airpod", "earbud", "bose",
-      "sony wh", "jbl"],                                        "🎧"),
-    (["robot vacuum", "roomba", "vacuum", "dyson"],             "🤖"),
-    (["air fryer", "microwave", "oven", "dishwasher",
-      "washing machine", "dryer", "fridge", "freezer"],         "🏠"),
-    (["coffee machine", "nespresso", "espresso", "grinder"],    "☕"),
-    (["flight", "airfare", "hotel", "travel", "airbnb", "holiday",
-      "qantas", "virgin australia", "jetstar", "singapore airlines",
-      "emirates", "cathay", "united airlines", "thai airways", "lufthansa",
-      "fiji airways", "air pacific", "scoot", "airasia", "air asia",
-      "korean air", "japan airlines", "eva air", "etihad", "turkish airlines",
-      "china southern", "air china", "garuda", "philippine airlines",
-      "air new zealand", "malaysia airlines", "royal brunei",
-      "return gold coast", "return sydney", "return melbourne",
-      "return brisbane", "return perth", "return adelaide",
-      " rtn ", "cruise", "holiday package"],                     "✈️"),
-    (["gift card", "voucher", "store credit", "eftpos"],        "🎁"),
-    (["cashback", "shopback", "cashrewards"],                   "💰"),
-    (["points", "qantas", "velocity", "flybuys", "rewards"],    "✈️"),
-    (["game", "nintendo", "playstation", "xbox", "steam"],      "🎮"),
-    (["camera", "gopro", "lens", "dslr", "mirrorless"],        "📷"),
-    (["software", "subscription", "licence", "microsoft",
-      "adobe", "vpn"],                                          "💿"),
-    (["car", "vehicle", "driveaway", "ute", "suv"],            "🚗"),
-    (["solar", "battery", "ev", "electric vehicle"],           "⚡"),
-    (["furniture", "mattress", "desk", "chair", "couch"],       "🛋️"),
-    (["watch", "smartwatch", "apple watch", "garmin"],          "⌚"),
-]
 
 def _deal_icon(title: str) -> str:
-    t = title.lower()
-    for keywords, icon in _ICON_RULES:
-        if any(k in t for k in keywords):
+    t = (title or "").lower()
+    rules = [
+        (("credit card", "bank", "savings account", "home loan"), "💳"),
+        (("flight", "airfare", "hotel", "travel", "qantas", "velocity", "cruise"), "✈️"),
+        (("laptop", "macbook", "notebook", "chromebook"), "💻"),
+        (("iphone", "phone", "samsung galaxy", "pixel", "ipad", "tablet"), "📱"),
+        (("tv", "television", "monitor", "oled", "qled"), "📺"),
+        (("headphone", "earphone", "airpod", "earbud", "bose", "sony wh"), "🎧"),
+        (("vacuum", "dyson", "roomba", "washing machine", "dryer", "fridge"), "🏠"),
+        (("camera", "gopro", "lens", "dslr", "mirrorless"), "📷"),
+        (("gift card", "voucher", "store credit"), "🎁"),
+        (("game", "nintendo", "playstation", "xbox", "steam"), "🎮"),
+        (("car", "vehicle", "driveaway", "suv", "ute"), "🚗"),
+        (("cashback", "shopback", "cashrewards"), "💰"),
+    ]
+    for words, icon in rules:
+        if any(word in t for word in words):
             return icon
     return "🛍️"
 
 
-# ── Score colour ──────────────────────────────────────────────────────────────
-
-def _score_color(score: int) -> tuple:
-    if score >= 9:   return "#1a7f37", "#d4edda", "Excellent"
-    elif score >= 7: return "#2da44e", "#e6f4ea", "Great"
-    elif score >= 5: return "#bf8700", "#fff8e1", "Good"
-    else:            return "#cf222e", "#fdecea", "Fair"
+def _category(deal: dict) -> str:
+    cats = deal.get("categories") or []
+    return cats[0] if cats else "Other"
 
 
-# ── Savings calculation breakdown ─────────────────────────────────────────────
+def _confidence_label(deal: dict) -> str:
+    confidence = deal.get("value_confidence") or ""
+    if confidence == "explicit_title_or_description":
+        return "Explicit price text"
+    if confidence == "market_lookup":
+        return "Market lookup"
+    if confidence == "llm_estimate":
+        return "AI estimate"
+    return "Parsed saving"
 
-def _savings_breakdown(deal: dict) -> str:
-    """Compact single-line savings callout — replaces the old 4-row table."""
-    explanation = deal.get("explanation", "")
-    savings     = deal.get("savings", 0)
-    savings_pct = deal.get("savings_percent", 0)
 
-    if not savings:
-        return '<div style="font-size:12px;color:#888;margin:6px 0;">Check deal for current pricing</div>'
-
-    pct_html = (
-        f'<span style="font-size:12px;font-weight:700;color:#1a7f37;">({savings_pct:.1f}% off)</span>'
-        if savings_pct else ""
+def _chip(text: str, bg: str = "#f6f8fa", color: str = INK) -> str:
+    if not text:
+        return ""
+    return (
+        f'<span style="display:inline-block;background:{bg};color:{color};'
+        f'border:1px solid #eaecf0;border-radius:12px;padding:3px 8px;'
+        f'font-size:11px;line-height:16px;margin:0 4px 4px 0;">{escape(str(text))}</span>'
     )
-    calc_html = (
-        f'<span style="font-size:11px;color:#555;margin-left:8px;">{explanation}</span>'
-        if explanation else ""
+
+
+def _button(label: str, href: str, bg: str = BRAND, color: str = "#ffffff") -> str:
+    if not href:
+        return ""
+    return (
+        f'<a href="{escape(href, quote=True)}" '
+        f'style="display:inline-block;background:{bg};color:{color};'
+        f'text-decoration:none;border-radius:6px;padding:9px 13px;'
+        f'font-size:13px;font-weight:700;line-height:16px;margin-right:8px;">'
+        f'{escape(label)}</a>'
     )
+
+
+def _summary_cell(label: str, value: str, color: str = INK) -> str:
     return f"""
-<div style="margin:8px 0;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px;">
-  <span style="font-size:22px;font-weight:800;color:#1a7f37;">~${savings:,} AUD</span>
-  {pct_html}
-  {calc_html}
-</div>"""
+      <td style="width:33.33%;padding:12px;border-right:1px solid #eaecf0;" valign="top">
+        <div style="font-size:11px;line-height:14px;color:{MUTED};font-weight:700;text-transform:uppercase;">
+          {escape(label)}
+        </div>
+        <div style="font-size:22px;line-height:28px;color:{color};font-weight:800;margin-top:3px;">
+          {escape(value)}
+        </div>
+      </td>"""
 
-
-# ── Score breakdown ───────────────────────────────────────────────────────────
-
-def _score_breakdown(deal: dict) -> str:
-    score  = deal.get("score", 0)
-    reason = deal.get("score_reason", "")
-    bg, light, label = _score_color(score)
-
-    reason_html = (
-        f'<span style="font-size:11px;color:#666;font-style:italic;margin-left:8px;">💬 {reason}</span>'
-    ) if reason else ""
-
-    return f"""
-<div style="margin:10px 0;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
-  <span style="background:{bg};color:#fff;font-size:13px;font-weight:800;
-               padding:4px 12px;border-radius:20px;">🎯 {score}/10 {label}</span>
-  {reason_html}
-</div>"""
-
-
-# ── Individual deal card ──────────────────────────────────────────────────────
 
 def _deal_card(deal: dict) -> str:
-    title      = deal.get("title", "No title")
-    ozb_link   = deal.get("link", "#")
-    ext_url    = deal.get("external_url", "")
-    merchant   = deal.get("merchant_name", "")
-    savings    = deal.get("savings", 0)
-    score      = deal.get("score", 0)
-    votes      = deal.get("votes", 0)
-    comments   = deal.get("comments", 0)
-    clicks     = deal.get("clicks", 0)
-    pub_date   = deal.get("pubDate")
-    top_cmts   = deal.get("top_comments", [])
-    cats       = deal.get("categories", [])
-    cb_plat    = deal.get("cashback_platform", "")
-    cb_pct     = deal.get("cashback_pct", 0.0)
-    cb_url     = deal.get("cashback_url", "")
-    market_price  = deal.get("market_price", 0)
-    market_note   = deal.get("market_note", "")
-    rel_tags   = deal.get("relevance_tags", [])
-    is_flash   = deal.get("is_flash", False)
-    is_expired = deal.get("is_expired", False)
+    title = escape(deal.get("title", "No title"))
+    ozb_link = deal.get("link", "#")
+    ext_url = deal.get("external_url", "")
+    merchant = deal.get("merchant_name", "")
+    savings = int(deal.get("savings", 0) or 0)
+    savings_percent = deal.get("savings_percent", 0) or 0
+    market_price = int(deal.get("market_price", 0) or 0)
+    deal_price = int(deal.get("deal_price", 0) or 0)
+    explanation = escape(deal.get("explanation", "") or "Saving parsed from deal text")
+    votes = int(deal.get("votes", 0) or 0)
+    comments = int(deal.get("comments", 0) or 0)
+    expiry = deal.get("expiry_label", "") or ""
+    age = _age_label(deal)
 
-    bg, light, label = _score_color(score)
-    icon = _deal_icon(title)
+    pct = f" · {savings_percent:.1f}% off" if savings_percent else ""
+    price_line = []
+    if deal_price:
+        price_line.append(f"Deal {_money(deal_price)}")
+    if market_price:
+        price_line.append(f"Market {_money(market_price)}")
+    price_text = " · ".join(price_line)
 
-    # Age + freshness badge
-    age_str   = ""
-    is_new    = False
-    if pub_date:
-        age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
-        age_str = _format_age(age_mins)
-        is_new   = age_mins < 1440  # posted within last 24 hours
+    meta = []
+    if merchant:
+        meta.append(merchant)
+    if age:
+        meta.append(age)
+    if expiry and expiry != "No expiry date listed":
+        meta.append(expiry)
+    meta_text = " · ".join(meta)
 
-    # Expiry label
-    expiry_label = deal.get("expiry_label", "")
-    expiry_urgent = _expiry_is_urgent(expiry_label)
-
-    # Flash / urgency banner
-    if is_flash:
-        flash_html = (
-            '<div style="background:#d73a49;color:#fff;font-size:12px;font-weight:bold;'
-            'padding:5px 14px;text-align:center;">⚡ FLASH DEAL — Act Fast!</div>'
-        )
-    elif expiry_urgent:
-        flash_html = (
-            f'<div style="background:#b45309;color:#fff;font-size:12px;font-weight:bold;'
-            f'padding:5px 14px;text-align:center;">{expiry_label} — Limited time!</div>'
-        )
-    elif savings >= 800 and score >= 7:
-        flash_html = (
-            '<div style="background:#1a7f37;color:#fff;font-size:12px;font-weight:bold;'
-            'padding:5px 14px;text-align:center;">🔥 High-Value Deal — Review Before It Expires</div>'
-        )
-    else:
-        flash_html = ""
-
-    # Merchant badge
-    merchant_badge = (
-        f'<span style="display:inline-block;background:#f0f0f0;color:#555;'
-        f'font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;">'
-        f'{merchant}</span>'
-    ) if merchant else ""
-
-    # Score badge (top-right)
-    score_badge = f"""
-    <div style="text-align:center;min-width:70px;">
-      <div style="background:{bg};color:#fff;font-size:20px;font-weight:800;
-                  padding:8px 12px;border-radius:12px;display:inline-block;
-                  min-width:50px;">{score}/10</div>
-      <div style="font-size:10px;color:{bg};font-weight:700;margin-top:3px;">{label}</div>
-    </div>"""
-
-    # Category tags
-    cat_tags = "".join(
-        f'<span style="background:#e8f0fe;color:#1a73e8;font-size:10px;'
-        f'padding:2px 8px;border-radius:10px;margin-right:4px;">{c}</span>'
-        for c in cats[:3]
-    )
-
-    # Cashback badge — availability only, no % (check live rate via link)
-    cb_html = ""
-    if cb_plat:
-        cb_href = f'href="{cb_url}"' if cb_url else ""
-        cb_html = (
-            f'<a {cb_href} style="display:inline-block;background:#ff6900;color:#fff;'
-            f'font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;'
-            f'text-decoration:none;margin:6px 0;">💰 Cashback likely via {cb_plat} — check rate</a>'
-        )
-
-    # Market price panel (Claude-sourced)
-    market_cheaper = deal.get("market_cheaper", False)
-    market_saving  = deal.get("market_saving", 0)
-    deal_price_val = deal.get("deal_price", 0)
-
-    market_html = ""
-    if market_price > 0:
-        if market_cheaper:
-            # Deal price is HIGHER than typical market — warn
-            overpay = deal_price_val - market_price if deal_price_val else 0
-            market_html = f"""
-<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;
-            padding:8px 12px;margin:8px 0;font-size:12px;">
-  <strong>⚠️ Market check:</strong> {market_note or f'~${market_price:,} AUD typical market price'}
-  {f'<span style="color:#856404;"> — deal may be ${overpay:,} above market</span>' if overpay > 0 else ""}
-  <span style="color:#999;font-size:10px;margin-left:6px;">· verify current pricing</span>
-</div>"""
-        else:
-            # Market price validates the deal or provides useful context
-            market_html = f"""
-<div style="background:#e6f4ea;border:1px solid #a8d5b5;border-radius:6px;
-            padding:8px 12px;margin:8px 0;font-size:12px;">
-  <strong>🏪 Market price:</strong> {market_note or f'~${market_price:,} AUD'}
-  <span style="color:#999;font-size:10px;margin-left:6px;">· estimated from Claude AI</span>
-</div>"""
-
-    # Top comment
-    cmt_html = ""
-    if top_cmts:
-        c = top_cmts[0]
-        cmt_html = (
-            f'<div style="background:#fffbdd;border-left:3px solid #d4a72c;'
-            f'padding:8px 10px;margin:10px 0;border-radius:0 4px 4px 0;font-size:12px;">'
-            f'<strong>⚠️ Top comment</strong> '
-            f'<span style="color:#888;">({c.get("author","anon")})</span><br>'
-            f'<em style="color:#555;">{c.get("text","")[:200]}</em>'
-            f'</div>'
-        )
-
-    # Relevance tags
-    rel_html = ""
-    if rel_tags:
-        rel_html = (
-            '<div style="margin:6px 0;">'
-            + "".join(
-                f'<span style="display:inline-block;background:#f6f8fa;border:1px solid #d0d7de;'
-                f'color:#57606a;font-size:10px;padding:2px 8px;border-radius:10px;margin-right:4px;">'
-                f'{tag}</span>'
-                for tag in rel_tags[:4]
-            )
-            + '</div>'
-        )
-
-    # CTA buttons
-    btn = ("display:inline-block;padding:8px 16px;border-radius:6px;"
-           "text-decoration:none;font-size:13px;font-weight:700;margin-right:8px;margin-top:6px;")
-    cta_view     = f'<a href="{ozb_link}" style="{btn}background:#e05c00;color:#fff;">🛍 View Deal</a>'
-    cta_merchant = f'<a href="{ext_url}" style="{btn}background:#f6f8fa;color:#24292f;border:1px solid #d0d7de;">🏪 Merchant</a>' if ext_url else ""
-    cta_cb       = f'<a href="{cb_url}" style="{btn}background:#ff6900;color:#fff;">💰 {cb_plat}</a>' if cb_url else ""
-
-    # Stats bar
-    stats = (
-        f'<span style="color:#888;font-size:12px;">'
-        f'👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
-        + (f'&nbsp; ⏰ {age_str}' if age_str else "")
-        + _expiry_html(expiry_label)
-        + '</span>'
-    )
-
-    expired_style = "opacity:0.55;" if is_expired else ""
+    confidence = _chip(_confidence_label(deal), "#ecfdf3", GREEN)
+    category = _chip(_category(deal), "#eef4ff", "#175cd3")
+    engagement = _chip(f"{votes} votes · {comments} comments", "#f8fafc", MUTED)
+    cashback = ""
+    if deal.get("cashback_platform"):
+        cashback = _chip(f"Cashback likely via {deal['cashback_platform']}", "#fff7ed", "#c2410c")
 
     return f"""
-<div style="border:1px solid #d0d7de;border-radius:10px;margin-bottom:18px;
-            overflow:hidden;font-family:Arial,sans-serif;{expired_style}">
-  {flash_html}
-  <div style="padding:16px;display:flex;gap:14px;align-items:flex-start;">
-
-    <!-- Icon -->
-    <div style="flex-shrink:0;font-size:42px;width:56px;text-align:center;
-                padding-top:4px;">{icon}</div>
-
-    <!-- Main body -->
-    <div style="flex:1;min-width:0;">
-
-      <!-- Title -->
-      <div style="margin-bottom:6px;">
-        {'<span style="background:#0969da;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;margin-right:6px;vertical-align:middle;">🆕 NEW</span>' if is_new else ""}
-        <a href="{ozb_link}" style="color:#e05c00;font-weight:800;font-size:15px;
-           text-decoration:none;line-height:1.4;">{title}</a>
-        {merchant_badge}
-      </div>
-
-      {f'<div style="margin-bottom:8px;">{cat_tags}</div>' if cat_tags else ""}
-
-      {cb_html}
-      {market_html}
-
-      <!-- Savings breakdown -->
-      {_savings_breakdown(deal)}
-
-
-      <!-- Trust Score -->
-      {_trust_badge(deal)}
-
-      <!-- Score breakdown -->
-      {_score_breakdown(deal)}
-
-      {cmt_html}
-      {rel_html}
-
-      <!-- CTAs + stats -->
-      <div style="margin-top:12px;display:flex;justify-content:space-between;
-                  align-items:center;flex-wrap:wrap;gap:8px;">
-        <div>{cta_view}{cta_merchant}{cta_cb}</div>
-        {stats}
-      </div>
-    </div>
-
-    <!-- Score badge -->
-    {score_badge}
-  </div>
-</div>"""
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+           style="border:1px solid {BORDER};border-radius:8px;background:#ffffff;margin:0 0 12px 0;border-collapse:separate;">
+      <tr>
+        <td width="52" valign="top" style="padding:16px 0 16px 16px;font-size:30px;line-height:34px;">
+          {_deal_icon(deal.get("title", ""))}
+        </td>
+        <td valign="top" style="padding:15px 16px 15px 12px;">
+          <div style="font-size:15px;line-height:21px;font-weight:800;margin-bottom:6px;">
+            <a href="{escape(ozb_link, quote=True)}" style="color:{INK};text-decoration:none;">{title}</a>
+          </div>
+          <div style="font-size:12px;line-height:17px;color:{MUTED};margin-bottom:9px;">
+            {escape(meta_text)}
+          </div>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                 style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;border-collapse:separate;margin-bottom:10px;">
+            <tr>
+              <td style="padding:10px 12px;">
+                <div style="font-size:24px;line-height:28px;font-weight:900;color:{GREEN};">
+                  Save ~{_money(savings)} AUD<span style="font-size:13px;font-weight:800;">{escape(pct)}</span>
+                </div>
+                <div style="font-size:12px;line-height:17px;color:#166534;margin-top:3px;">
+                  {escape(price_text)}
+                </div>
+                <div style="font-size:12px;line-height:17px;color:#344054;margin-top:5px;">
+                  {explanation}
+                </div>
+              </td>
+            </tr>
+          </table>
+          <div style="margin-bottom:8px;">
+            {category}{confidence}{cashback}{engagement}
+          </div>
+          <div>
+            {_button("View on OzBargain", ozb_link)}
+            {_button("Merchant", ext_url, "#ffffff", INK)}
+          </div>
+        </td>
+      </tr>
+    </table>"""
 
 
-# ── Full email ────────────────────────────────────────────────────────────────
-
-def _cc_travel_card(deal: dict) -> str:
-    """
-    Rich card for Credit Card and Travel deals.
-    Shows sub-type badge, points→$ breakdown, and retail comparison.
-    """
-    title        = deal.get("title", "No title")
-    ozb_link     = deal.get("link", "#")
-    ext_url      = deal.get("external_url", "")
-    savings      = deal.get("savings", 0)
-    score        = deal.get("score", 0)
-    votes        = deal.get("votes", 0)
-    comments     = deal.get("comments", 0)
-    clicks       = deal.get("clicks", 0)
-    pub_date     = deal.get("pubDate")
-    explanation  = deal.get("explanation", "")
-    score_reason = deal.get("score_reason", "")
-    subtype      = deal.get("deal_subtype", "travel")
-
-    icon = _deal_icon(title)
-    bg, light, label = _score_color(score)
-
-    age_str = ""
-    is_new  = False
-    if pub_date:
-        age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
-        age_str = _format_age(age_mins)
-        is_new   = age_mins < 1440
-
-    new_badge = '<span style="background:#0969da;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;margin-right:6px;">🆕 NEW</span>' if is_new else ""
-
-    # Sub-type badge
-    if subtype == "credit_card":
-        badge_bg, badge_text, badge_label = "#4f46e5", "#fff", "💳 Credit Card"
-    else:
-        badge_bg, badge_text, badge_label = "#0284c7", "#fff", "✈️ Travel"
-
-    subtype_badge = (
-        f'<span style="display:inline-block;background:{badge_bg};color:{badge_text};'
-        f'font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;'
-        f'margin-bottom:6px;">{badge_label}</span>'
-    )
-
-    # Points breakdown — detect points in explanation and show → $ calculation
-    points_html = ""
-    import re as _re
-    pts_match = _re.search(r"([\d,]+)\s*(Qantas|Velocity|qantas|velocity)\s*pts?", explanation, _re.IGNORECASE)
-    if pts_match:
-        pts_raw   = pts_match.group(1).replace(",", "")
-        pts_brand = pts_match.group(2).capitalize()
-        try:
-            pts       = int(pts_raw)
-            from modules.value_parser import QANTAS_CPP, VELOCITY_CPP
-            cpp       = VELOCITY_CPP if pts_brand.lower() == "velocity" else QANTAS_CPP
-            pts_value = int(pts * cpp)
-            points_html = f"""
-<div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:6px;
-            padding:8px 12px;margin:8px 0;font-size:12px;">
-  <strong>✈️ Points Value Breakdown</strong><br>
-  <span style="color:#4f46e5;">{pts:,} {pts_brand} points × ${cpp}/pt
-  = <strong>${pts_value:,} AUD</strong></span>
-  <span style="color:#888;font-size:11px;margin-left:6px;">
-    (based on ${cpp}/pt redemption rate)
-  </span>
-</div>"""
-        except ValueError:
-            pass
-
-    # Savings panel
-    if savings:
-        savings_html = (
-            f'<div style="font-size:24px;font-weight:800;color:#1a7f37;margin:6px 0;">'
-            f'~${savings:,} AUD</div>'
-            f'<div style="font-size:12px;color:#555;margin-bottom:4px;">{explanation}</div>'
-        )
-    else:
-        savings_html = '<div style="font-size:12px;color:#888;margin:6px 0 4px;">Value not quantified — check deal</div>'
-
-    # Score line
-    score_html = (
-        f'<span style="background:{bg};color:#fff;font-size:12px;font-weight:700;'
-        f'padding:2px 8px;border-radius:8px;">{score}/10 {label}</span>'
-        + (f'<span style="font-size:11px;color:#666;margin-left:8px;font-style:italic;">'
-           f'💬 {score_reason}</span>' if score_reason else "")
-    )
-
-    btn = ("display:inline-block;padding:7px 14px;border-radius:6px;"
-           "text-decoration:none;font-size:13px;font-weight:700;margin-right:8px;margin-top:6px;")
-    cta_view     = f'<a href="{ozb_link}" style="{btn}background:{badge_bg};color:#fff;">View Deal</a>'
-    cta_merchant = f'<a href="{ext_url}" style="{btn}background:#f6f8fa;color:#24292f;border:1px solid #d0d7de;">Go to Offer</a>' if ext_url else ""
-
-    stats = (
-        f'<span style="color:#888;font-size:12px;">👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
-        + (f'&nbsp; ⏰ {age_str}' if age_str else "")
-        + _expiry_html(deal.get("expiry_label", ""))
-        + '</span>'
-    )
-
-    return f"""
-<div style="border:1px solid #c7d2fe;border-radius:10px;margin-bottom:14px;
-            overflow:hidden;font-family:Arial,sans-serif;background:#fafafa;">
-  <div style="padding:14px 16px;display:flex;gap:12px;align-items:flex-start;">
-    <div style="flex-shrink:0;font-size:36px;width:48px;text-align:center;padding-top:2px;">{icon}</div>
-    <div style="flex:1;min-width:0;">
-      {subtype_badge}
-      <div style="margin-bottom:4px;">
-        {new_badge}<a href="{ozb_link}" style="color:#1e1b4b;font-weight:800;font-size:14px;
-           text-decoration:none;line-height:1.4;">{title}</a>
-      </div>
-      {savings_html}
-      {points_html}
-      {_trust_badge(deal)}
-      <div style="margin-bottom:8px;">{score_html}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <div>{cta_view}{cta_merchant}</div>
-        {stats}
-      </div>
-    </div>
-  </div>
-</div>"""
-
-
-def _financial_card(deal: dict) -> str:
-    """Compact card for financial deals — same layout, green accent."""
-    title      = deal.get("title", "No title")
-    ozb_link   = deal.get("link", "#")
-    ext_url    = deal.get("external_url", "")
-    savings    = deal.get("savings", 0)
-    score      = deal.get("score", 0)
-    votes      = deal.get("votes", 0)
-    comments   = deal.get("comments", 0)
-    clicks     = deal.get("clicks", 0)
-    pub_date   = deal.get("pubDate")
-    explanation= deal.get("explanation", "")
-    score_reason = deal.get("score_reason", "")
-
-    icon = _deal_icon(title)
-
-    age_str = ""
-    is_new  = False
-    if pub_date:
-        age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
-        age_str = _format_age(age_mins)
-        is_new   = age_mins < 1440
-
-    new_badge = '<span style="background:#0969da;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;margin-right:6px;">🆕 NEW</span>' if is_new else ""
-
-    bg, light, label = _score_color(score)
-
-    savings_html = (
-        f'<div style="font-size:22px;font-weight:800;color:#1a7f37;margin:6px 0;">'
-        f'~${savings:,} AUD</div>'
-        f'<div style="font-size:12px;color:#555;margin-bottom:8px;">{explanation}</div>'
-    ) if savings else (
-        '<div style="font-size:12px;color:#888;margin:6px 0 8px;">Value not quantified — check deal</div>'
-    )
-
-    score_html = (
-        f'<span style="background:{bg};color:#fff;font-size:12px;font-weight:700;'
-        f'padding:2px 8px;border-radius:8px;">{score}/10</span>'
-        + (f'<span style="font-size:11px;color:#666;margin-left:8px;font-style:italic;">{score_reason}</span>' if score_reason else "")
-    )
-
-    btn = ("display:inline-block;padding:7px 14px;border-radius:6px;"
-           "text-decoration:none;font-size:13px;font-weight:700;margin-right:8px;margin-top:6px;")
-    cta_view     = f'<a href="{ozb_link}" style="{btn}background:#1a7f37;color:#fff;">💳 View Deal</a>'
-    cta_merchant = f'<a href="{ext_url}" style="{btn}background:#f6f8fa;color:#24292f;border:1px solid #d0d7de;">🏦 Go to Offer</a>' if ext_url else ""
-
-    stats = (
-        f'<span style="color:#888;font-size:12px;">👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
-        + (f'&nbsp; ⏰ {age_str}' if age_str else "")
-        + _expiry_html(deal.get("expiry_label", ""))
-        + '</span>'
-    )
-
-    return f"""
-<div style="border:1px solid #c6e6d0;border-radius:10px;margin-bottom:14px;
-            overflow:hidden;font-family:Arial,sans-serif;background:#f6fbf7;">
-  <div style="padding:14px 16px;display:flex;gap:12px;align-items:flex-start;">
-    <div style="flex-shrink:0;font-size:36px;width:48px;text-align:center;padding-top:2px;">{icon}</div>
-    <div style="flex:1;min-width:0;">
-      {new_badge}<a href="{ozb_link}" style="color:#1a7f37;font-weight:800;font-size:14px;
-         text-decoration:none;line-height:1.4;">{title}</a>
-      {savings_html}
-      <div style="margin-bottom:8px;">{score_html}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <div>{cta_view}{cta_merchant}</div>
-        {stats}
-      </div>
-    </div>
-  </div>
-</div>"""
-
-
-def _lifestyle_card(deal: dict, accent_color: str = "#e67e22") -> str:
-    """Compact card for Food/Grocery and Home/Appliance deals."""
-    title        = deal.get("title", "No title")
-    ozb_link     = deal.get("link", "#")
-    ext_url      = deal.get("external_url", "")
-    savings      = deal.get("savings", 0)
-    score        = deal.get("score", 0)
-    votes        = deal.get("votes", 0)
-    comments     = deal.get("comments", 0)
-    clicks       = deal.get("clicks", 0)
-    pub_date     = deal.get("pubDate")
-    explanation  = deal.get("explanation", "")
-    score_reason = deal.get("score_reason", "")
-
-    icon = _deal_icon(title)
-    bg, light, label = _score_color(score)
-
-    age_str = ""
-    if pub_date:
-        age_mins = int((datetime.now(timezone.utc) - pub_date).total_seconds() / 60)
-        age_str = _format_age(age_mins)
-
-    savings_html = (
-        f'<div style="font-size:20px;font-weight:800;color:#1a7f37;margin:5px 0;">'
-        f'~${savings:,} AUD</div>'
-        f'<div style="font-size:12px;color:#555;margin-bottom:6px;">{explanation}</div>'
-    ) if savings else (
-        '<div style="font-size:12px;color:#888;margin:5px 0 6px;">Check deal for pricing</div>'
-    )
-
-    score_html = (
-        f'<span style="background:{bg};color:#fff;font-size:12px;font-weight:700;'
-        f'padding:2px 8px;border-radius:8px;">{score}/10</span>'
-        + (f'<span style="font-size:11px;color:#666;margin-left:8px;font-style:italic;">'
-           f'💬 {score_reason}</span>' if score_reason else "")
-    )
-
-    btn = ("display:inline-block;padding:7px 14px;border-radius:6px;"
-           "text-decoration:none;font-size:13px;font-weight:700;margin-right:8px;margin-top:6px;")
-    cta_view     = f'<a href="{ozb_link}" style="{btn}background:{accent_color};color:#fff;">View Deal</a>'
-    cta_merchant = (
-        f'<a href="{ext_url}" style="{btn}background:#f6f8fa;color:#24292f;border:1px solid #d0d7de;">Go to Offer</a>'
-    ) if ext_url else ""
-
-    stats = (
-        f'<span style="color:#888;font-size:12px;">👍 {votes} &nbsp;💬 {comments} &nbsp;👁 {clicks}'
-        + (f'&nbsp; ⏰ {age_str}' if age_str else "")
-        + _expiry_html(deal.get("expiry_label", ""))
-        + '</span>'
-    )
-
-    return f"""
-<div style="border:1px solid #ffe0b2;border-radius:10px;margin-bottom:14px;
-            overflow:hidden;font-family:Arial,sans-serif;background:#fffaf5;">
-  <div style="padding:14px 16px;display:flex;gap:12px;align-items:flex-start;">
-    <div style="flex-shrink:0;font-size:36px;width:48px;text-align:center;padding-top:2px;">{icon}</div>
-    <div style="flex:1;min-width:0;">
-      <a href="{ozb_link}" style="color:{accent_color};font-weight:800;font-size:14px;
-         text-decoration:none;line-height:1.4;">{title}</a>
-      {savings_html}
-      <div style="margin-bottom:8px;">{score_html}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <div>{cta_view}{cta_merchant}</div>
-        {stats}
-      </div>
-    </div>
-  </div>
-</div>"""
-
-
-def _trust_badge(deal: dict) -> str:
-    """Compact trust % widget shown on every deal card."""
-    trust = deal.get("trust_pct", 0)
-    barriers = deal.get("trust_barriers", [])
-    if not trust:
+def _section(title: str, deals: list[dict]) -> str:
+    if not deals:
         return ""
-    if trust >= 80:
-        color, label = "#1a7f37", "High Trust"
-    elif trust >= 50:
-        color, label = "#bf8700", "Moderate"
-    else:
-        color, label = "#d73a49", "Low Trust"
-    barrier_html = ""
-    if barriers:
-        barrier_html = (
-            '<span style="font-size:10px;color:#555;margin-left:8px;">'
-            + " · ".join(f"⚠️ {b}" for b in barriers[:2])
-            + "</span>"
-        )
-    return (
-        f'<div style="margin:4px 0;display:flex;align-items:center;flex-wrap:wrap;gap:4px;">'
-        f'<span style="background:{color};color:#fff;font-size:10px;font-weight:700;'
-        f'padding:2px 8px;border-radius:8px;">🔐 Trust {trust}% — {label}</span>'
-        f'{barrier_html}</div>'
-    )
+    total = sum(int(d.get("savings", 0) or 0) for d in deals)
+    cards = "\n".join(_deal_card(d) for d in deals)
+    return f"""
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:18px 0 0 0;">
+      <tr>
+        <td style="background:{INK};color:#ffffff;border-radius:8px 8px 0 0;padding:12px 14px;">
+          <div style="font-size:16px;line-height:20px;font-weight:900;">{escape(title)}</div>
+          <div style="font-size:12px;line-height:17px;color:#d0d5dd;margin-top:2px;">
+            {len(deals)} deal(s) · ~{_money(total)} AUD savings
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:#ffffff;border:1px solid {BORDER};border-top:none;border-radius:0 0 8px 8px;padding:12px;">
+          {cards}
+        </td>
+      </tr>
+    </table>"""
 
 
 def _briefing_section(briefing: dict) -> str:
-    """Morning briefing executive summary card."""
     if not briefing or not briefing.get("actions"):
         return ""
-    actions = briefing["actions"]
     rows = ""
-    for i, a in enumerate(actions, 1):
-        rows += (
-            f'<div style="display:flex;align-items:baseline;gap:10px;padding:6px 0;'
-            f'border-bottom:1px solid #f0fdf4;">'
-            f'<span style="font-size:14px;font-weight:800;color:#1a7f37;min-width:18px;">#{i}</span>'
-            f'<div style="flex:1;">'
-            f'<span style="font-weight:700;font-size:12px;">{a["icon"]} {a["title"]}</span>'
-            f'<div style="font-size:10px;color:#666;margin-top:1px;">{a["one_liner"]}</div>'
-            f'</div>'
-            f'<span style="font-size:12px;font-weight:800;color:#1a7f37;white-space:nowrap;">'
-            f'~${a["value"]:,}</span>'
-            f'</div>'
-        )
+    for i, action in enumerate(briefing.get("actions", [])[:5], 1):
+        rows += f"""
+          <tr>
+            <td style="padding:8px 0;border-top:1px solid #dcfce7;" valign="top">
+              <div style="font-size:12px;line-height:17px;color:{GREEN};font-weight:900;">#{i} {_money(action.get("value", 0))}</div>
+              <div style="font-size:13px;line-height:18px;color:{INK};font-weight:800;">
+                {escape(action.get("icon", ""))} {escape(action.get("title", ""))}
+              </div>
+              <div style="font-size:12px;line-height:17px;color:{MUTED};">
+                {escape(action.get("one_liner", ""))}
+              </div>
+            </td>
+          </tr>"""
     return f"""
-  <!-- Morning Briefing -->
-  <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #86efac;
-              border-radius:10px;padding:16px 20px;margin-bottom:16px;">
-    <div style="margin-bottom:10px;">
-      <div style="font-size:17px;font-weight:800;color:#14532d;">
-        ☀️ {briefing.get('date','')} — Top {briefing['action_count']} deal(s)
-      </div>
-      <div style="font-size:11px;color:#166534;margin-top:2px;">
-        ~${briefing['total_value']:,} combined savings
-      </div>
-    </div>
-    {rows}
-  </div>"""
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+           style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;margin:0 0 16px 0;border-collapse:separate;">
+      <tr>
+        <td style="padding:14px 16px;">
+          <div style="font-size:16px;line-height:21px;font-weight:900;color:#14532d;">
+            Top deal opportunities
+          </div>
+          <div style="font-size:12px;line-height:17px;color:#166534;margin-top:2px;">
+            {briefing.get("action_count", 0)} highlighted · ~{_money(briefing.get("total_value", 0))} combined savings
+          </div>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:8px;">
+            {rows}
+          </table>
+        </td>
+      </tr>
+    </table>"""
+
+
+def _group_deals(deals: list[dict]) -> list[tuple[str, list[dict]]]:
+    grouped = defaultdict(list)
+    for deal in deals:
+        grouped[_category(deal)].append(deal)
+    return sorted(
+        grouped.items(),
+        key=lambda item: sum(int(d.get("savings", 0) or 0) for d in item[1]),
+        reverse=True,
+    )
 
 
 def build_email_html(
@@ -712,233 +289,21 @@ def build_email_html(
     extra_deals: list = None,
     briefing: dict = None,
 ) -> str:
-    financial_deals   = financial_deals   or []
-    cc_travel_deals   = cc_travel_deals   or []
-    food_deals        = food_deals        or []
-    home_deals        = home_deals        or []
-    extra_deals       = extra_deals       or []
-    briefing          = briefing          or {}
-    total_savings = sum(d.get("savings", 0) for d in deals)
-    flash_count   = sum(1 for d in deals if d.get("is_flash"))
-    now_str       = datetime.now().strftime("%d %b %Y %H:%M AEST")
+    financial_deals = financial_deals or []
+    cc_travel_deals = cc_travel_deals or []
+    food_deals = food_deals or []
+    home_deals = home_deals or []
+    extra_deals = extra_deals or []
+    briefing = briefing or {}
 
-    LIFESTYLE_TOP_N = 5
+    all_deals = deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
+    all_deals = sorted(all_deals, key=lambda d: int(d.get("savings", 0) or 0), reverse=True)
+    total_savings = sum(int(d.get("savings", 0) or 0) for d in all_deals)
+    top_saving = int(all_deals[0].get("savings", 0) or 0) if all_deals else 0
+    now_str = datetime.now().strftime("%d %b %Y %H:%M")
 
-    # Sort by flash first, then savings, then score
-    def _sort_key(d):
-        return (d.get("is_flash", False), d.get("savings", 0), d.get("score", 0))
-
-    sorted_deals = sorted(deals, key=_sort_key, reverse=True)
-    grouped_cards = []
-    if sorted_deals:
-        from collections import defaultdict
-        grouped = defaultdict(list)
-        for d in sorted_deals:
-            cats = d.get("categories") or ["Other"]
-            grouped[cats[0] or "Other"].append(d)
-
-        for category, cat_deals in sorted(
-            grouped.items(),
-            key=lambda item: sum(d.get("savings", 0) for d in item[1]),
-            reverse=True,
-        ):
-            cat_savings = sum(d.get("savings", 0) for d in cat_deals)
-            cat_cards = "\n".join(_deal_card(d) for d in cat_deals)
-            grouped_cards.append(f"""
-  <div style="margin-top:18px;">
-    <div style="background:#24292f;color:#fff;border-radius:8px 8px 0 0;
-                padding:10px 14px;font-size:15px;font-weight:800;">
-      {category} · {len(cat_deals)} deal(s) · ~${cat_savings:,} AUD savings
-    </div>
-    <div style="background:#fff;border:1px solid #d0d7de;border-top:none;
-                border-radius:0 0 8px 8px;padding:12px;">
-      {cat_cards}
-    </div>
-  </div>""")
-    cards = "\n".join(grouped_cards)
-
-    flash_note = (
-        f'&nbsp;·&nbsp;<span style="color:#d73a49;font-weight:700;">'
-        f'⚡ {flash_count} flash deal(s)</span>'
-    ) if flash_count else ""
-
-    fin_note = (
-        f'&nbsp;·&nbsp;<span style="color:#1a7f37;font-weight:700;">'
-        f'🏦 {len(financial_deals)} banking deal(s)</span>'
-    ) if financial_deals else ""
-
-    cct_note = (
-        f'&nbsp;·&nbsp;<span style="color:#4f46e5;font-weight:700;">'
-        f'💳✈️ {len(cc_travel_deals)} CC/travel deal(s)</span>'
-    ) if cc_travel_deals else ""
-
-    food_note = (
-        f'&nbsp;·&nbsp;<span style="color:#e67e22;font-weight:700;">'
-        f'🍎 {len(food_deals)} food deal(s)</span>'
-    ) if food_deals else ""
-
-    home_note = (
-        f'&nbsp;·&nbsp;<span style="color:#8e44ad;font-weight:700;">'
-        f'🏠 {len(home_deals)} home deal(s)</span>'
-    ) if home_deals else ""
-
-    all_savings = sum(
-        d.get("savings", 0)
-        for d in deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
-    )
-    briefing_html        = _briefing_section(briefing)
-
-    # Financial (banking) section
-    if financial_deals:
-        sorted_fin = sorted(
-            financial_deals,
-            key=lambda d: (d.get("savings", 0), d.get("score", 0)),
-            reverse=True,
-        )
-        fin_cards = "\n".join(_financial_card(d) for d in sorted_fin)
-        fin_section = f"""
-  <!-- Banking/financial deals section -->
-  <div style="margin-top:24px;">
-    <div style="background:linear-gradient(135deg,#1a7f37,#116329);border-radius:10px 10px 0 0;
-                padding:14px 20px;color:#fff;">
-      <div style="font-size:17px;font-weight:800;">🏦 Banking &amp; Financial Deals</div>
-      <div style="font-size:11px;opacity:0.85;margin-top:2px;">
-        {len(financial_deals)} deal(s) · savings accounts, home loans, trading bonuses
-      </div>
-    </div>
-    <div style="background:#f6fbf7;border:1px solid #c6e6d0;border-top:none;
-                border-radius:0 0 10px 10px;padding:14px;margin-bottom:18px;">
-      {fin_cards}
-    </div>
-  </div>"""
-    else:
-        fin_section = ""
-
-    # Credit Card & Travel section
-    if cc_travel_deals:
-        sorted_cct = sorted(
-            cc_travel_deals,
-            key=lambda d: (d.get("savings", 0), d.get("score", 0)),
-            reverse=True,
-        )
-        # Split for sub-section counts
-        n_cc     = sum(1 for d in sorted_cct if d.get("deal_subtype") == "credit_card")
-        n_travel = len(sorted_cct) - n_cc
-        sub_note = []
-        if n_cc:     sub_note.append(f"{n_cc} credit card")
-        if n_travel: sub_note.append(f"{n_travel} travel")
-        sub_str = " · ".join(sub_note)
-
-        cct_total_savings = sum(d.get("savings", 0) for d in sorted_cct)
-        cct_cards = "\n".join(_cc_travel_card(d) for d in sorted_cct)
-
-        cct_section = f"""
-  <!-- Credit Card & Travel section -->
-  <div style="margin-top:24px;">
-    <div style="background:linear-gradient(135deg,#4f46e5,#3730a3);border-radius:10px 10px 0 0;
-                padding:14px 20px;color:#fff;">
-      <div style="font-size:17px;font-weight:800;">💳✈️ Credit Card &amp; Travel Deals</div>
-      <div style="font-size:11px;opacity:0.85;margin-top:2px;">
-        {len(sorted_cct)} deal(s) · {sub_str}
-        &nbsp;·&nbsp; ~${cct_total_savings:,} AUD total value
-      </div>
-    </div>
-    <div style="background:#f8f7ff;border:1px solid #c7d2fe;border-top:none;
-                border-radius:0 0 10px 10px;padding:14px;margin-bottom:18px;">
-      {cct_cards}
-    </div>
-  </div>"""
-    else:
-        cct_section = ""
-
-    deals_section = f"""
-  <!-- Main deals section -->
-  <div style="margin-bottom:8px;font-size:13px;font-weight:700;color:#444;">
-    🛍 Deals with Quantified Savings ≥ ${min_savings:,}
-  </div>
-  {cards}""" if deals else ""
-
-    # Food & Grocery section
-    if food_deals:
-        sorted_food = sorted(
-            food_deals,
-            key=lambda d: (d.get("savings", 0), d.get("score", 0)),
-            reverse=True,
-        )[:LIFESTYLE_TOP_N]
-        food_cards = "\n".join(_lifestyle_card(d, accent_color="#e67e22") for d in sorted_food)
-        food_section = f"""
-  <!-- Food & Grocery section -->
-  <div style="margin-top:24px;">
-    <div style="background:linear-gradient(135deg,#e67e22,#ca6f1e);border-radius:10px 10px 0 0;
-                padding:14px 20px;color:#fff;">
-      <div style="font-size:17px;font-weight:800;">🍎 Food &amp; Groceries</div>
-      <div style="font-size:11px;opacity:0.85;margin-top:2px;">
-        Top {len(sorted_food)} of {len(food_deals)} deal(s) · supermarket, meal kits, groceries · score≥5 · savings≥$100
-      </div>
-    </div>
-    <div style="background:#fffaf5;border:1px solid #ffe0b2;border-top:none;
-                border-radius:0 0 10px 10px;padding:14px;margin-bottom:18px;">
-      {food_cards}
-    </div>
-  </div>"""
-    else:
-        food_section = ""
-
-    # Home & Appliances section
-    if home_deals:
-        sorted_home = sorted(
-            home_deals,
-            key=lambda d: (d.get("savings", 0), d.get("score", 0)),
-            reverse=True,
-        )[:LIFESTYLE_TOP_N]
-        home_cards = "\n".join(_lifestyle_card(d, accent_color="#8e44ad") for d in sorted_home)
-        home_section = f"""
-  <!-- Home & Appliances section -->
-  <div style="margin-top:24px;">
-    <div style="background:linear-gradient(135deg,#8e44ad,#7d3c98);border-radius:10px 10px 0 0;
-                padding:14px 20px;color:#fff;">
-      <div style="font-size:17px;font-weight:800;">🏠 Home &amp; Appliances</div>
-      <div style="font-size:11px;opacity:0.85;margin-top:2px;">
-        Top {len(sorted_home)} of {len(home_deals)} deal(s) · whitegoods, kitchen, vacuum, appliances · score≥5 · savings≥$100
-      </div>
-    </div>
-    <div style="background:#fdf5ff;border:1px solid #e8d5f5;border-top:none;
-                border-radius:0 0 10px 10px;padding:14px;margin-bottom:18px;">
-      {home_cards}
-    </div>
-  </div>"""
-    else:
-        home_section = ""
-
-    # Extra categories — group by section label, one card per deal
-    if extra_deals:
-        sorted_extra = sorted(
-            extra_deals,
-            key=lambda d: (d.get("savings", 0), d.get("score", 0)),
-            reverse=True,
-        )[:LIFESTYLE_TOP_N * 2]  # show top 10 across all extra categories
-        extra_cards  = "\n".join(_lifestyle_card(d, accent_color="#555") for d in sorted_extra)
-        # Group label breakdown
-        from collections import Counter
-        cat_counts = Counter(d.get("_section", "other") for d in extra_deals)
-        cat_str = " · ".join(f"{v} {k}" for k, v in cat_counts.most_common(5))
-        extra_section = f"""
-  <!-- Extra categories section -->
-  <div style="margin-top:24px;">
-    <div style="background:linear-gradient(135deg,#374151,#1f2937);border-radius:10px 10px 0 0;
-                padding:14px 20px;color:#fff;">
-      <div style="font-size:17px;font-weight:800;">📦 More Categories</div>
-      <div style="font-size:11px;opacity:0.85;margin-top:2px;">
-        Top {len(sorted_extra)} of {len(extra_deals)} deal(s) · {cat_str} · savings≥$100
-      </div>
-    </div>
-    <div style="background:#f9fafb;border:1px solid #d1d5db;border-top:none;
-                border-radius:0 0 10px 10px;padding:14px;margin-bottom:18px;">
-      {extra_cards}
-    </div>
-  </div>"""
-    else:
-        extra_section = ""
+    sections = "\n".join(_section(category, category_deals) for category, category_deals in _group_deals(all_deals))
+    briefing_html = _briefing_section(briefing)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -947,52 +312,50 @@ def build_email_html(
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>OzBargain Deal Alert</title>
 </head>
-<body style="margin:0;padding:0;background:#f6f8fa;font-family:Arial,sans-serif;">
-<div style="max-width:680px;margin:0 auto;padding:20px;">
-
-  <!-- Header -->
-  <div style="background:linear-gradient(135deg,#e05c00,#c44d00);border-radius:10px 10px 0 0;
-              padding:20px 24px;color:#fff;">
-    <div style="font-size:22px;font-weight:800;">🤖 OZB Deal Tracking Agent</div>
-    <div style="font-size:12px;opacity:0.85;margin-top:4px;">📅 {now_str} &nbsp;·&nbsp; Powered by Claude AI</div>
-  </div>
-
-  <!-- Summary bar -->
-  <div style="background:#fff;border:1px solid #d0d7de;border-top:none;
-              border-radius:0 0 10px 10px;padding:12px 20px;margin-bottom:14px;">
-    {'<strong>' + str(len(deals)) + '</strong> product deal(s)' if deals else ''}{flash_note}{cct_note}{fin_note}{food_note}{home_note}
-    &nbsp;·&nbsp;
-    <strong style="color:#1a7f37;">~${all_savings:,} AUD</strong> total possible savings
-  </div>
-
-  {briefing_html}
-  {deals_section}
-  {cct_section}
-  {fin_section}
-  {food_section}
-  {home_section}
-  {extra_section}
-
-  <!-- Footer -->
-  <div style="font-size:11px;color:#999;margin-top:16px;padding:12px;
-              border-top:1px solid #e8e8e8;text-align:center;">
-    Inclusion rule: quantified savings ≥ ${min_savings:,} · no votes/comments/clicks filter · HTML crawl across OzBargain deal pages
-    <br>Market price and savings percentage are inferred from explicit title/description prices when available.
-    <br>
-    <a href="https://www.ozbargain.com.au/cat/financial" style="color:#1a7f37;margin-right:12px;">
-      Financial deals
-    </a>
-    <a href="https://www.ozbargain.com.au/cat/travel" style="color:#4f46e5;margin-right:12px;">
-      Travel deals
-    </a>
-    <a href="https://www.ozbargain.com.au/cat/groceries" style="color:#e67e22;margin-right:12px;">
-      Grocery deals
-    </a>
-    <a href="https://www.ozbargain.com.au/tag/appliances" style="color:#8e44ad;">
-      Appliance deals
-    </a>
-  </div>
-
-</div>
+<body style="margin:0;padding:0;background:{BG};font-family:Arial,Helvetica,sans-serif;color:{INK};">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:{BG};">
+    <tr>
+      <td align="center" style="padding:18px 10px;">
+        <table role="presentation" width="680" cellspacing="0" cellpadding="0"
+               style="width:100%;max-width:680px;background:{BG};border-collapse:separate;">
+          <tr>
+            <td style="background:{BRAND};border-radius:10px 10px 0 0;padding:20px 22px;color:#ffffff;">
+              <div style="font-size:23px;line-height:29px;font-weight:900;">OzBargain Savings Digest</div>
+              <div style="font-size:13px;line-height:18px;margin-top:4px;color:#fff3e8;">
+                {escape(now_str)} · deals with quantified savings
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#ffffff;border:1px solid {BORDER};border-top:none;border-radius:0 0 10px 10px;padding:0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                <tr>
+                  {_summary_cell("Deals", str(len(all_deals)))}
+                  {_summary_cell("Total Savings", f"~{_money(total_savings)}", GREEN)}
+                  {_summary_cell("Top Saving", f"~{_money(top_saving)}", GREEN)}
+                </tr>
+              </table>
+              <div style="padding:10px 16px 14px 16px;font-size:12px;line-height:18px;color:{MUTED};border-top:1px solid #eaecf0;">
+                Inclusion: quantified savings of at least {_money(min_savings)}. Votes, comments and clicks are shown as context only.
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-top:16px;">
+              {briefing_html}
+              {sections}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 4px 6px 4px;text-align:center;font-size:11px;line-height:17px;color:{MUTED};">
+              Market price and percentage-off values are inferred from explicit title or description prices when available.
+              <br>
+              <a href="https://www.ozbargain.com.au/deals" style="color:{BRAND};text-decoration:none;font-weight:700;">Open OzBargain Deals</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>"""
