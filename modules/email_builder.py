@@ -97,31 +97,15 @@ def _chip(text: str, bg: str = "#f6f8fa", color: str = INK) -> str:
     )
 
 
-def _button(label: str, href: str, bg: str = BRAND, color: str = "#ffffff") -> str:
-    if not href:
-        return ""
-    return (
-        f'<a href="{escape(href, quote=True)}" '
-        f'style="display:inline-block;background:{bg};color:{color};'
-        f'text-decoration:none;border-radius:6px;padding:9px 13px;'
-        f'font-size:13px;font-weight:700;line-height:16px;margin-right:8px;">'
-        f'{escape(label)}</a>'
-    )
-
-
 def _summary_cell(label: str, value: str, color: str = INK) -> str:
-    return f"""
-      <td style="width:33.33%;padding:12px;border-right:1px solid #eaecf0;" valign="top">
-        <div style="font-size:11px;line-height:14px;color:{MUTED};font-weight:700;text-transform:uppercase;">
-          {escape(label)}
-        </div>
-        <div style="font-size:22px;line-height:28px;color:{color};font-weight:800;margin-top:3px;">
-          {escape(value)}
-        </div>
+    tone = " good" if color == GREEN else ""
+    return f"""<td class="sum" valign="top">
+        <div class="suml">{escape(label)}</div>
+        <div class="sumv{tone}">{escape(value)}</div>
       </td>"""
 
 
-def _deal_card(deal: dict) -> str:
+def _deal_row(deal: dict, rank: int) -> str:
     title = escape(deal.get("title", "No title"))
     ozb_link = deal.get("link", "#")
     ext_url = deal.get("external_url", "")
@@ -131,12 +115,10 @@ def _deal_card(deal: dict) -> str:
     market_price = int(deal.get("market_price", 0) or 0)
     deal_price = int(deal.get("deal_price", 0) or 0)
     explanation = escape(deal.get("explanation", "") or "Saving parsed from deal text")
-    votes = int(deal.get("votes", 0) or 0)
-    comments = int(deal.get("comments", 0) or 0)
     expiry = deal.get("expiry_label", "") or ""
     age = _age_label(deal)
 
-    pct = f" · {savings_percent:.1f}% off" if savings_percent else ""
+    pct = f" ({savings_percent:.1f}%)" if savings_percent else ""
     price_line = []
     if deal_price:
         price_line.append(f"Deal {_money(deal_price)}")
@@ -145,83 +127,42 @@ def _deal_card(deal: dict) -> str:
     price_text = " · ".join(price_line)
 
     meta = []
-    if merchant:
-        meta.append(merchant)
     if age:
         meta.append(age)
     if expiry and expiry != "No expiry date listed":
         meta.append(expiry)
     meta_text = " · ".join(meta)
 
-    confidence = _chip(_confidence_label(deal), "#ecfdf3", GREEN)
-    category = _chip(_category(deal), "#eef4ff", "#175cd3")
-    engagement = _chip(f"{votes} votes · {comments} comments", "#f8fafc", MUTED)
-    cashback = ""
+    proof = _confidence_label(deal)
     if deal.get("cashback_platform"):
-        cashback = _chip(f"Cashback likely via {deal['cashback_platform']}", "#fff7ed", "#c2410c")
+        proof += f" · Cashback likely via {deal['cashback_platform']}"
 
-    return f"""
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-           style="border:1px solid {BORDER};border-radius:8px;background:#ffffff;margin:0 0 12px 0;border-collapse:separate;">
-      <tr>
-        <td width="52" valign="top" style="padding:16px 0 16px 16px;font-size:30px;line-height:34px;">
-          {_deal_icon(deal.get("title", ""))}
-        </td>
-        <td valign="top" style="padding:15px 16px 15px 12px;">
-          <div style="font-size:15px;line-height:21px;font-weight:800;margin-bottom:6px;">
-            <a href="{escape(ozb_link, quote=True)}" style="color:{INK};text-decoration:none;">{title}</a>
-          </div>
-          <div style="font-size:12px;line-height:17px;color:{MUTED};margin-bottom:9px;">
-            {escape(meta_text)}
-          </div>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                 style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;border-collapse:separate;margin-bottom:10px;">
-            <tr>
-              <td style="padding:10px 12px;">
-                <div style="font-size:24px;line-height:28px;font-weight:900;color:{GREEN};">
-                  Save ~{_money(savings)} AUD<span style="font-size:13px;font-weight:800;">{escape(pct)}</span>
-                </div>
-                <div style="font-size:12px;line-height:17px;color:#166534;margin-top:3px;">
-                  {escape(price_text)}
-                </div>
-                <div style="font-size:12px;line-height:17px;color:#344054;margin-top:5px;">
-                  {explanation}
-                </div>
-              </td>
-            </tr>
-          </table>
-          <div style="margin-bottom:8px;">
-            {category}{confidence}{cashback}{engagement}
-          </div>
-          <div>
-            {_button("View on OzBargain", ozb_link)}
-            {_button("Merchant", ext_url, "#ffffff", INK)}
-          </div>
-        </td>
-      </tr>
-    </table>"""
+    merchant_html = escape(merchant or "Merchant")
+    if ext_url:
+        merchant_html = (
+            f'<a href="{escape(ext_url, quote=True)}" '
+            f'style="color:{BRAND};text-decoration:none;font-weight:700;">{merchant_html}</a>'
+        )
+
+    meta_html = f"{merchant_html}{escape(' · ' + meta_text if merchant and meta_text else meta_text)}"
+    proof_html = f"{escape(price_text)}{escape(' · ' if price_text else '')}{escape(proof)}"
+    return (
+        f'<tr><td class="num" width="42" valign="top">#{rank}<br>{_deal_icon(deal.get("title", ""))}</td>'
+        f'<td class="deal" valign="top"><a class="title" href="{escape(ozb_link, quote=True)}">{title}</a>'
+        f'<div class="meta">{meta_html}</div><div class="why">{explanation}</div>'
+        f'<div class="proof">{proof_html}</div></td>'
+        f'<td class="save" width="104" valign="top">{_money(savings)}<br><span>saved{escape(pct)}</span></td></tr>'
+    )
 
 
-def _section(title: str, deals: list[dict]) -> str:
+def _section(title: str, deals: list[dict], start_rank: int) -> str:
     if not deals:
         return ""
     total = sum(int(d.get("savings", 0) or 0) for d in deals)
-    cards = "\n".join(_deal_card(d) for d in deals)
-    return f"""
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:18px 0 0 0;">
-      <tr>
-        <td style="background:{INK};color:#ffffff;border-radius:8px 8px 0 0;padding:12px 14px;">
-          <div style="font-size:16px;line-height:20px;font-weight:900;">{escape(title)}</div>
-          <div style="font-size:12px;line-height:17px;color:#d0d5dd;margin-top:2px;">
-            {len(deals)} deal(s) · ~{_money(total)} AUD savings
-          </div>
-        </td>
-      </tr>
-      <tr>
-        <td style="background:#ffffff;border:1px solid {BORDER};border-top:none;border-radius:0 0 8px 8px;padding:12px;">
-          {cards}
-        </td>
-      </tr>
+    rows = "\n".join(_deal_row(d, start_rank + i) for i, d in enumerate(deals))
+    return f"""<table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="sec">
+      <tr><td class="sech"><b>{escape(title)}</b><br><span>{len(deals)} deal(s) · ~{_money(total)} AUD savings</span></td></tr>
+      <tr><td class="box"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="rows">{rows}</table></td></tr>
     </table>"""
 
 
@@ -230,34 +171,14 @@ def _briefing_section(briefing: dict) -> str:
         return ""
     rows = ""
     for i, action in enumerate(briefing.get("actions", [])[:5], 1):
-        rows += f"""
-          <tr>
-            <td style="padding:8px 0;border-top:1px solid #dcfce7;" valign="top">
-              <div style="font-size:12px;line-height:17px;color:{GREEN};font-weight:900;">#{i} {_money(action.get("value", 0))}</div>
-              <div style="font-size:13px;line-height:18px;color:{INK};font-weight:800;">
-                {escape(action.get("icon", ""))} {escape(action.get("title", ""))}
-              </div>
-              <div style="font-size:12px;line-height:17px;color:{MUTED};">
-                {escape(action.get("one_liner", ""))}
-              </div>
-            </td>
-          </tr>"""
-    return f"""
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-           style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;margin:0 0 16px 0;border-collapse:separate;">
-      <tr>
-        <td style="padding:14px 16px;">
-          <div style="font-size:16px;line-height:21px;font-weight:900;color:#14532d;">
-            Top deal opportunities
-          </div>
-          <div style="font-size:12px;line-height:17px;color:#166534;margin-top:2px;">
-            {briefing.get("action_count", 0)} highlighted · ~{_money(briefing.get("total_value", 0))} combined savings
-          </div>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:8px;">
-            {rows}
-          </table>
-        </td>
-      </tr>
+        rows += (
+            f'<tr><td class="brrow" valign="top"><b>#{i} {_money(action.get("value", 0))}</b> '
+            f'{escape(action.get("icon", ""))} {escape(action.get("title", ""))}'
+            f'<br><span>{escape(action.get("one_liner", ""))}</span></td></tr>'
+        )
+    return f"""<table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="brief">
+      <tr><td><b>Top deal opportunities</b><br><span>{briefing.get("action_count", 0)} highlighted · ~{_money(briefing.get("total_value", 0))} combined savings</span>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">{rows}</table></td></tr>
     </table>"""
 
 
@@ -302,7 +223,12 @@ def build_email_html(
     top_saving = int(all_deals[0].get("savings", 0) or 0) if all_deals else 0
     now_str = datetime.now().strftime("%d %b %Y %H:%M")
 
-    sections = "\n".join(_section(category, category_deals) for category, category_deals in _group_deals(all_deals))
+    sections = []
+    rank = 1
+    for category, category_deals in _group_deals(all_deals):
+        sections.append(_section(category, category_deals, rank))
+        rank += len(category_deals)
+    sections_html = "\n".join(sections)
     briefing_html = _briefing_section(briefing)
 
     return f"""<!DOCTYPE html>
@@ -311,31 +237,49 @@ def build_email_html(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>OzBargain Deal Alert</title>
+  <style>
+    body{{margin:0;padding:0;background:{BG};font-family:Arial,Helvetica,sans-serif;color:{INK}}}
+    table{{border-collapse:collapse}} a{{color:{BRAND}}}
+    .wrap{{width:100%;max-width:660px;background:{BG}}}
+    .hero{{background:{BRAND};border-radius:8px 8px 0 0;padding:16px 18px;color:#fff}}
+    .hero b{{font-size:22px;line-height:27px}} .hero div{{font-size:13px;line-height:18px;margin-top:3px;color:#fff3e8}}
+    .summary{{background:#fff;border:1px solid {BORDER};border-top:0;border-radius:0 0 8px 8px}}
+    .sum{{width:33.33%;padding:10px 8px;border-right:1px solid #eaecf0}}
+    .suml{{font-size:10px;line-height:13px;color:{MUTED};font-weight:700;text-transform:uppercase}}
+    .sumv{{font-size:18px;line-height:23px;color:{INK};font-weight:800;margin-top:2px}} .good{{color:{GREEN}}}
+    .note{{padding:9px 14px 12px;font-size:12px;line-height:17px;color:{MUTED};border-top:1px solid #eaecf0}}
+    .brief{{background:#f0fdf4;border:1px solid #86efac;border-radius:6px;margin:0 0 16px}}.brief td{{padding:12px 14px;color:#14532d;font-size:14px;line-height:19px}}.brief span{{color:#166534;font-size:12px}}.brrow{{border-top:1px solid #dcfce7}}
+    .sec{{margin:18px 0 0}} .sech{{background:{INK};color:#fff;border-radius:6px 6px 0 0;padding:10px 12px;font-size:16px;line-height:20px}} .sech span{{font-size:12px;line-height:17px;color:#d0d5dd}}
+    .box{{background:#fff;border:1px solid {BORDER};border-top:0;border-radius:0 0 6px 6px;padding:0}} .rows tr:first-child td{{border-top:0}}
+    .num{{padding:10px 8px;border-top:1px solid #eaecf0;text-align:center;color:{MUTED};font-size:11px;line-height:18px;font-weight:800}}
+    .deal{{padding:10px 8px;border-top:1px solid #eaecf0}} .title{{color:{INK};text-decoration:none;font-size:14px;line-height:19px;font-weight:800}}
+    .meta{{font-size:12px;line-height:17px;color:{MUTED};margin-top:2px}} .meta a{{text-decoration:none;font-weight:700}}
+    .why{{font-size:12px;line-height:17px;color:#344054;margin-top:4px}} .proof{{font-size:11px;line-height:15px;color:{MUTED};margin-top:3px}}
+    .save{{padding:10px 8px;border-top:1px solid #eaecf0;text-align:right;color:{GREEN};font-size:18px;line-height:22px;font-weight:900}} .save span{{font-size:11px;line-height:14px;font-weight:800}}
+    .foot{{padding:18px 4px 6px;text-align:center;font-size:11px;line-height:17px;color:{MUTED}}}
+  </style>
 </head>
-<body style="margin:0;padding:0;background:{BG};font-family:Arial,Helvetica,sans-serif;color:{INK};">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:{BG};">
+<body>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
     <tr>
       <td align="center" style="padding:18px 10px;">
-        <table role="presentation" width="680" cellspacing="0" cellpadding="0"
-               style="width:100%;max-width:680px;background:{BG};border-collapse:separate;">
+        <table role="presentation" width="660" cellspacing="0" cellpadding="0" class="wrap">
           <tr>
-            <td style="background:{BRAND};border-radius:10px 10px 0 0;padding:20px 22px;color:#ffffff;">
-              <div style="font-size:23px;line-height:29px;font-weight:900;">OzBargain Savings Digest</div>
-              <div style="font-size:13px;line-height:18px;margin-top:4px;color:#fff3e8;">
-                {escape(now_str)} · deals with quantified savings
-              </div>
+            <td class="hero">
+              <b>OzBargain Savings Digest</b>
+              <div>{escape(now_str)} · every qualifying deal is listed below</div>
             </td>
           </tr>
           <tr>
-            <td style="background:#ffffff;border:1px solid {BORDER};border-top:none;border-radius:0 0 10px 10px;padding:0;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+            <td class="summary">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   {_summary_cell("Deals", str(len(all_deals)))}
                   {_summary_cell("Total Savings", f"~{_money(total_savings)}", GREEN)}
                   {_summary_cell("Top Saving", f"~{_money(top_saving)}", GREEN)}
                 </tr>
               </table>
-              <div style="padding:10px 16px 14px 16px;font-size:12px;line-height:18px;color:{MUTED};border-top:1px solid #eaecf0;">
+              <div class="note">
                 Inclusion: quantified savings of at least {_money(min_savings)}. Votes, comments and clicks are shown as context only.
               </div>
             </td>
@@ -343,14 +287,14 @@ def build_email_html(
           <tr>
             <td style="padding-top:16px;">
               {briefing_html}
-              {sections}
+              {sections_html}
             </td>
           </tr>
           <tr>
-            <td style="padding:18px 4px 6px 4px;text-align:center;font-size:11px;line-height:17px;color:{MUTED};">
+            <td class="foot">
               Market price and percentage-off values are inferred from explicit title or description prices when available.
               <br>
-              <a href="https://www.ozbargain.com.au/deals" style="color:{BRAND};text-decoration:none;font-weight:700;">Open OzBargain Deals</a>
+              <a href="https://www.ozbargain.com.au/deals" style="text-decoration:none;font-weight:700;">Open OzBargain Deals</a>
             </td>
           </tr>
         </table>

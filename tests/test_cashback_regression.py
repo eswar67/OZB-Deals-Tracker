@@ -40,6 +40,32 @@ class CashbackRegressionTests(unittest.TestCase):
         self.assertIn("Cashback likely via ShopBack/Cashrewards", html)
         self.assertNotIn("~0%", html)
 
+    def test_email_html_stays_compact_with_many_deals(self):
+        deals = []
+        for i in range(80):
+            deals.append({
+                "title": f"Large Saving Deal {i} Save $250 @ Store",
+                "link": f"https://www.ozbargain.com.au/node/{i}",
+                "external_url": f"https://example.com/deal-{i}",
+                "merchant_name": "Example",
+                "score": 10,
+                "savings": 250 + i,
+                "savings_percent": 20.0,
+                "deal_price": 999,
+                "market_price": 1249,
+                "explanation": "Explicit saving of $250 stated in title",
+                "votes": 100,
+                "comments": 20,
+                "clicks": 0,
+                "categories": ["Computing"],
+            })
+
+        html = build_email_html(deals, min_savings=200)
+
+        self.assertLess(len(html.encode("utf-8")), 95_000)
+        self.assertIn("Large Saving Deal 0", html)
+        self.assertIn("Large Saving Deal 79", html)
+
 
 if __name__ == "__main__":
     unittest.main()
