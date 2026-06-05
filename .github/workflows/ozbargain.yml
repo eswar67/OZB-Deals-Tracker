@@ -2,13 +2,24 @@ name: OzBargain Monitor
 
 on:
   schedule:
-    # GitHub cron is UTC-only. These entries cover 2:30 PM and 7:17 PM
-    # Australia/Sydney across AEST (UTC+10) and AEDT (UTC+11).
-    # The first step gates by TZ=Australia/Sydney so only the correct entries run.
+    # GitHub cron is UTC-only and can be delayed or occasionally skipped.
+    # These backup ticks cover 2:30 PM and 7:17 PM Australia/Sydney across
+    # AEST (UTC+10) and AEDT (UTC+11). A cache guard below sends at most once
+    # per local slot per day.
     - cron: '30 3 * * *'
+    - cron: '40 3 * * *'
+    - cron: '50 3 * * *'
     - cron: '30 4 * * *'
+    - cron: '40 4 * * *'
+    - cron: '50 4 * * *'
     - cron: '17 8 * * *'
+    - cron: '27 8 * * *'
+    - cron: '37 8 * * *'
+    - cron: '47 8 * * *'
     - cron: '17 9 * * *'
+    - cron: '27 9 * * *'
+    - cron: '37 9 * * *'
+    - cron: '47 9 * * *'
   workflow_dispatch:   # allow manual trigger from GitHub UI
 
 permissions:
@@ -34,10 +45,16 @@ jobs:
           fi
 
           sydney_hour="$(TZ=Australia/Sydney date +%H)"
+          sydney_minute="$(TZ=Australia/Sydney date +%M)"
+          sydney_date="$(TZ=Australia/Sydney date +%Y%m%d)"
           sydney_time="$(TZ=Australia/Sydney date '+%Y-%m-%d %H:%M %Z')"
           echo "Sydney time: $sydney_time"
 
-          if [ "$sydney_hour" = "14" ] || [ "$sydney_hour" = "19" ]; then
+          if (( 10#$sydney_hour == 14 && 10#$sydney_minute >= 30 && 10#$sydney_minute <= 59 )); then
+            echo "slot_key=${sydney_date}-afternoon" >> "$GITHUB_OUTPUT"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          elif (( 10#$sydney_hour == 19 && 10#$sydney_minute >= 17 && 10#$sydney_minute <= 59 )); then
+            echo "slot_key=${sydney_date}-evening" >> "$GITHUB_OUTPUT"
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           else
             echo "should_run=false" >> "$GITHUB_OUTPUT"
@@ -47,31 +64,43 @@ jobs:
         if: steps.schedule_gate.outputs.should_run != 'true'
         run: echo "Skipping because this UTC cron entry is outside the 2:30 PM / 7 PM Australia/Sydney windows."
 
+      - name: Restore schedule slot marker
+        id: schedule_cache
+        if: steps.schedule_gate.outputs.should_run == 'true' && github.event_name == 'schedule'
+        uses: actions/cache/restore@v4
+        with:
+          path: .schedule-cache-marker
+          key: ozbargain-monitor-${{ steps.schedule_gate.outputs.slot_key }}
+
+      - name: Skip duplicate scheduled slot
+        if: steps.schedule_gate.outputs.should_run == 'true' && github.event_name == 'schedule' && steps.schedule_cache.outputs.cache-hit == 'true'
+        run: echo "Report already sent for this Sydney schedule slot."
+
       - uses: actions/checkout@v4
-        if: steps.schedule_gate.outputs.should_run == 'true'
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
 
       - uses: actions/setup-python@v5
-        if: steps.schedule_gate.outputs.should_run == 'true'
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
         with:
           python-version: '3.11'
           cache: pip
 
       - name: Install dependencies
-        if: steps.schedule_gate.outputs.should_run == 'true'
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
 
       - name: Run tests
-        if: steps.schedule_gate.outputs.should_run == 'true'
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
         run: python -m unittest discover -s tests
 
       - name: Write Google credentials
-        if: steps.schedule_gate.outputs.should_run == 'true'
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
         run: |
           echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
           echo '${{ secrets.GOOGLE_TOKEN }}'        > token.json
 
       - name: Run monitor
-        if: steps.schedule_gate.outputs.should_run == 'true'
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
         env:
           ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           GMAIL_TO:           ${{ secrets.GMAIL_TO }}
@@ -85,3 +114,16 @@ jobs:
           ENABLE_QUALITY_SCORING: "false"
           ENABLE_PRE_SEND_REVIEW: "false"
         run: python ozbargain_monitor.py
+
+      - name: Mark scheduled slot sent
+        if: steps.schedule_gate.outputs.should_run == 'true' && github.event_name == 'schedule' && steps.schedule_cache.outputs.cache-hit != 'true' && success()
+        run: |
+          mkdir -p .schedule-cache-marker
+          echo "${{ steps.schedule_gate.outputs.slot_key }}" > .schedule-cache-marker/slot.txt
+
+      - name: Save schedule slot marker
+        if: steps.schedule_gate.outputs.should_run == 'true' && github.event_name == 'schedule' && steps.schedule_cache.outputs.cache-hit != 'true' && success()
+        uses: actions/cache/save@v4
+        with:
+          path: .schedule-cache-marker
+          key: ozbargain-monitor-${{ steps.schedule_gate.outputs.slot_key }}
