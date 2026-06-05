@@ -77,9 +77,9 @@ jobs:
           SEATS_AERO_API_KEY: ${{ secrets.SEATS_AERO_API_KEY }}
           TOKEN_FILE:         token.json
           CREDENTIALS_FILE:   credentials.json
-          MIN_SAVINGS:        200
-          OZB_MAX_PAGES:      200
-          ENABLE_MARKET_PRICE_LOOKUP: false
-          ENABLE_QUALITY_SCORING: false
-          ENABLE_PRE_SEND_REVIEW: false
+          MIN_SAVINGS:        "200"
+          OZB_MAX_PAGES:      "200"
+          ENABLE_MARKET_PRICE_LOOKUP: "false"
+          ENABLE_QUALITY_SCORING: "false"
+          ENABLE_PRE_SEND_REVIEW: "false"
         run: python ozbargain_monitor.py
