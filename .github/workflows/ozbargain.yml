@@ -44,16 +44,27 @@ jobs:
             exit 0
           fi
 
-          sydney_hour="$(TZ=Australia/Sydney date +%H)"
-          sydney_minute="$(TZ=Australia/Sydney date +%M)"
           sydney_date="$(TZ=Australia/Sydney date +%Y%m%d)"
           sydney_time="$(TZ=Australia/Sydney date '+%Y-%m-%d %H:%M %Z')"
-          echo "Sydney time: $sydney_time"
+          sydney_offset="$(TZ=Australia/Sydney date +%z)"
+          trigger_cron="${{ github.event.schedule }}"
+          read -r cron_minute cron_hour _ <<< "$trigger_cron"
 
-          if (( 10#$sydney_hour == 14 && 10#$sydney_minute >= 30 && 10#$sydney_minute <= 59 )); then
+          echo "Sydney time: $sydney_time"
+          echo "Triggered by cron: $trigger_cron"
+
+          # GitHub can delay scheduled workflows by hours. Gate by the intended
+          # UTC cron expression, not the runner's actual wall-clock start time.
+          if [[ "$sydney_offset" == "+1000" && "$cron_hour" == "4" ]]; then
             echo "slot_key=${sydney_date}-afternoon" >> "$GITHUB_OUTPUT"
             echo "should_run=true" >> "$GITHUB_OUTPUT"
-          elif (( 10#$sydney_hour == 19 && 10#$sydney_minute >= 17 && 10#$sydney_minute <= 59 )); then
+          elif [[ "$sydney_offset" == "+1100" && "$cron_hour" == "3" ]]; then
+            echo "slot_key=${sydney_date}-afternoon" >> "$GITHUB_OUTPUT"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$sydney_offset" == "+1000" && "$cron_hour" == "9" ]]; then
+            echo "slot_key=${sydney_date}-evening" >> "$GITHUB_OUTPUT"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$sydney_offset" == "+1100" && "$cron_hour" == "8" ]]; then
             echo "slot_key=${sydney_date}-evening" >> "$GITHUB_OUTPUT"
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           else
