@@ -85,12 +85,9 @@ def _match_rrp(t: str):
     if rrp == 0:
         return None
 
-    # Find the first price in title that is less than RRP
-    prices = _all_prices(t)
-    candidates = [p for p in prices if 0 < p < rrp]
-    if not candidates:
+    deal_price = _extract_deal_price(t)
+    if not (0 < deal_price < rrp):
         return None
-    deal_price = min(candidates)
     savings = rrp - deal_price
     if savings > 0:
         return savings, f"RRP ${rrp:,} − deal ${deal_price:,} = ${savings:,} saving"
@@ -106,12 +103,8 @@ def _match_percent_off(t: str):
     if pct <= 0 or pct >= 100:
         return None
 
-    prices = _all_prices(t)
-    if not prices:
-        return None
-
-    # The deal price is the smallest price; original = deal / (1 - pct/100)
-    deal_price = min(prices)
+    # The deal price is the headline price, not a per-unit price in parentheses.
+    deal_price = _extract_deal_price(t)
     if deal_price == 0:
         return None
     original = deal_price / (1 - pct / 100)
@@ -132,16 +125,39 @@ def _match_gift_card(t: str):
         face, price = _price(m.group(1)), _price(m.group(2))
         if face > price > 0:
             return face - price, f"${face:,} gift card for ${price:,} = ${face-price:,} saving"
-    # Percent off gift cards
-    m2 = re.search(r"([\d.]+)\s*%\s*off[^$]*(?:gift\s*card|voucher)", t, re.IGNORECASE)
-    if m2:
-        pct = float(m2.group(1))
-        prices = _all_prices(t)
-        if prices:
-            face = max(prices)
-            savings = int(face * pct / 100)
-            if savings > 0:
-                return savings, f"{pct:.0f}% off ${face:,} gift card = ${savings:,} saving"
+    return None
+
+
+def _match_spend_get_value(t: str):
+    """'Spend $1000 and get a $250 voucher' → saving is the reward value, not spend minus reward."""
+    patterns = [
+        r"spend\s+\$\s*[\d,]+[^$]{0,80}?\bget\s+(?:a\s+)?\$\s*([\d,]+)\s*(?:voucher|gift\s*card|credit|cashback|cash\s*back|bonus)",
+        r"\bget\s+(?:a\s+)?\$\s*([\d,]+)\s*(?:voucher|gift\s*card|credit|cashback|cash\s*back|bonus)[^$]{0,80}?spend\s+\$\s*[\d,]+",
+    ]
+    for pat in patterns:
+        m = re.search(pat, t, re.IGNORECASE)
+        if m:
+            value = _price(m.group(1))
+            if value > 0:
+                return value, f"${value:,} reward value stated in title"
+    return None
+
+
+def _match_reward_value(t: str):
+    """'Get $300/$600 EDR Dollars' → count the stated reward value."""
+    m = re.search(
+        r"\b(?:get|receive|bonus|reward)\b.{0,100}?\b(?:voucher|gift\s*card|credit|cashback|cash\s*back|edr\s*dollars?|dollars?)\b",
+        t,
+        re.IGNORECASE,
+    )
+    if not m:
+        return None
+    values = _all_prices(m.group(0))
+    if not values:
+        return None
+    value = max(values)
+    if value > 0:
+        return value, f"${value:,} reward value stated in title"
     return None
 
 
@@ -382,6 +398,8 @@ MAX_REGEX_SAVINGS = 5000
 
 MATCHERS = [
     ("explicit_save",  _match_explicit_save),
+    ("spend_get",      _match_spend_get_value),
+    ("reward_value",   _match_reward_value),
     ("was_now",        _match_was_now),
     ("rrp",            _match_rrp),
     ("gift_card",      _match_gift_card),
@@ -389,7 +407,6 @@ MATCHERS = [
     ("points",         _match_points),
     ("cashback",       _match_cashback),
     ("percent_off",    _match_percent_off),
-    ("two_prices",     _match_two_prices),
 ]
 
 
@@ -452,12 +469,15 @@ def parse_deal_value(deal: dict, live_gift_lookup: bool = False) -> dict:
     base_savings = 0
     base_explanation = ""
 
-    # Run non-free-gift matchers first on title, then description
-    NON_GIFT_MATCHERS = [(n, m) for n, m in MATCHERS if n != "free_bundle"]
-    for text_src in [title, desc_clean]:
+    # Run broad matchers on the title only. Descriptions often contain price
+    # tiers, spend examples, denominations, or comments that are not the deal's
+    # saving. Use description only for explicit "save $X" text.
+    TITLE_MATCHERS = [(n, m) for n, m in MATCHERS if n != "free_bundle"]
+    DESCRIPTION_MATCHERS = [("explicit_save", _match_explicit_save), ("spend_get", _match_spend_get_value)]
+    for text_src, matchers in [(title, TITLE_MATCHERS), (desc_clean, DESCRIPTION_MATCHERS)]:
         if not text_src.strip():
             continue
-        for name, matcher in NON_GIFT_MATCHERS:
+        for name, matcher in matchers:
             result = matcher(text_src)
             if result:
                 savings, explanation = result

@@ -235,17 +235,23 @@ def _cap_claude_candidates(deals: list[dict], limit: int, label: str) -> list[di
 
 
 def _apply_savings_metrics(deal: dict) -> dict:
-    """Infer market price and savings percent when deal price + savings are known."""
+    """Calculate display metrics only when there is a real comparison baseline."""
     savings = int(deal.get("savings", 0) or 0)
     deal_price = int(deal.get("deal_price", 0) or 0)
     market = int(deal.get("market_price", 0) or 0)
+    explanation = deal.get("explanation", "") or ""
+    has_price_baseline = (
+        explanation.startswith("Was ")
+        or explanation.startswith("RRP ")
+        or bool(re.search(r"\b\d+(?:\.\d+)?%\s+off\b", explanation, re.IGNORECASE))
+    )
 
-    if market <= 0 and savings > 0 and deal_price > 0:
+    if market <= 0 and savings > 0 and deal_price > 0 and has_price_baseline:
         market = deal_price + savings
         deal["market_price"] = market
-        deal.setdefault("market_note", f"Inferred from parsed saving: ${market:,}")
+        deal.setdefault("market_note", f"Baseline inferred from parsed comparison: ${market:,}")
 
-    if market > 0 and savings > 0:
+    if market > 0 and savings > 0 and has_price_baseline:
         deal["savings_percent"] = round((savings / market) * 100, 1)
     else:
         deal["savings_percent"] = 0.0
