@@ -97,11 +97,14 @@ def _chip(text: str, bg: str = "#f6f8fa", color: str = INK) -> str:
     )
 
 
-def _summary_cell(label: str, value: str, color: str = INK) -> str:
+def _summary_cell(label: str, value: str, color: str = INK, href: str = "") -> str:
     tone = " good" if color == GREEN else ""
+    value_html = escape(value)
+    if href:
+        value_html = f'<a href="{escape(href, quote=True)}" class="sumlink">{value_html}</a>'
     return f"""<td class="sum" valign="top">
         <div class="suml">{escape(label)}</div>
-        <div class="sumv{tone}">{escape(value)}</div>
+        <div class="sumv{tone}">{value_html}</div>
       </td>"""
 
 
@@ -136,6 +139,8 @@ def _deal_row(deal: dict, rank: int) -> str:
     proof = _confidence_label(deal)
     if deal.get("cashback_platform"):
         proof += f" · Cashback likely via {deal['cashback_platform']}"
+    if deal.get("is_flash"):
+        proof = f"⚡ Time-sensitive · {proof}"
 
     merchant_html = escape(merchant or "Merchant")
     if ext_url:
@@ -151,17 +156,18 @@ def _deal_row(deal: dict, rank: int) -> str:
         f'<td class="deal" valign="top"><a class="title" href="{escape(ozb_link, quote=True)}">{title}</a>'
         f'<div class="meta">{meta_html}</div><div class="why">{explanation}</div>'
         f'<div class="proof">{proof_html}</div></td>'
-        f'<td class="save" width="104" valign="top">{_money(savings)}<br><span>saved{escape(pct)}</span></td></tr>'
+        f'<td class="save" width="104" valign="top">{_money(savings)}<br><span>potential{escape(pct)}</span></td></tr>'
     )
 
 
-def _section(title: str, deals: list[dict], start_rank: int) -> str:
+def _section(title: str, deals: list[dict], start_rank: int, section_id: str = "") -> str:
     if not deals:
         return ""
     total = sum(int(d.get("savings", 0) or 0) for d in deals)
     rows = "\n".join(_deal_row(d, start_rank + i) for i, d in enumerate(deals))
-    return f"""<table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="sec">
-      <tr><td class="sech"><b>{escape(title)}</b><br><span>{len(deals)} deal(s) · ~{_money(total)} AUD savings</span></td></tr>
+    anchor = f'<a id="{escape(section_id, quote=True)}" name="{escape(section_id, quote=True)}"></a>' if section_id else ""
+    return f"""{anchor}<table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="sec">
+      <tr><td class="sech"><b>{escape(title)}</b><br><span>{len(deals)} deal(s) · ~{_money(total)} AUD potential value</span></td></tr>
       <tr><td class="box"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="rows">{rows}</table></td></tr>
     </table>"""
 
@@ -177,7 +183,7 @@ def _briefing_section(briefing: dict) -> str:
             f'<br><span>{escape(action.get("one_liner", ""))}</span></td></tr>'
         )
     return f"""<table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="brief">
-      <tr><td><b>Top deal opportunities</b><br><span>{briefing.get("action_count", 0)} highlighted · ~{_money(briefing.get("total_value", 0))} combined savings</span>
+      <tr><td><b>Top potential opportunities</b><br><span>{briefing.get("action_count", 0)} highlighted · ~{_money(briefing.get("total_value", 0))} combined potential value</span>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0">{rows}</table></td></tr>
     </table>"""
 
@@ -219,13 +225,20 @@ def build_email_html(
 
     all_deals = deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     all_deals = sorted(all_deals, key=lambda d: int(d.get("savings", 0) or 0), reverse=True)
+    flash_deals = [d for d in all_deals if d.get("is_flash")]
+    non_flash_deals = [d for d in all_deals if not d.get("is_flash")]
     total_savings = sum(int(d.get("savings", 0) or 0) for d in all_deals)
     top_saving = int(all_deals[0].get("savings", 0) or 0) if all_deals else 0
+    top_link = all_deals[0].get("link", "#all-deals") if all_deals else "#all-deals"
     now_str = datetime.now().strftime("%d %b %Y %H:%M")
 
     sections = []
     rank = 1
-    for category, category_deals in _group_deals(all_deals):
+    sections.append('<a id="all-deals" name="all-deals"></a>')
+    if flash_deals:
+        sections.append(_section("⚡ Time-sensitive opportunities", flash_deals, rank, "time-sensitive"))
+        rank += len(flash_deals)
+    for category, category_deals in _group_deals(non_flash_deals):
         sections.append(_section(category, category_deals, rank))
         rank += len(category_deals)
     sections_html = "\n".join(sections)
@@ -247,6 +260,7 @@ def build_email_html(
     .sum{{width:33.33%;padding:10px 8px;border-right:1px solid #eaecf0}}
     .suml{{font-size:10px;line-height:13px;color:{MUTED};font-weight:700;text-transform:uppercase}}
     .sumv{{font-size:18px;line-height:23px;color:{INK};font-weight:800;margin-top:2px}} .good{{color:{GREEN}}}
+    .sumlink{{color:inherit;text-decoration:none}}
     .note{{padding:9px 14px 12px;font-size:12px;line-height:17px;color:{MUTED};border-top:1px solid #eaecf0}}
     .brief{{background:#f0fdf4;border:1px solid #86efac;border-radius:6px;margin:0 0 16px}}.brief td{{padding:12px 14px;color:#14532d;font-size:14px;line-height:19px}}.brief span{{color:#166534;font-size:12px}}.brrow{{border-top:1px solid #dcfce7}}
     .sec{{margin:18px 0 0}} .sech{{background:{INK};color:#fff;border-radius:6px 6px 0 0;padding:10px 12px;font-size:16px;line-height:20px}} .sech span{{font-size:12px;line-height:17px;color:#d0d5dd}}
@@ -266,7 +280,7 @@ def build_email_html(
         <table role="presentation" width="660" cellspacing="0" cellpadding="0" class="wrap">
           <tr>
             <td class="hero">
-              <b>OzBargain Savings Digest</b>
+              <b>OzBargain Opportunity Digest</b>
               <div>{escape(now_str)} · every qualifying deal is listed below</div>
             </td>
           </tr>
@@ -274,13 +288,14 @@ def build_email_html(
             <td class="summary">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  {_summary_cell("Deals", str(len(all_deals)))}
-                  {_summary_cell("Total Savings", f"~{_money(total_savings)}", GREEN)}
-                  {_summary_cell("Top Saving", f"~{_money(top_saving)}", GREEN)}
+                  {_summary_cell("Deals", str(len(all_deals)), href="#all-deals")}
+                  {_summary_cell("Potential Value", f"~{_money(total_savings)}", GREEN, "#all-deals")}
+                  {_summary_cell("Top Opportunity", f"~{_money(top_saving)}", GREEN, top_link)}
                 </tr>
               </table>
               <div class="note">
-                Inclusion: quantified savings of at least {_money(min_savings)}. Votes, comments and clicks are shown as context only.
+                Inclusion: quantified potential saving opportunities of at least {_money(min_savings)}. Votes, comments and clicks are shown as context only.
+                {f'<br><a href="#time-sensitive" style="font-weight:700;">View {len(flash_deals)} time-sensitive deal(s)</a>' if flash_deals else ''}
               </div>
             </td>
           </tr>
@@ -292,7 +307,7 @@ def build_email_html(
           </tr>
           <tr>
             <td class="foot">
-              Market price and percentage-off values are inferred from explicit title or description prices when available.
+              Potential value and percentage-off values are inferred from explicit title or description prices when available.
               <br>
               <a href="https://www.ozbargain.com.au/deals" style="text-decoration:none;font-weight:700;">Open OzBargain Deals</a>
             </td>

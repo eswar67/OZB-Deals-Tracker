@@ -1742,9 +1742,6 @@ def send_gmail_alert(
     home_deals         = home_deals         or []
     extra_deals        = extra_deals        or []
     briefing           = briefing           or {}
-    flash_count        = sum(1 for d in deals if d.get("is_flash"))
-    flash_prefix    = "⚡ FLASH + " if flash_count else ""
-
     notes = []
     if financial_deals: notes.append(f"💳 {len(financial_deals)} financial")
     if cc_travel_deals: notes.append(f"✈️ {len(cc_travel_deals)} CC/travel")
@@ -1753,11 +1750,13 @@ def send_gmail_alert(
     note_str = " · " + " · ".join(notes) if notes else ""
 
     all_categorised = deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
+    flash_count   = sum(1 for d in all_categorised if d.get("is_flash"))
+    flash_prefix  = f"⚡ {flash_count} time-sensitive + " if flash_count else ""
     total_deals   = len(all_categorised)
     total_savings = sum(d.get("savings", 0) for d in all_categorised)
     subject = (
         f"🤖 OZ Bargain Deal Tracking Agent | {flash_prefix}{total_deals} deals{note_str} "
-        f"· ~${total_savings:,} AUD savings"
+        f"· ~${total_savings:,} AUD potential value"
     )
 
     service = build("gmail", "v1", credentials=creds)
@@ -1770,8 +1769,9 @@ def send_gmail_alert(
     # Plain-text fallback
     plain = "\n\n".join(
         f"[{d['score']}/10] ~${d.get('savings',0):,} — {d['title']}\n"
-        f"Value: {d.get('explanation','')}\n"
-        f"OZB: {d['link']}\n"
+        f"Potential value: {d.get('explanation','')}\n"
+        + ("Time-sensitive: yes\n" if d.get("is_flash") else "")
+        + f"OZB: {d['link']}\n"
         f"Votes:{d['votes']} Comments:{d['comments']} Clicks:{d['clicks']}"
         + (f"\nCashback likely via {d['cashback_platform']} — check rate" if d.get('cashback_platform') else "")
         for d in all_categorised
