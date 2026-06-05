@@ -2,10 +2,11 @@ name: OzBargain Monitor
 
 on:
   schedule:
-    # GitHub cron is UTC-only. These two entries cover 7:17 PM Australia/Sydney:
-    # - 09:17 UTC during AEST (UTC+10)
-    # - 08:17 UTC during AEDT (UTC+11)
-    # The first step gates by TZ=Australia/Sydney so only the correct one runs.
+    # GitHub cron is UTC-only. These entries cover 2:17 PM and 7:17 PM
+    # Australia/Sydney across AEST (UTC+10) and AEDT (UTC+11).
+    # The first step gates by TZ=Australia/Sydney so only the correct entries run.
+    - cron: '17 3 * * *'
+    - cron: '17 4 * * *'
     - cron: '17 8 * * *'
     - cron: '17 9 * * *'
   workflow_dispatch:   # allow manual trigger from GitHub UI
@@ -36,15 +37,15 @@ jobs:
           sydney_time="$(TZ=Australia/Sydney date '+%Y-%m-%d %H:%M %Z')"
           echo "Sydney time: $sydney_time"
 
-          if [ "$sydney_hour" = "19" ]; then
+          if [ "$sydney_hour" = "14" ] || [ "$sydney_hour" = "19" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           else
             echo "should_run=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Skip outside Sydney 7 PM
+      - name: Skip outside Sydney 2 PM / 7 PM
         if: steps.schedule_gate.outputs.should_run != 'true'
-        run: echo "Skipping because this UTC cron entry is outside the 7 PM Australia/Sydney window."
+        run: echo "Skipping because this UTC cron entry is outside the 2 PM / 7 PM Australia/Sydney windows."
 
       - uses: actions/checkout@v4
         if: steps.schedule_gate.outputs.should_run == 'true'
