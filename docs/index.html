@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OzBargain Deal Radar</title>
+  <style>
+    :root {
+      --ink: #17202a;
+      --muted: #667085;
+      --line: #d8dee4;
+      --accent: #d95c00;
+      --accent-dark: #9a3f00;
+      --good: #137333;
+      --bg: #f4f7fb;
+      --card: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+    }
+    .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 0; }
+    .brand { font-weight: 850; font-size: 20px; }
+    .stamp { color: var(--muted); font-size: 13px; }
+    .hero { padding: 28px 0 22px; }
+    h1 { margin: 0; font-size: 34px; line-height: 1.12; letter-spacing: 0; }
+    .sub { margin-top: 8px; max-width: 760px; color: var(--muted); font-size: 15px; line-height: 1.55; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 22px 0 0; }
+    .stat { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+    .label { color: var(--muted); font-size: 12px; font-weight: 750; text-transform: uppercase; }
+    .value { margin-top: 4px; font-size: 26px; line-height: 1.1; font-weight: 900; }
+    .toolbar { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 18px 0 12px; }
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 15px;
+      padding: 12px 13px;
+    }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 750;
+      padding: 10px 12px;
+    }
+    button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 8px 0 32px; }
+    .card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      min-height: 148px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 15px;
+    }
+    .rank { color: var(--accent-dark); font-weight: 850; font-size: 12px; }
+    .title { display: block; margin-top: 6px; color: var(--ink); text-decoration: none; font-size: 16px; line-height: 1.35; font-weight: 850; }
+    .title:hover { color: var(--accent-dark); }
+    .meta { margin-top: 10px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .pillrow { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .pill { border: 1px solid #e8edf3; background: #f8fafc; border-radius: 999px; padding: 4px 8px; font-size: 12px; color: var(--muted); }
+    .save { text-align: right; color: var(--good); font-size: 24px; font-weight: 950; white-space: nowrap; }
+    .save span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+    .empty { display: none; padding: 28px 0 48px; color: var(--muted); }
+    footer { border-top: 1px solid var(--line); padding: 18px 0 28px; color: var(--muted); font-size: 13px; }
+    @media (max-width: 760px) {
+      h1 { font-size: 28px; }
+      .topbar, .toolbar { display: block; }
+      .stamp, .filters { margin-top: 10px; justify-content: flex-start; }
+      .stats, .grid { grid-template-columns: 1fr; }
+      .card { grid-template-columns: 1fr; }
+      .save { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="topbar">
+        <div class="brand">OzBargain Deal Radar</div>
+        <div class="stamp">Latest run: 06 Jun 2026, 07:21 PM</div>
+      </div>
+      <section class="hero">
+        <h1>Today's best quantified deals</h1>
+        <div class="sub">A clean public view of the latest OzBargain monitor run. Deals are ranked by parsed potential saving and link back to the original OzBargain posts.</div>
+        <div class="stats">
+          <div class="stat"><div class="label">Deals</div><div class="value">74</div></div>
+          <div class="stat"><div class="label">Potential Value</div><div class="value">$71,072</div></div>
+          <div class="stat"><div class="label">Top Saving</div><div class="value">$9,954</div></div>
+        </div>
+      </section>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="toolbar">
+      <input id="search" placeholder="Search deals, merchants, categories" aria-label="Search deals">
+      <div class="filters">
+        <button class="chip active" data-filter="All">All</button>
+        <button class="chip" data-filter="Automotive">Automotive</button>
+<button class="chip" data-filter="Computing">Computing</button>
+<button class="chip" data-filter="Electronics">Electronics</button>
+<button class="chip" data-filter="Finance">Finance</button>
+<button class="chip" data-filter="Gaming">Gaming</button>
+<button class="chip" data-filter="Home">Home</button>
+<button class="chip" data-filter="Other">Other</button>
+<button class="chip" data-filter="Travel">Travel</button>
+      </div>
+    </div>
+    <section class="grid" id="deals">
+      <article class="card" data-category="Electronics" data-search="samsung 115&quot; qn90f mini led $14,929 (rrp $24,883) @ jb hi fi electronics jb hi fi">
+  <div>
+    <div class="rank">#1 · Electronics</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962268" target="_blank" rel="noopener">Samsung 115&quot; QN90F Mini LED $14,929 (RRP $24,883) @ JB Hi Fi</a>
+    <div class="meta">JB Hi Fi · Node 962268</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $9,954</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$9,954<span>potential</span></div>
+</article>
+<article class="card" data-category="Automotive" data-search="vw tayron suv phev ehybrid 150tsi elegance 6-speed dsg my26 from $61,990 driveaway (save $6,000+) @ vw automotive vw">
+  <div>
+    <div class="rank">#2 · Automotive</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960180" target="_blank" rel="noopener">VW Tayron SUV PHEV eHybrid 150TSI Elegance 6-Speed DSG MY26 from $61,990 Driveaway (Save $6,000+) @ VW</a>
+    <div class="meta">VW · Node 960180</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $6,000</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$6,000<span>potential</span></div>
+</article>
+<article class="card" data-category="Finance" data-search="$2,000-$4,000 cashback on home loan refinance (minimum loan $250,000, lvr &lt; 80%) @ imb bank finance imb bank">
+  <div>
+    <div class="rank">#3 · Finance</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959395" target="_blank" rel="noopener">$2,000-$4,000 Cashback on Home Loan Refinance (Minimum Loan $250,000, LVR &lt; 80%) @ IMB Bank</a>
+    <div class="meta">IMB Bank · Node 959395</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $4,000</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$4,000<span>potential</span></div>
+</article>
+<article class="card" data-category="Automotive" data-search="my25 škoda kodiaq mid size suv from $49,990 to $69,990 driveaway + bonus $4000 fuel voucher @ škoda dealers automotive škoda dealers">
+  <div>
+    <div class="rank">#4 · Automotive</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961961" target="_blank" rel="noopener">MY25 Škoda Kodiaq Mid Size SUV from $49,990 to $69,990 Driveaway + Bonus $4000 Fuel Voucher @ Škoda Dealers</a>
+    <div class="meta">Škoda Dealers · Node 961961</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $4,000</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$4,000<span>potential</span></div>
+</article>
+<article class="card" data-category="Finance" data-search="$3000 cashback on byd sealion 5, sealion 6, sealion 8 &amp; shark 6 premium @ byd finance byd">
+  <div>
+    <div class="rank">#5 · Finance</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959020" target="_blank" rel="noopener">$3000 Cashback on BYD Sealion 5, Sealion 6, Sealion 8 &amp; Shark 6 Premium @ BYD</a>
+    <div class="meta">BYD · Node 959020</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $3,000</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$3,000<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="powerguard 3000w portable power station (2560wh) $1279.60 delivered (rrp $3299) @ techunion other techunion">
+  <div>
+    <div class="rank">#6 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962190" target="_blank" rel="noopener">Powerguard 3000w Portable Power Station (2560Wh) $1279.60 Delivered (RRP $3299) @ Techunion</a>
+    <div class="meta">Techunion · Node 962190</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $2,020</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$2,020<span>potential</span></div>
+</article>
+<article class="card" data-category="Home" data-search="spend $2000 on penfolds wine (with min. 1 grange) at independent outlets, redeem grand cru curved 42-bottle fridge @ penfolds home penfolds">
+  <div>
+    <div class="rank">#7 · Home</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/957689" target="_blank" rel="noopener">Spend $2000 on Penfolds Wine (with Min. 1 Grange) at Independent Outlets, Redeem Grand Cru Curved 42-Bottle Fridge @ Penfolds</a>
+    <div class="meta">Penfolds · Node 957689</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $2,000</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$2,000<span>potential</span></div>
+</article>
+<article class="card" data-category="Finance" data-search="$2000 cashback on home loans refinance (customer retention offer) @ anz finance anz">
+  <div>
+    <div class="rank">#8 · Finance</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961198" target="_blank" rel="noopener">$2000 Cashback on Home Loans Refinance (Customer Retention Offer) @ ANZ</a>
+    <div class="meta">ANZ · Node 961198</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $2,000</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$2,000<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="eufy s1 pro $999 delivered (rrp $2699.95) @ goodbuyz other goodbuyz">
+  <div>
+    <div class="rank">#9 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/958247" target="_blank" rel="noopener">eufy S1 PRO $999 Delivered (RRP $2699.95) @ goodbuyz</a>
+    <div class="meta">goodbuyz · Node 958247</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,700</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,700<span>potential</span></div>
+</article>
+<article class="card" data-category="Home" data-search="husqvarna automower 415x robotic mower $2099 (save $1540 / 43% off) + $55 delivery ($0 vic c&amp;c) @ hampton mowerpower home hampton mowerpower">
+  <div>
+    <div class="rank">#10 · Home</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960260" target="_blank" rel="noopener">Husqvarna Automower 415X Robotic Mower $2099 (Save $1540 / 43% off) + $55 Delivery ($0 VIC C&amp;C) @ Hampton Mowerpower</a>
+    <div class="meta">Hampton Mowerpower · Node 960260</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,540</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,540<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="anker solix f1200 (powerhouse 757) 1229wh/1500w $599 (was $1,999, 70% off) @ anker solix au other anker solix au">
+  <div>
+    <div class="rank">#11 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960996" target="_blank" rel="noopener">Anker Solix F1200 (PowerHouse 757) 1229wh/1500w $599 (Was $1,999, 70% off) @ Anker Solix AU</a>
+    <div class="meta">Anker Solix AU · Node 960996</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,400</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,400<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="oos - yakima skyrise hd medium roof top tent $999 (57% off, was $2,299) + delivery ($0 c&amp;c) @ roof racks galore other roof racks galore">
+  <div>
+    <div class="rank">#12 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961095" target="_blank" rel="noopener">OOS - Yakima Skyrise HD Medium Roof Top Tent $999 (57% off, Was $2,299) + Delivery ($0 C&amp;C) @ Roof Racks Galore</a>
+    <div class="meta">Roof Racks Galore · Node 961095</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,300</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,300<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="up to 80% off clearance items (e.g. georgina coffee table $319.80, was $1599) + delivery ($0 qld c&amp;c) @ abide interiors other abide interiors">
+  <div>
+    <div class="rank">#13 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959320" target="_blank" rel="noopener">Up to 80% off Clearance Items (e.g. Georgina Coffee Table $319.80, Was $1599) + Delivery ($0 QLD C&amp;C) @ Abide Interiors</a>
+    <div class="meta">Abide Interiors · Node 959320</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,280</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,280<span>potential</span></div>
+</article>
+<article class="card" data-category="Home" data-search="dreame l10s ultra gen2 robot vacuum and mop $598.98 (rrp $1699) delivered @ dreame official au via amazon au home dreame official au via amazon au">
+  <div>
+    <div class="rank">#14 · Home</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959472" target="_blank" rel="noopener">Dreame L10s Ultra Gen2 Robot Vacuum and Mop $598.98 (RRP $1699) Delivered @ Dreame Official AU via Amazon AU</a>
+    <div class="meta">Dreame Official AU via Amazon AU · Node 959472</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,101</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,101<span>potential</span></div>
+</article>
+<article class="card" data-category="Home" data-search="ecovacs goat g1 robot lawn mower $945.25 (was $1999) delivered @ horizon store home horizon store">
+  <div>
+    <div class="rank">#15 · Home</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961284" target="_blank" rel="noopener">Ecovacs Goat G1 Robot Lawn Mower $945.25 (Was $1999) Delivered @ Horizon Store</a>
+    <div class="meta">Horizon Store · Node 961284</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,054</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,054<span>potential</span></div>
+</article>
+<article class="card" data-category="Electronics" data-search="samsung galaxy tab s10 ultra 14.6&quot; wi-fi 256gb (grey) $1,049 (was $2,099) + delivery ($0 c&amp;c/ in-store) @ jb hi-fi electronics jb hi-fi">
+  <div>
+    <div class="rank">#16 · Electronics</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961129" target="_blank" rel="noopener">Samsung Galaxy Tab S10 Ultra 14.6&quot; Wi-Fi 256GB (Grey) $1,049 (Was $2,099) + Delivery ($0 C&amp;C/ in-Store) @ JB Hi-Fi</a>
+    <div class="meta">JB Hi-Fi · Node 961129</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,050</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,050<span>potential</span></div>
+</article>
+<article class="card" data-category="Electronics" data-search="samsung 75&quot; neo qled qn80h 4k samsung vision ai smart tv $1949 (was $2999) + delivery @ samsung epp (excl. tas, nt) electronics samsung epp (excl. tas, nt)">
+  <div>
+    <div class="rank">#17 · Electronics</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961238" target="_blank" rel="noopener">Samsung 75&quot; Neo QLED QN80H 4K Samsung Vision AI Smart TV $1949 (was $2999) + Delivery @ Samsung EPP (Excl. TAS, NT)</a>
+    <div class="meta">Samsung EPP (Excl. TAS, NT) · Node 961238</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,050</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,050<span>potential</span></div>
+</article>
+<article class="card" data-category="Electronics" data-search="apple ipad pro 11&quot; m5 (wi-fi + cellular, 2tb, standard glass) $2,750.46 (rrp $3,799) delivered @ amazon au electronics amazon au">
+  <div>
+    <div class="rank">#18 · Electronics</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961980" target="_blank" rel="noopener">Apple iPad Pro 11&quot; M5 (Wi-Fi + Cellular, 2TB, Standard Glass) $2,750.46 (RRP $3,799) Delivered @ Amazon AU</a>
+    <div class="meta">Amazon AU · Node 961980</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,049</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,049<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="free servicing for 3 years/45,000km (valued at $1,017) with j5 track (from $25,990 driveaway) for first 1,000 buyers @ jaecoo other jaecoo">
+  <div>
+    <div class="rank">#19 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961512" target="_blank" rel="noopener">Free Servicing for 3 Years/45,000km (Valued at $1,017) with J5 Track (from $25,990 Driveaway) for First 1,000 Buyers @ Jaecoo</a>
+    <div class="meta">Jaecoo · Node 961512</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,017</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,017<span>potential</span></div>
+</article>
+<article class="card" data-category="Automotive" data-search="$1000 fuel card or $1000 off the purchase price of chery tiggo 4 (from $23,990 driveaway before discount) @ chery automotive chery">
+  <div>
+    <div class="rank">#20 · Automotive</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/957569" target="_blank" rel="noopener">$1000 Fuel Card or $1000 off the Purchase Price of Chery Tiggo 4 (from $23,990 Driveaway Before Discount) @ Chery</a>
+    <div class="meta">Chery · Node 957569</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,000</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,000<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="ubiquiti unifi dream wall all in one internet gateway $889 (was $1889) + postage ($0 to metro areas/ c&amp;c/ in-store) @ scorptec other scorptec">
+  <div>
+    <div class="rank">#21 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961482" target="_blank" rel="noopener">Ubiquiti Unifi Dream Wall All in One Internet Gateway $889 (Was $1889) + Postage ($0 to Metro Areas/ C&amp;C/ in-Store) @ Scorptec</a>
+    <div class="meta">Scorptec · Node 961482</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $1,000</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$1,000<span>potential</span></div>
+</article>
+<article class="card" data-category="Finance" data-search="american express velocity platinum card: referee gets 70,000 velocity points (with $5000 spend in 3 months), $440 annual fee finance ozbargain">
+  <div>
+    <div class="rank">#22 · Finance</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/958228" target="_blank" rel="noopener">American Express Velocity Platinum Card: Referee Gets 70,000 Velocity Points (with $5000 Spend in 3 Months), $440 Annual Fee</a>
+    <div class="meta">OzBargain · Node 958228</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $945</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$945<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="bluetti elite 300 portable power station 2400w 3014wh $2324 delivered (was $3199) @ bluetti other bluetti">
+  <div>
+    <div class="rank">#23 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962218" target="_blank" rel="noopener">Bluetti Elite 300 Portable Power Station 2400W 3014Wh $2324 Delivered (Was $3199) @ Bluetti</a>
+    <div class="meta">Bluetti · Node 962218</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $875</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$875<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="85% off secret premium coonawarra shiraz 2020 12-pack $150 ($12.50/bottle, rrp $1020) delivered @ dozen deals other dozen deals">
+  <div>
+    <div class="rank">#24 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/958912" target="_blank" rel="noopener">85% off Secret Premium Coonawarra Shiraz 2020 12-Pack $150 ($12.50/Bottle, RRP $1020) Delivered @ Dozen Deals</a>
+    <div class="meta">Dozen Deals · Node 958912</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $870</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$870<span>potential</span></div>
+</article>
+<article class="card" data-category="Home" data-search="vatti 23mj embedded gas cooktop (900mm $849 was $1699) (600mm $749 was $1499) + $30 shipping ($0 vic c&amp;c) @ 1 kitchen supply home 1 kitchen supply">
+  <div>
+    <div class="rank">#25 · Home</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962247" target="_blank" rel="noopener">Vatti 23mj Embedded Gas Cooktop (900mm $849 Was $1699) (600mm $749 Was $1499) + $30 Shipping ($0 VIC C&amp;C) @ 1 Kitchen Supply</a>
+    <div class="meta">1 Kitchen Supply · Node 962247</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $850</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$850<span>potential</span></div>
+</article>
+<article class="card" data-category="Computing" data-search="lg ultragear 27-inch 240hz uhd 4k nano ips black gaming monitor 27g850a-b $699 delivered (save $700) @ lg computing lg">
+  <div>
+    <div class="rank">#26 · Computing</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960289" target="_blank" rel="noopener">LG UltraGear 27-Inch 240hz UHD 4K Nano IPS Black Gaming Monitor 27G850A-B $699 Delivered (Save $700) @ LG</a>
+    <div class="meta">LG · Node 960289</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $700</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$700<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="bluetti ac180t portable power station | 1800w 1433.6wh - $999 delivered (was $1699, 41% off) @ bluetti au other bluetti au">
+  <div>
+    <div class="rank">#27 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960998" target="_blank" rel="noopener">Bluetti AC180T Portable Power Station | 1800w 1433.6wh - $999 Delivered (Was $1699, 41% off) @ Bluetti AU</a>
+    <div class="meta">Bluetti AU · Node 960998</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $700</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$700<span>potential</span></div>
+</article>
+<article class="card" data-category="Home" data-search="xiaomi robot vacuum x20+, smart mop &amp; vacuum, white $499 (rrp $1,199) delivered @ amazon au home amazon au">
+  <div>
+    <div class="rank">#28 · Home</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961064" target="_blank" rel="noopener">Xiaomi Robot Vacuum X20+, Smart Mop &amp; Vacuum, White $499 (RRP $1,199) Delivered @ Amazon AU</a>
+    <div class="meta">Amazon AU · Node 961064</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $700</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$700<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="marantz cinema 50 9.4 channel av receiver $2,800 delivered (was $3,500) @ selby other selby">
+  <div>
+    <div class="rank">#29 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962011" target="_blank" rel="noopener">Marantz Cinema 50 9.4 Channel AV Receiver $2,800 Delivered (Was $3,500) @ Selby</a>
+    <div class="meta">Selby · Node 962011</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $700</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$700<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="bose lifestyle ultra soundbar $1,099 @ the good guys (was $1,799) other the good guys (was $1,799)">
+  <div>
+    <div class="rank">#30 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962264" target="_blank" rel="noopener">Bose Lifestyle Ultra Soundbar $1,099 @ The Good Guys (was $1,799)</a>
+    <div class="meta">The Good Guys (was $1,799) · Node 962264</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $700</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$700<span>potential</span></div>
+</article>
+<article class="card" data-category="Finance" data-search="earn up to 50,000 qantas points with an unsecured personal loan (1 point per dollar borrowed, $0 ongoing fees) @ alex.bank finance alex.bank">
+  <div>
+    <div class="rank">#31 · Finance</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/957295" target="_blank" rel="noopener">Earn Up to 50,000 Qantas Points with an Unsecured Personal Loan (1 Point Per Dollar Borrowed, $0 Ongoing Fees) @ Alex.Bank</a>
+    <div class="meta">Alex.Bank · Node 957295</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $675</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$675<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="join hospital + extras or packaged cover on direct debit, stay 60 days, get $300 (singles) / $600 (family) edr dollars @ bupa other bupa">
+  <div>
+    <div class="rank">#32 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959492" target="_blank" rel="noopener">Join Hospital + Extras or Packaged Cover on Direct Debit, Stay 60 Days, Get $300 (Singles) / $600 (Family) EDR Dollars @ Bupa</a>
+    <div class="meta">Bupa · Node 959492</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $600</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$600<span>potential</span></div>
+</article>
+<article class="card" data-category="Computing" data-search="lg ultragear 27gx700a 27&quot; qhd 280hz oled gaming monitor $799 (save $600) + shipping / $0 c&amp;c / in-store @ jb hi-fi computing jb hi-fi">
+  <div>
+    <div class="rank">#33 · Computing</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962317" target="_blank" rel="noopener">LG UltraGear 27GX700A 27&quot; QHD 280hz Oled Gaming Monitor $799 (Save $600) + Shipping / $0 C&amp;C / In-Store @ JB Hi-Fi</a>
+    <div class="meta">JB Hi-Fi · Node 962317</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $600</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$600<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="84% off secret premium coonawarra shiraz 2015 6-pack $99 ($16.50/bottle, rrp $690) delivered @ dozen deals other dozen deals">
+  <div>
+    <div class="rank">#34 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962014" target="_blank" rel="noopener">84% off Secret Premium Coonawarra Shiraz 2015 6-Pack $99 ($16.50/Bottle, RRP $690) Delivered @ Dozen Deals</a>
+    <div class="meta">Dozen Deals · Node 962014</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $591</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$591<span>potential</span></div>
+</article>
+<article class="card" data-category="Electronics" data-search="samsung galaxy tab s11 ultra 256gb wi-fi $1099 less trade-in (with $550 off in cart &amp; $450 trade in bonus) delivered @ samsung electronics samsung">
+  <div>
+    <div class="rank">#35 · Electronics</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962065" target="_blank" rel="noopener">Samsung Galaxy Tab S11 Ultra 256GB Wi-Fi $1099 Less Trade-in (with $550 off in Cart &amp; $450 Trade in Bonus) Delivered @ Samsung</a>
+    <div class="meta">Samsung · Node 962065</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $550</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$550<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="arcteryx alpha sv waterproof shell jacket $928-$960 (36% off) delivered @ arc&#x27;teryx other arc&#x27;teryx">
+  <div>
+    <div class="rank">#36 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/957594" target="_blank" rel="noopener">Arcteryx Alpha SV Waterproof Shell Jacket $928-$960 (36% off) Delivered @ Arc&#x27;teryx</a>
+    <div class="meta">Arc&#x27;teryx · Node 957594</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $522</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$522<span>potential</span></div>
+</article>
+<article class="card" data-category="Home" data-search="dyson v9 submarine wet &amp; dry cordless vacuum $494 (was $999) delivered @ dyson australia home dyson australia">
+  <div>
+    <div class="rank">#37 · Home</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959495" target="_blank" rel="noopener">Dyson V9 Submarine Wet &amp; Dry Cordless Vacuum $494 (Was $999) Delivered @ Dyson Australia</a>
+    <div class="meta">Dyson Australia · Node 959495</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $505</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$505<span>potential</span></div>
+</article>
+<article class="card" data-category="Computing" data-search="gaming pc: r5 5600, rx 9060 xt 16gb, 1tb gen4 ssd, 16gb (2x8gb) rgb ram, b550m wi-fi mobo: $1288 + $50 delivery @ nebula pc computing nebula pc">
+  <div>
+    <div class="rank">#38 · Computing</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/957621" target="_blank" rel="noopener">Gaming PC: R5 5600, RX 9060 XT 16GB, 1TB Gen4 SSD, 16GB (2x8GB) RGB RAM, B550M Wi-Fi Mobo: $1288 + $50 Delivery @ Nebula PC</a>
+    <div class="meta">Nebula PC · Node 957621</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $500</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$500<span>potential</span></div>
+</article>
+<article class="card" data-category="Computing" data-search="gaming pc: r7 9800x3d, rtx 5070 ti, 240 aio, 32gb (2x16) ram, 1tb ssd, 850w gold psu $2998 | $1698 byo gpu + $50 del @ nebula pc computing nebula pc">
+  <div>
+    <div class="rank">#39 · Computing</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/958442" target="_blank" rel="noopener">Gaming PC: R7 9800X3D, RTX 5070 Ti, 240 AIO, 32GB (2x16) RAM, 1TB SSD, 850W Gold PSU $2998 | $1698 BYO GPU + $50 Del @ Nebula PC</a>
+    <div class="meta">Nebula PC · Node 958442</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $500</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$500<span>potential</span></div>
+</article>
+<article class="card" data-category="Gaming" data-search="switch to hbf combined hospital &amp; extras cover, hold until 29/1/2027 &amp; receive a $500 digital visa gift card @ finder gaming finder">
+  <div>
+    <div class="rank">#40 · Gaming</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959048" target="_blank" rel="noopener">Switch to HBF Combined Hospital &amp; Extras Cover, Hold until 29/1/2027 &amp; Receive a $500 Digital Visa Gift Card @ Finder</a>
+    <div class="meta">Finder · Node 959048</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $500</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$500<span>potential</span></div>
+</article>
+<article class="card" data-category="Electronics" data-search="samsung q-series soundbar hw-q800h 5.1.2ch subwoofer (2026) $494.10 ($419 with $75 trade-up) + delivery @ samsung electronics samsung">
+  <div>
+    <div class="rank">#41 · Electronics</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962179" target="_blank" rel="noopener">Samsung Q-series Soundbar HW-Q800H 5.1.2ch Subwoofer (2026) $494.10 ($419 with $75 Trade-Up) + Delivery @ Samsung</a>
+    <div class="meta">Samsung · Node 962179</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $500</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$500<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="[skye club] premium barossa shiraz 2020 $108/dozen (82% off rrp) delivered @ skye cellars other skye cellars">
+  <div>
+    <div class="rank">#42 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960057" target="_blank" rel="noopener">[Skye Club] Premium Barossa Shiraz 2020 $108/Dozen (82% off RRP) Delivered @ Skye Cellars</a>
+    <div class="meta">Skye Cellars · Node 960057</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $491</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$491<span>potential</span></div>
+</article>
+<article class="card" data-category="Home" data-search="eureka j15 evo ultra robot vacuum $599 (rrp $1,067.45) delivered @ midea group au amazon au home midea group au amazon au">
+  <div>
+    <div class="rank">#43 · Home</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959423" target="_blank" rel="noopener">Eureka J15 Evo Ultra Robot Vacuum $599 (RRP $1,067.45) Delivered @ Midea Group AU Amazon AU</a>
+    <div class="meta">Midea Group AU Amazon AU · Node 959423</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $468</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$468<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="klipsch r-100sw 10&quot; subwoofer $449 rrp $899 ($29 delivery) @ westcoast hifi other westcoast hifi">
+  <div>
+    <div class="rank">#44 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962210" target="_blank" rel="noopener">Klipsch R-100SW 10&quot; Subwoofer $449 RRP $899 ($29 Delivery) @ Westcoast HiFi</a>
+    <div class="meta">Westcoast HiFi · Node 962210</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $450</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$450<span>potential</span></div>
+</article>
+<article class="card" data-category="Home" data-search="kitchenaid artisan steel core enamel covered casserole pot 24cm 6l $69 (was $499.95) + $9.95 delivery ($0 c&amp;c/ $99 order) @ myer home myer">
+  <div>
+    <div class="rank">#45 · Home</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961684" target="_blank" rel="noopener">KitchenAid Artisan Steel Core Enamel Covered Casserole Pot 24cm 6L $69 (Was $499.95) + $9.95 Delivery ($0 C&amp;C/ $99 Order) @ Myer</a>
+    <div class="meta">Myer · Node 961684</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $430</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$430<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="woll diamond lite 5l stock pot $99.95 (was $499.95) + $10 delivery ($0 with $99.99 order) @ woll australia other woll australia">
+  <div>
+    <div class="rank">#46 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959700" target="_blank" rel="noopener">Woll Diamond Lite 5L Stock Pot $99.95 (Was $499.95) + $10 Delivery ($0 with $99.99 Order) @ WOLL Australia</a>
+    <div class="meta">WOLL Australia · Node 959700</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $400</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$400<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="desky big &amp; tall high back office chair $399 (expired: $299 with code, was $699) + free shipping @ desky other desky">
+  <div>
+    <div class="rank">#47 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961633" target="_blank" rel="noopener">Desky Big &amp; Tall High Back Office Chair $399 (Expired: $299 with Code, Was $699) + Free Shipping @ Desky</a>
+    <div class="meta">Desky · Node 961633</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $400</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$400<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="[skye club] premium barossa shiraz 2024 $67.50/bottle (85% off rrp) delivered @ skye cellars other skye cellars">
+  <div>
+    <div class="rank">#48 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/957373" target="_blank" rel="noopener">[Skye Club] Premium Barossa Shiraz 2024 $67.50/Bottle (85% off RRP) Delivered @ Skye Cellars</a>
+    <div class="meta">Skye Cellars · Node 957373</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $379</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$379<span>potential</span></div>
+</article>
+<article class="card" data-category="Home" data-search="xiaomi vacuum cleaner g20 max $389 (was $699) delivered @ xiaomi australia home xiaomi australia">
+  <div>
+    <div class="rank">#49 · Home</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/957828" target="_blank" rel="noopener">Xiaomi Vacuum Cleaner G20 Max $389 (Was $699) Delivered @ Xiaomi Australia</a>
+    <div class="meta">Xiaomi Australia · Node 957828</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $310</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$310<span>potential</span></div>
+</article>
+<article class="card" data-category="Electronics" data-search="extra $300 off iphone air with 12/24/36-month phone plan: e.g. 256gb $27.72/m with 36-m plan, $41.58/m with 24-m plan @ optus electronics optus">
+  <div>
+    <div class="rank">#50 · Electronics</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959785" target="_blank" rel="noopener">Extra $300 off iPhone Air with 12/24/36-Month Phone Plan: e.g. 256GB $27.72/M with 36-M Plan, $41.58/M with 24-M Plan @ Optus</a>
+    <div class="meta">Optus · Node 959785</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $300</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$300<span>potential</span></div>
+</article>
+<article class="card" data-category="Finance" data-search="join combined hospital &amp; extras insurance via compare the market, hold for 90 days &amp; get $300 cashback @ shopback or topcashback finance shopback or topcashback">
+  <div>
+    <div class="rank">#51 · Finance</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961327" target="_blank" rel="noopener">Join Combined Hospital &amp; Extras Insurance via Compare The Market, Hold for 90 Days &amp; Get $300 Cashback @ ShopBack or TopCashback</a>
+    <div class="meta">ShopBack or TopCashback · Node 961327</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $300</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$300<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="lego star wars death star 75419 building kit $1,199 (rrp $1,499.99) delivered @ amazon au other amazon au">
+  <div>
+    <div class="rank">#52 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961420" target="_blank" rel="noopener">LEGO Star Wars Death Star 75419 Building Kit $1,199 (RRP $1,499.99) Delivered @ Amazon AU</a>
+    <div class="meta">Amazon AU · Node 961420</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $300</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$300<span>potential</span></div>
+</article>
+<article class="card" data-category="Automotive" data-search="garmin forerunner 965 carbon gray dlc titanium bezel with black case $699 (rrp $999) delivered @ amazon au automotive amazon au">
+  <div>
+    <div class="rank">#53 · Automotive</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961517" target="_blank" rel="noopener">Garmin Forerunner 965 Carbon Gray DLC Titanium Bezel with Black Case $699 (RRP $999) Delivered @ Amazon AU</a>
+    <div class="meta">Amazon AU · Node 961517</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $300</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$300<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="$300 off foxess a-series ev charger (single phase $699) + $200 off zappi/ohme/hypervolt + $50 off tesla wall connector other ozbargain">
+  <div>
+    <div class="rank">#54 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962154" target="_blank" rel="noopener">$300 off Foxess a-Series EV Charger (Single Phase $699) + $200 off Zappi/Ohme/Hypervolt + $50 off Tesla Wall Connector</a>
+    <div class="meta">OzBargain · Node 962154</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $300</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$300<span>potential</span></div>
+</article>
+<article class="card" data-category="Automotive" data-search="buy 2 solar battery protective covers get the 3rd for 50% off: from 3 for $287.38 + delivery ($0 qld c&amp;c) @ star sparky online automotive star sparky online">
+  <div>
+    <div class="rank">#55 · Automotive</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960183" target="_blank" rel="noopener">Buy 2 Solar Battery Protective Covers Get the 3rd for 50% off: from 3 for $287.38 + Delivery ($0 QLD C&amp;C) @ Star Sparky Online</a>
+    <div class="meta">Star Sparky Online · Node 960183</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $287</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$287<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="reolink elite pro floodlight poe 16mp floodlight cam w/ 180° panorama, 2 pack $514.55 delivered (rrp $798.99) @ reolink au other reolink au">
+  <div>
+    <div class="rank">#56 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961457" target="_blank" rel="noopener">Reolink Elite Pro Floodlight PoE 16MP Floodlight Cam w/ 180° Panorama, 2 Pack $514.55 Delivered (RRP $798.99) @ Reolink AU</a>
+    <div class="meta">Reolink AU · Node 961457</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $284</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$284<span>potential</span></div>
+</article>
+<article class="card" data-category="Travel" data-search="50-60% off overstock &amp; seconds sale - eg. [seconds] women&#x27;s leather jacket $179.60 + $7.95 delivery @ the wanderer&#x27;s travel co. travel the wanderer&#x27;s travel co.">
+  <div>
+    <div class="rank">#57 · Travel</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961450" target="_blank" rel="noopener">50-60% off Overstock &amp; Seconds Sale - eg. [Seconds] Women&#x27;s Leather Jacket $179.60 + $7.95 Delivery @ The Wanderer&#x27;s Travel Co.</a>
+    <div class="meta">The Wanderer&#x27;s Travel Co. · Node 961450</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $268</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$268<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="amd ryzen 5 7600x desktop processors $244 (rrp $505) delivered @ amazon de via au other amazon de via au">
+  <div>
+    <div class="rank">#58 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960382" target="_blank" rel="noopener">AMD Ryzen 5 7600X Desktop Processors $244 (RRP $505) Delivered @ Amazon DE via AU</a>
+    <div class="meta">Amazon DE via AU · Node 960382</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $261</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$261<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="uniden xtrak 80 smart uhf radio + antenna pack $449 delivered @ uniden other uniden">
+  <div>
+    <div class="rank">#59 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961441" target="_blank" rel="noopener">Uniden XTRAK 80 Smart UHF Radio + Antenna Pack $449 Delivered @ Uniden</a>
+    <div class="meta">Uniden · Node 961441</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $260</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$260<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="spend $1000 in 1 transaction &amp; get a $250 voucher (use 13/7-17/8) for business network member (marketing opt in required) @ ikea other ikea">
+  <div>
+    <div class="rank">#60 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/957433" target="_blank" rel="noopener">Spend $1000 in 1 Transaction &amp; Get a $250 Voucher (Use 13/7-17/8) for Business Network Member (Marketing Opt in Required) @ IKEA</a>
+    <div class="meta">IKEA · Node 957433</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $250</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$250<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="10% off ausclimate dehumidifiers: e.g. 45l smart acd245 $449.10 delivered (rrp $699) @ ausclimate other ausclimate">
+  <div>
+    <div class="rank">#61 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960926" target="_blank" rel="noopener">10% off Ausclimate Dehumidifiers: e.g. 45L Smart ACD245 $449.10 Delivered (RRP $699) @ Ausclimate</a>
+    <div class="meta">Ausclimate · Node 960926</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $250</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$250<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="nbn 25/10 $30/month for 6 months ($70/month ongoing, new services only) @ amaysim other amaysim">
+  <div>
+    <div class="rank">#62 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960313" target="_blank" rel="noopener">nbn 25/10 $30/Month for 6 Months ($70/Month Ongoing, New Services Only) @ amaysim</a>
+    <div class="meta">amaysim · Node 960313</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $240</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$240<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="us export cleanskin mclaren vale shiraz 2022 (12 bottles) $120 delivered (rrp $360) ($0 sa c&amp;c) @ bec hardy wines other bec hardy wines">
+  <div>
+    <div class="rank">#63 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961161" target="_blank" rel="noopener">US Export Cleanskin McLaren Vale Shiraz 2022 (12 Bottles) $120 Delivered (RRP $360) ($0 SA C&amp;C) @ Bec Hardy Wines</a>
+    <div class="meta">Bec Hardy Wines · Node 961161</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $240</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$240<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="[seconds] grip auto tourismo watch $160 (rrp $395), campione chronograph watch $250 (rrp $588) free shipping @ grip auto outlet other grip auto outlet">
+  <div>
+    <div class="rank">#64 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/962359" target="_blank" rel="noopener">[Seconds] Grip Auto Tourismo Watch $160 (RRP $395), Campione Chronograph Watch $250 (RRP $588) Free Shipping @ Grip Auto Outlet</a>
+    <div class="meta">Grip Auto Outlet · Node 962359</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $235</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$235<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="cuisinart precision pro mixer smd-50xa $268.99 (rrp $499) delivered @ amazon au other amazon au">
+  <div>
+    <div class="rank">#65 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961490" target="_blank" rel="noopener">Cuisinart Precision Pro Mixer SMD-50XA $268.99 (RRP $499) Delivered @ Amazon AU</a>
+    <div class="meta">Amazon AU · Node 961490</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $231</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$231<span>potential</span></div>
+</article>
+<article class="card" data-category="Automotive" data-search="philips sonicare 9900 prestige rechargable electric toothbrush $329 (rrp $549) delivered @ amazon au automotive amazon au">
+  <div>
+    <div class="rank">#66 · Automotive</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960995" target="_blank" rel="noopener">Philips Sonicare 9900 Prestige Rechargable Electric Toothbrush $329 (RRP $549) Delivered @ Amazon AU</a>
+    <div class="meta">Amazon AU · Node 960995</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $220</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$220<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="columbia men&#x27;s puffect iii insulated jacket, xl~xxl $100 delivered (rrp $319.99) @ columbia other columbia">
+  <div>
+    <div class="rank">#67 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/958730" target="_blank" rel="noopener">Columbia Men&#x27;s Puffect III Insulated Jacket, XL~XXL $100 Delivered (RRP $319.99) @ Columbia</a>
+    <div class="meta">Columbia · Node 958730</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $219</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$219<span>potential</span></div>
+</article>
+<article class="card" data-category="Gaming" data-search="logitech g rs50 system for playstation/pc or xbox/pc $998 (rrp $1,199.95) delivered @ amazon au gaming amazon au">
+  <div>
+    <div class="rank">#68 · Gaming</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960022" target="_blank" rel="noopener">Logitech G RS50 System for PlayStation/PC or Xbox/PC $998 (RRP $1,199.95) Delivered @ Amazon AU</a>
+    <div class="meta">Amazon AU · Node 960022</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $201</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$201<span>potential</span></div>
+</article>
+<article class="card" data-category="Automotive" data-search="referrer &amp; referee each get $200 amazon australia gift card each after referee installs sigenstor system @ sigenergy automotive sigenergy">
+  <div>
+    <div class="rank">#69 · Automotive</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/958454" target="_blank" rel="noopener">Referrer &amp; Referee Each Get $200 Amazon Australia Gift Card Each after Referee Installs SigenStor System @ Sigenergy</a>
+    <div class="meta">Sigenergy · Node 958454</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $200</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$200<span>potential</span></div>
+</article>
+<article class="card" data-category="Automotive" data-search="[nsw, qld, sa, vic] westpac banking group customers: join agl electricity, get $100/$50 visa card + $200 bill credit automotive ozbargain">
+  <div>
+    <div class="rank">#70 · Automotive</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959489" target="_blank" rel="noopener">[NSW, QLD, SA, VIC] Westpac Banking Group Customers: Join AGL Electricity, Get $100/$50 Visa Card + $200 Bill Credit</a>
+    <div class="meta">OzBargain · Node 959489</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $200</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$200<span>potential</span></div>
+</article>
+<article class="card" data-category="Finance" data-search="join via compare the market &amp; hold for 90 days: $200 cashback for hospital &amp; extras, $200 cb for hospital only @ topcashback au finance topcashback au">
+  <div>
+    <div class="rank">#71 · Finance</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/959644" target="_blank" rel="noopener">Join via Compare The Market &amp; Hold for 90 Days: $200 Cashback for Hospital &amp; Extras, $200 CB for Hospital Only @ TopCashback AU</a>
+    <div class="meta">TopCashback AU · Node 959644</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $200</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$200<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="instant pot pro plus wi-fi multi cooker 5.7l $229 (rrp $429) delivered @ amazon au other amazon au">
+  <div>
+    <div class="rank">#72 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960488" target="_blank" rel="noopener">Instant Pot Pro Plus Wi-Fi Multi Cooker 5.7L $229 (RRP $429) Delivered @ Amazon AU</a>
+    <div class="meta">Amazon AU · Node 960488</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $200</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$200<span>potential</span></div>
+</article>
+<article class="card" data-category="Other" data-search="logitech g920 driving force racing wheel and floor pedals $349 (rrp $549.95) delivered @ amazon au other amazon au">
+  <div>
+    <div class="rank">#73 · Other</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/960546" target="_blank" rel="noopener">Logitech G920 Driving Force Racing Wheel and Floor Pedals $349 (RRP $549.95) Delivered @ Amazon AU</a>
+    <div class="meta">Amazon AU · Node 960546</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $200</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$200<span>potential</span></div>
+</article>
+<article class="card" data-category="Automotive" data-search="karcher 18v se 3-18 ultra clean battery spot cleaner (5ah) $199 (was $399) + delivery ($0 c&amp;c/in-store) @ repco automotive repco">
+  <div>
+    <div class="rank">#74 · Automotive</div>
+    <a class="title" href="https://www.ozbargain.com.au/node/961777" target="_blank" rel="noopener">Karcher 18V SE 3-18 Ultra Clean Battery Spot Cleaner (5AH) $199 (Was $399) + Delivery ($0 C&amp;C/In-Store) @ Repco</a>
+    <div class="meta">Repco · Node 961777</div>
+    <div class="pillrow">
+      <span class="pill">Seen 1x</span>
+      <span class="pill">Best $200</span>
+      <span class="pill">Emailed 1x</span>
+    </div>
+  </div>
+  <div class="save">$200<span>potential</span></div>
+</article>
+    </section>
+    <div class="empty" id="empty">No matching deals.</div>
+  </main>
+  <footer>
+    <div class="wrap">Potential savings are parsed from explicit deal text and should be verified before purchase.</div>
+  </footer>
+  <script>
+    const search = document.querySelector('#search');
+    const cards = Array.from(document.querySelectorAll('.card'));
+    const buttons = Array.from(document.querySelectorAll('.chip'));
+    const empty = document.querySelector('#empty');
+    let filter = 'All';
+
+    function applyFilters() {
+      const q = search.value.trim().toLowerCase();
+      let shown = 0;
+      for (const card of cards) {
+        const inCategory = filter === 'All' || card.dataset.category === filter;
+        const inSearch = !q || card.dataset.search.includes(q);
+        const visible = inCategory && inSearch;
+        card.style.display = visible ? 'grid' : 'none';
+        if (visible) shown += 1;
+      }
+      empty.style.display = shown ? 'none' : 'block';
+    }
+
+    search.addEventListener('input', applyFilters);
+    for (const button of buttons) {
+      button.addEventListener('click', () => {
+        filter = button.dataset.filter;
+        buttons.forEach(b => b.classList.toggle('active', b === button));
+        applyFilters();
+      });
+    }
+  </script>
+</body>
+</html>
