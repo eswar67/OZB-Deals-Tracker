@@ -115,6 +115,7 @@ section {
 
 .deal-radar input,
 .deal-radar select {
+  box-sizing: border-box;
   width: 100%;
   border: 1px solid var(--radar-line);
   border-radius: 8px;
