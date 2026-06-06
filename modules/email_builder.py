@@ -277,7 +277,7 @@ def build_email_html(
         site_cta = (
             f'<br><a href="{safe_url}" style="display:inline-block;background:{BRAND};'
             f'color:#fff;text-decoration:none;border-radius:6px;padding:8px 10px;'
-            f'font-weight:800;margin-top:8px;">Open clean website view</a>'
+            f'font-weight:800;margin-top:8px;">Open filterable deal explorer</a>'
         )
 
     return f"""<!DOCTYPE html>
@@ -348,7 +348,7 @@ def build_email_html(
             <td class="foot">
               Potential value and percentage-off values are inferred from explicit title or description prices when available.
               <br>
-              {f'<a href="{escape(public_deals_url, quote=True)}" style="text-decoration:none;font-weight:700;">Open clean website view</a> · ' if public_deals_url else ''}
+              {f'<a href="{escape(public_deals_url, quote=True)}" style="text-decoration:none;font-weight:700;">Open filterable deal explorer</a> · ' if public_deals_url else ''}
               <a href="https://www.ozbargain.com.au/deals" style="text-decoration:none;font-weight:700;">Open OzBargain Deals</a>
             </td>
           </tr>

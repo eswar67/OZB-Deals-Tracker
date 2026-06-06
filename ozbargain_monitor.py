@@ -1812,7 +1812,7 @@ def send_gmail_alert(
         for d in all_categorised
     )
     if PUBLIC_DEALS_URL:
-        plain = f"Clean website view: {PUBLIC_DEALS_URL}\n\n{plain}"
+        plain = f"Filterable deal explorer: {PUBLIC_DEALS_URL}\n\n{plain}"
     msg.attach(MIMEText(plain, "plain"))
 
     html = build_email_html(

@@ -139,7 +139,7 @@ class CashbackRegressionTests(unittest.TestCase):
             },
         ], min_savings=200, public_deals_url="https://example.com/deals/")
 
-        self.assertIn("Open clean website view", html)
+        self.assertIn("Open filterable deal explorer", html)
         self.assertIn("https://example.com/deals/", html)
 
     def test_email_sections_sort_deals_by_savings_descending(self):
