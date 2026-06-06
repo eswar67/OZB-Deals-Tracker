@@ -298,17 +298,87 @@ def _render_card(deal: dict, rank: int) -> str:
 </article>"""
 
 
+def render_jekyll_html(deals: list[dict], generated_at: datetime) -> str:
+    total = sum(d["savings"] for d in deals)
+    top = deals[0]["savings"] if deals else 0
+    categories = sorted({d["category"] for d in deals})
+    cards = "\n".join(_render_card(deal, i + 1) for i, deal in enumerate(deals))
+    chips = "\n".join(
+        f'<button class="chip" data-filter="{escape(category)}">{escape(category)}</button>'
+        for category in categories
+    )
+    generated = generated_at.astimezone().strftime("%d %b %Y, %I:%M %p")
+
+    return f"""---
+layout: default
+title: Today's best quantified deals
+---
+<div class="deal-radar">
+  <section class="radar-intro">
+    <div class="stamp">Latest run: {escape(generated)}</div>
+    <p>A clean public view of the latest OzBargain monitor run. Deals are ranked by parsed potential saving and link back to the original OzBargain posts.</p>
+    <div class="stats">
+      <div class="stat"><div class="label">Deals</div><div class="value">{len(deals)}</div></div>
+      <div class="stat"><div class="label">Potential Value</div><div class="value">{_money(total)}</div></div>
+      <div class="stat"><div class="label">Top Saving</div><div class="value">{_money(top)}</div></div>
+    </div>
+  </section>
+  <div class="toolbar">
+    <input id="search" placeholder="Search deals, merchants, categories" aria-label="Search deals">
+    <div class="filters">
+      <button class="chip active" data-filter="All">All</button>
+      {chips}
+    </div>
+  </div>
+  <section class="grid" id="deals">
+    {cards}
+  </section>
+  <div class="empty" id="empty">No matching deals.</div>
+  <p class="fineprint">Potential savings are parsed from explicit deal text and should be verified before purchase.</p>
+</div>
+<script>
+  const search = document.querySelector('#search');
+  const cards = Array.from(document.querySelectorAll('.card'));
+  const buttons = Array.from(document.querySelectorAll('.chip'));
+  const empty = document.querySelector('#empty');
+  let filter = 'All';
+
+  function applyFilters() {{
+    const q = search.value.trim().toLowerCase();
+    let shown = 0;
+    for (const card of cards) {{
+      const inCategory = filter === 'All' || card.dataset.category === filter;
+      const inSearch = !q || card.dataset.search.includes(q);
+      const visible = inCategory && inSearch;
+      card.style.display = visible ? 'grid' : 'none';
+      if (visible) shown += 1;
+    }}
+    empty.style.display = shown ? 'none' : 'block';
+  }}
+
+  search.addEventListener('input', applyFilters);
+  for (const button of buttons) {{
+    button.addEventListener('click', () => {{
+      filter = button.dataset.filter;
+      buttons.forEach(b => b.classList.toggle('active', b === button));
+      applyFilters();
+    }});
+  }}
+</script>
+"""
+
+
 def build(memory_file: Path = MEMORY_FILE, output_file: Path = OUTPUT_FILE) -> tuple[int, Path]:
     deals, generated_at = load_latest_deals(memory_file)
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    output_file.write_text(render_html(deals, generated_at))
+    output_file.write_text(render_jekyll_html(deals, generated_at))
     return len(deals), output_file
 
 
 def build_from_deals(deals: list[dict], output_file: Path = OUTPUT_FILE) -> tuple[int, Path]:
     rows, generated_at = deals_from_monitor_run(deals)
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    output_file.write_text(render_html(rows, generated_at))
+    output_file.write_text(render_jekyll_html(rows, generated_at))
     return len(rows), output_file
 
 

@@ -58,7 +58,8 @@ class DealsSiteTests(unittest.TestCase):
 
             html = path.read_text()
             self.assertEqual(count, 1)
-            self.assertIn("OzBargain Deal Radar", html)
+            self.assertIn("layout: default", html)
+            self.assertIn("Today's best quantified deals", html)
             self.assertIn("Dyson Vacuum", html)
 
     def test_build_from_live_monitor_deals(self):

@@ -1,118 +1,22 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OzBargain Deal Radar</title>
-  <style>
-    :root {
-      --ink: #17202a;
-      --muted: #667085;
-      --line: #d8dee4;
-      --accent: #d95c00;
-      --accent-dark: #9a3f00;
-      --good: #137333;
-      --bg: #f4f7fb;
-      --card: #ffffff;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--ink);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-    }
-    header {
-      background: #ffffff;
-      border-bottom: 1px solid var(--line);
-    }
-    .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 0; }
-    .brand { font-weight: 850; font-size: 20px; }
-    .stamp { color: var(--muted); font-size: 13px; }
-    .hero { padding: 28px 0 22px; }
-    h1 { margin: 0; font-size: 34px; line-height: 1.12; letter-spacing: 0; }
-    .sub { margin-top: 8px; max-width: 760px; color: var(--muted); font-size: 15px; line-height: 1.55; }
-    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 22px 0 0; }
-    .stat { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
-    .label { color: var(--muted); font-size: 12px; font-weight: 750; text-transform: uppercase; }
-    .value { margin-top: 4px; font-size: 26px; line-height: 1.1; font-weight: 900; }
-    .toolbar { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 18px 0 12px; }
-    input {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
-      color: var(--ink);
-      font-size: 15px;
-      padding: 12px 13px;
-    }
-    .filters { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-    button {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
-      color: var(--ink);
-      cursor: pointer;
-      font-weight: 750;
-      padding: 10px 12px;
-    }
-    button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 8px 0 32px; }
-    .card {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 14px;
-      min-height: 148px;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 15px;
-    }
-    .rank { color: var(--accent-dark); font-weight: 850; font-size: 12px; }
-    .title { display: block; margin-top: 6px; color: var(--ink); text-decoration: none; font-size: 16px; line-height: 1.35; font-weight: 850; }
-    .title:hover { color: var(--accent-dark); }
-    .meta { margin-top: 10px; color: var(--muted); font-size: 13px; line-height: 1.45; }
-    .pillrow { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
-    .pill { border: 1px solid #e8edf3; background: #f8fafc; border-radius: 999px; padding: 4px 8px; font-size: 12px; color: var(--muted); }
-    .save { text-align: right; color: var(--good); font-size: 24px; font-weight: 950; white-space: nowrap; }
-    .save span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; text-transform: uppercase; }
-    .empty { display: none; padding: 28px 0 48px; color: var(--muted); }
-    footer { border-top: 1px solid var(--line); padding: 18px 0 28px; color: var(--muted); font-size: 13px; }
-    @media (max-width: 760px) {
-      h1 { font-size: 28px; }
-      .topbar, .toolbar { display: block; }
-      .stamp, .filters { margin-top: 10px; justify-content: flex-start; }
-      .stats, .grid { grid-template-columns: 1fr; }
-      .card { grid-template-columns: 1fr; }
-      .save { text-align: left; }
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <div class="wrap">
-      <div class="topbar">
-        <div class="brand">OzBargain Deal Radar</div>
-        <div class="stamp">Latest run: 06 Jun 2026, 07:21 PM</div>
-      </div>
-      <section class="hero">
-        <h1>Today's best quantified deals</h1>
-        <div class="sub">A clean public view of the latest OzBargain monitor run. Deals are ranked by parsed potential saving and link back to the original OzBargain posts.</div>
-        <div class="stats">
-          <div class="stat"><div class="label">Deals</div><div class="value">74</div></div>
-          <div class="stat"><div class="label">Potential Value</div><div class="value">$71,072</div></div>
-          <div class="stat"><div class="label">Top Saving</div><div class="value">$9,954</div></div>
-        </div>
-      </section>
+---
+layout: default
+title: Today's best quantified deals
+---
+<div class="deal-radar">
+  <section class="radar-intro">
+    <div class="stamp">Latest run: 06 Jun 2026, 07:21 PM</div>
+    <p>A clean public view of the latest OzBargain monitor run. Deals are ranked by parsed potential saving and link back to the original OzBargain posts.</p>
+    <div class="stats">
+      <div class="stat"><div class="label">Deals</div><div class="value">74</div></div>
+      <div class="stat"><div class="label">Potential Value</div><div class="value">$71,072</div></div>
+      <div class="stat"><div class="label">Top Saving</div><div class="value">$9,954</div></div>
     </div>
-  </header>
-  <main class="wrap">
-    <div class="toolbar">
-      <input id="search" placeholder="Search deals, merchants, categories" aria-label="Search deals">
-      <div class="filters">
-        <button class="chip active" data-filter="All">All</button>
-        <button class="chip" data-filter="Automotive">Automotive</button>
+  </section>
+  <div class="toolbar">
+    <input id="search" placeholder="Search deals, merchants, categories" aria-label="Search deals">
+    <div class="filters">
+      <button class="chip active" data-filter="All">All</button>
+      <button class="chip" data-filter="Automotive">Automotive</button>
 <button class="chip" data-filter="Computing">Computing</button>
 <button class="chip" data-filter="Electronics">Electronics</button>
 <button class="chip" data-filter="Finance">Finance</button>
@@ -120,10 +24,10 @@
 <button class="chip" data-filter="Home">Home</button>
 <button class="chip" data-filter="Other">Other</button>
 <button class="chip" data-filter="Travel">Travel</button>
-      </div>
     </div>
-    <section class="grid" id="deals">
-      <article class="card" data-category="Electronics" data-search="samsung 115&quot; qn90f mini led $14,929 (rrp $24,883) @ jb hi fi electronics jb hi fi">
+  </div>
+  <section class="grid" id="deals">
+    <article class="card" data-category="Electronics" data-search="samsung 115&quot; qn90f mini led $14,929 (rrp $24,883) @ jb hi fi electronics jb hi fi">
   <div>
     <div class="rank">#1 · Electronics</div>
     <a class="title" href="https://www.ozbargain.com.au/node/962268" target="_blank" rel="noopener">Samsung 115&quot; QN90F Mini LED $14,929 (RRP $24,883) @ JB Hi Fi</a>
@@ -1085,40 +989,36 @@
   </div>
   <div class="save">$200<span>potential</span></div>
 </article>
-    </section>
-    <div class="empty" id="empty">No matching deals.</div>
-  </main>
-  <footer>
-    <div class="wrap">Potential savings are parsed from explicit deal text and should be verified before purchase.</div>
-  </footer>
-  <script>
-    const search = document.querySelector('#search');
-    const cards = Array.from(document.querySelectorAll('.card'));
-    const buttons = Array.from(document.querySelectorAll('.chip'));
-    const empty = document.querySelector('#empty');
-    let filter = 'All';
+  </section>
+  <div class="empty" id="empty">No matching deals.</div>
+  <p class="fineprint">Potential savings are parsed from explicit deal text and should be verified before purchase.</p>
+</div>
+<script>
+  const search = document.querySelector('#search');
+  const cards = Array.from(document.querySelectorAll('.card'));
+  const buttons = Array.from(document.querySelectorAll('.chip'));
+  const empty = document.querySelector('#empty');
+  let filter = 'All';
 
-    function applyFilters() {
-      const q = search.value.trim().toLowerCase();
-      let shown = 0;
-      for (const card of cards) {
-        const inCategory = filter === 'All' || card.dataset.category === filter;
-        const inSearch = !q || card.dataset.search.includes(q);
-        const visible = inCategory && inSearch;
-        card.style.display = visible ? 'grid' : 'none';
-        if (visible) shown += 1;
-      }
-      empty.style.display = shown ? 'none' : 'block';
+  function applyFilters() {
+    const q = search.value.trim().toLowerCase();
+    let shown = 0;
+    for (const card of cards) {
+      const inCategory = filter === 'All' || card.dataset.category === filter;
+      const inSearch = !q || card.dataset.search.includes(q);
+      const visible = inCategory && inSearch;
+      card.style.display = visible ? 'grid' : 'none';
+      if (visible) shown += 1;
     }
+    empty.style.display = shown ? 'none' : 'block';
+  }
 
-    search.addEventListener('input', applyFilters);
-    for (const button of buttons) {
-      button.addEventListener('click', () => {
-        filter = button.dataset.filter;
-        buttons.forEach(b => b.classList.toggle('active', b === button));
-        applyFilters();
-      });
-    }
-  </script>
-</body>
-</html>
+  search.addEventListener('input', applyFilters);
+  for (const button of buttons) {
+    button.addEventListener('click', () => {
+      filter = button.dataset.filter;
+      buttons.forEach(b => b.classList.toggle('active', b === button));
+      applyFilters();
+    });
+  }
+</script>
