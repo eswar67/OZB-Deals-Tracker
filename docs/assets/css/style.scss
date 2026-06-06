@@ -222,6 +222,14 @@ section {
   margin: 0.85rem 0 0.75rem;
 }
 
+.deal-radar .urgent-strip {
+  background: rgba(181, 232, 83, 0.055);
+  border: 1px solid rgba(181, 232, 83, 0.2);
+  border-radius: 8px;
+  margin-top: 0.75rem;
+  padding: 0.7rem;
+}
+
 .deal-radar .strip-head {
   align-items: center;
   display: flex;
@@ -235,6 +243,16 @@ section {
   font-size: 0.75rem;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.deal-radar .urgent-title {
+  color: var(--radar-accent);
+}
+
+.deal-radar .strip-subtitle {
+  color: var(--radar-muted);
+  font-size: 0.72rem;
+  margin-top: 0.15rem;
 }
 
 .deal-radar .strip-row {
@@ -251,6 +269,10 @@ section {
   min-height: 96px;
   overflow: hidden;
   text-align: left;
+}
+
+.deal-radar .urgent-deal {
+  border-color: rgba(181, 232, 83, 0.34);
 }
 
 .deal-radar .link-button {

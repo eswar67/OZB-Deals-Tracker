@@ -64,6 +64,8 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn("deal-data", html)
             self.assertIn("Minimum saving", html)
             self.assertIn("Saved preference presets", html)
+            self.assertIn("Flash / time-sensitive deals", html)
+            self.assertIn("urgent-strip", html)
             self.assertIn("Top 10 strongest opportunities", html)
             self.assertIn("Value score high to low", html)
             self.assertIn("Hide expired/OOS", html)

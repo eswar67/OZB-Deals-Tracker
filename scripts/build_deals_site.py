@@ -371,6 +371,7 @@ title: Today's best quantified deals
       <div class="stat"><div class="label">Top Saving</div><div class="value" id="stat-top">{_money(top)}</div></div>
     </div>
   </section>
+  <section class="top-strip urgent-strip" id="urgent-strip" aria-label="Flash and time-sensitive deals"></section>
   <section class="preset-bar" aria-label="Saved preference presets">
     <button type="button" class="preset" data-preset="high">High savings</button>
     <button type="button" class="preset" data-preset="tech">Tech deals</button>
@@ -456,6 +457,7 @@ title: Today's best quantified deals
     toggle: document.querySelector('#filter-toggle'),
     panel: document.querySelector('#filter-panel'),
     grid: document.querySelector('#deals'),
+    urgentStrip: document.querySelector('#urgent-strip'),
     topStrip: document.querySelector('#top-strip'),
     categorySummary: document.querySelector('#category-summary'),
     drawer: document.querySelector('#detail-drawer'),
@@ -522,6 +524,20 @@ title: Today's best quantified deals
     return badges.length ? badges : ['Fresh memory'];
   }}
 
+  function timeSensitiveReason(deal) {{
+    const title = String(deal.title || '').toLowerCase();
+    if (/\\b(today only|ends today|today\\b|tonight|last day|final day)\\b/.test(title)) return 'Ends today';
+    if (/\\b(ends|ending|expires|expiring|until|limited time|limited stock|while stocks last|clearance|flash|deal of the day|one day)\\b/.test(title)) return 'Time sensitive';
+    if (/\\b(code|coupon|cashback|bonus|afterpay|shopback|cashrewards)\\b/.test(title)) return 'Promo window';
+    if (daysSince(deal.first_seen_at) <= 1) return 'New today';
+    if (daysSince(deal.last_seen_at) <= 1 && deal.savings >= 500) return 'Fresh high saving';
+    return '';
+  }}
+
+  function isTimeSensitive(deal) {{
+    return !isExpired(deal) && Boolean(timeSensitiveReason(deal));
+  }}
+
   function matchesSearch(deal, query) {{
     if (!query) return true;
     return dealText(deal).includes(query);
@@ -564,11 +580,22 @@ title: Today's best quantified deals
   }}
 
   function topStripHtml(rows) {{
-    const top = [...rows].sort((a, b) => (qualityScore(b) - qualityScore(a)) || (b.savings - a.savings)).slice(0, 10);
+    const top = [...rows].sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a))).slice(0, 10);
     if (!top.length) return '';
     return `<div class="strip-head"><div class="strip-title">Top 10 strongest opportunities</div><button type="button" class="link-button" data-preset="high">High savings view</button></div><div class="strip-row">${{top.map((deal, i) => `
       <button type="button" class="mini-deal" data-top-index="${{i}}">
         <span>#${{i + 1}} · Score ${{qualityScore(deal)}}</span>
+        <b>${{escapeHtml(deal.title)}}</b>
+        <em>${{money(deal.savings)}} potential</em>
+      </button>`).join('')}}</div>`;
+  }}
+
+  function urgentStripHtml(rows) {{
+    const urgent = [...rows].filter(isTimeSensitive).sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a))).slice(0, 8);
+    if (!urgent.length) return '';
+    return `<div class="strip-head"><div><div class="strip-title urgent-title">Flash / time-sensitive deals</div><div class="strip-subtitle">Fresh, limited, ending, code, or cashback deals sorted by savings</div></div></div><div class="strip-row">${{urgent.map((deal, i) => `
+      <button type="button" class="mini-deal urgent-deal" data-urgent-index="${{i}}">
+        <span>#${{i + 1}} · ${{escapeHtml(timeSensitiveReason(deal))}}</span>
         <b>${{escapeHtml(deal.title)}}</b>
         <em>${{money(deal.savings)}} potential</em>
       </button>`).join('')}}</div>`;
@@ -633,6 +660,7 @@ title: Today's best quantified deals
 
     currentRows = rows;
     els.grid.innerHTML = rows.map(cardHtml).join('');
+    els.urgentStrip.innerHTML = urgentStripHtml(rows);
     els.topStrip.innerHTML = topStripHtml(rows);
     renderCategorySummary(rows);
     els.empty.style.display = rows.length ? 'none' : 'block';
@@ -722,6 +750,12 @@ title: Today's best quantified deals
     if (!presetButton) return;
     applyPreset(presetButton.dataset.preset);
   }});
+  els.urgentStrip.addEventListener('click', event => {{
+    const button = event.target.closest('.mini-deal');
+    if (!button) return;
+    const urgent = [...currentRows].filter(isTimeSensitive).sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a)));
+    openDetails(urgent[Number(button.dataset.urgentIndex)]);
+  }});
   els.grid.addEventListener('click', event => {{
     const button = event.target.closest('.details');
     if (!button) return;
@@ -730,7 +764,7 @@ title: Today's best quantified deals
   els.topStrip.addEventListener('click', event => {{
     const button = event.target.closest('.mini-deal');
     if (!button) return;
-    const top = [...currentRows].sort((a, b) => (qualityScore(b) - qualityScore(a)) || (b.savings - a.savings));
+    const top = [...currentRows].sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a)));
     openDetails(top[Number(button.dataset.topIndex)]);
   }});
   for (const el of [els.search, els.category, els.merchant, els.minSaving, els.minSeen, els.sort, els.watchlist, els.emailedOnly, els.repeatOnly, els.hideExpired]) {{
