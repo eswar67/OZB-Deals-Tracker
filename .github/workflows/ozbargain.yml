@@ -2,58 +2,19 @@ name: OzBargain Monitor
 
 on:
   schedule:
-    # GitHub cron is UTC-only and can be delayed or occasionally skipped.
-    # Wake every 15 minutes across the Sydney afternoon/evening window, then
-    # run the first due slot that has not already been sent today. This is more
-    # reliable than relying on one exact 2:00 PM or 7:15 PM tick.
-    - cron: '0 2 * * *'
-    - cron: '15 2 * * *'
-    - cron: '30 2 * * *'
-    - cron: '45 2 * * *'
-    - cron: '0 3 * * *'
-    - cron: '15 3 * * *'
-    - cron: '30 3 * * *'
-    - cron: '45 3 * * *'
-    - cron: '0 4 * * *'
-    - cron: '15 4 * * *'
-    - cron: '30 4 * * *'
-    - cron: '45 4 * * *'
-    - cron: '0 5 * * *'
-    - cron: '15 5 * * *'
-    - cron: '30 5 * * *'
-    - cron: '45 5 * * *'
-    - cron: '0 6 * * *'
-    - cron: '15 6 * * *'
-    - cron: '30 6 * * *'
-    - cron: '45 6 * * *'
-    - cron: '0 7 * * *'
-    - cron: '15 7 * * *'
-    - cron: '30 7 * * *'
-    - cron: '45 7 * * *'
-    - cron: '0 8 * * *'
-    - cron: '15 8 * * *'
-    - cron: '30 8 * * *'
-    - cron: '45 8 * * *'
-    - cron: '0 9 * * *'
-    - cron: '15 9 * * *'
-    - cron: '30 9 * * *'
-    - cron: '45 9 * * *'
-    - cron: '0 10 * * *'
-    - cron: '15 10 * * *'
-    - cron: '30 10 * * *'
-    - cron: '45 10 * * *'
-    - cron: '0 11 * * *'
-    - cron: '15 11 * * *'
-    - cron: '30 11 * * *'
-    - cron: '45 11 * * *'
-    - cron: '0 12 * * *'
-    - cron: '15 12 * * *'
-    - cron: '30 12 * * *'
-    - cron: '45 12 * * *'
-    - cron: '0 13 * * *'
-    - cron: '15 13 * * *'
-    - cron: '30 13 * * *'
-    - cron: '45 13 * * *'
+    # GitHub cron is UTC-only, so include both AEST and AEDT ticks.
+    # Each slot has one primary wake-up plus one backup. The gate below runs
+    # the first due Sydney slot only once per day, even if a backup tick arrives.
+    # AEST:  2:00 PM = 04:00 UTC, 7:15 PM = 09:15 UTC
+    # AEDT:  2:00 PM = 03:00 UTC, 7:15 PM = 08:15 UTC
+    - cron: '7 3 * * *'
+    - cron: '37 3 * * *'
+    - cron: '7 4 * * *'
+    - cron: '37 4 * * *'
+    - cron: '17 8 * * *'
+    - cron: '47 8 * * *'
+    - cron: '17 9 * * *'
+    - cron: '47 9 * * *'
   workflow_dispatch:   # allow manual trigger from GitHub UI
 
 permissions:

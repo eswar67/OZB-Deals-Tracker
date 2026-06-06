@@ -12,6 +12,10 @@ WORKFLOW_ID="288527704"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG="$SCRIPT_DIR/ozbargain_monitor.log"
 PYTHON="$(command -v python3)"
+CURL="$(command -v curl)"
+
+exec >> "$LOG" 2>&1
+echo "$(date) Mac fallback: started."
 
 sydney_date="$(TZ=Australia/Sydney date +%Y-%m-%d)"
 sydney_ymd="$(TZ=Australia/Sydney date +%Y%m%d)"
@@ -26,11 +30,11 @@ elif (( sydney_minutes >= 19 * 60 + 15 )); then
   slot="evening"
   slot_start_local="$sydney_date 19:15:00 Australia/Sydney"
 else
-  echo "$(date) Mac fallback: outside monitored slots; exiting." >> "$LOG"
+  echo "$(date) Mac fallback: outside monitored slots; exiting."
   exit 0
 fi
 
-slot_start_utc="$("$PYTHON" - "$slot_start_local" <<'PY'
+if ! slot_start_utc="$("$PYTHON" - "$slot_start_local" <<'PY'
 import sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -39,11 +43,14 @@ text = sys.argv[1].replace(" Australia/Sydney", "")
 dt = datetime.strptime(text, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo("Australia/Sydney"))
 print(dt.astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%dT%H:%M:%SZ"))
 PY
-)"
+)"; then
+  echo "$(date) Mac fallback: failed to compute Sydney slot start."
+  exit 1
+fi
 
-echo "$(date) Mac fallback: checking GitHub Actions for $sydney_ymd-$slot since $slot_start_utc" >> "$LOG"
+echo "$(date) Mac fallback: checking GitHub Actions for $sydney_ymd-$slot since $slot_start_utc"
 
-runs_json="$(curl -fsS "https://api.github.com/repos/$REPO/actions/workflows/$WORKFLOW_ID/runs?per_page=20&branch=main" || true)"
+runs_json="$("$CURL" -fsS "https://api.github.com/repos/$REPO/actions/workflows/$WORKFLOW_ID/runs?per_page=20&branch=main" || true)"
 
 if "$PYTHON" - "$slot_start_utc" "$runs_json" <<'PY'
 import json
@@ -71,10 +78,10 @@ for run in payload.get("workflow_runs", []):
 sys.exit(1)
 PY
 then
-  echo "$(date) Mac fallback: GitHub Actions has run or is running; skipping local run." >> "$LOG"
+  echo "$(date) Mac fallback: GitHub Actions has run or is running; skipping local run."
   exit 0
 fi
 
-echo "$(date) Mac fallback: no GitHub Actions run found; running local monitor." >> "$LOG"
+echo "$(date) Mac fallback: no GitHub Actions run found; running local monitor."
 cd "$SCRIPT_DIR"
-"$PYTHON" ozbargain_monitor.py >> "$LOG" 2>&1
+"$PYTHON" ozbargain_monitor.py
