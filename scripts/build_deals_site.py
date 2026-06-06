@@ -54,23 +54,36 @@ def _merchant_from_title(title: str) -> str:
     return match.group(1).strip() if match else "OzBargain"
 
 
+def _row_from_memory_item(item: dict) -> dict:
+    title = item.get("last_title") or item.get("first_title") or "Untitled deal"
+    emailed_at = _parse_dt(item.get("last_emailed_at", ""))
+    last_seen_at = _parse_dt(item.get("last_seen_at", ""))
+    first_seen_at = _parse_dt(item.get("first_seen_at", ""))
+    row = {
+        "title": title,
+        "link": item.get("link") or "#",
+        "node_id": item.get("node_id") or "",
+        "savings": int(item.get("last_savings", 0) or 0),
+        "best_savings": int(item.get("best_savings", 0) or 0),
+        "times_seen": int(item.get("times_seen", 0) or 0),
+        "email_count": int(item.get("email_count", 0) or 0),
+        "last_emailed_at": emailed_at,
+        "last_seen_at": last_seen_at,
+        "first_seen_at": first_seen_at,
+        "category": _category_from_title(title),
+        "merchant": _merchant_from_title(title),
+    }
+    return row
+
+
 def load_latest_deals(memory_file: Path = MEMORY_FILE) -> tuple[list[dict], datetime]:
     payload = json.loads(memory_file.read_text())
     rows = []
     for item in payload.get("deals", {}).values():
-        emailed_at = _parse_dt(item.get("last_emailed_at", ""))
-        if emailed_at == datetime.min.replace(tzinfo=timezone.utc):
+        row = _row_from_memory_item(item)
+        if row["last_emailed_at"] == datetime.min.replace(tzinfo=timezone.utc):
             continue
-        rows.append({
-            "title": item.get("last_title") or item.get("first_title") or "Untitled deal",
-            "link": item.get("link") or "#",
-            "node_id": item.get("node_id") or "",
-            "savings": int(item.get("last_savings", 0) or 0),
-            "best_savings": int(item.get("best_savings", 0) or 0),
-            "times_seen": int(item.get("times_seen", 0) or 0),
-            "email_count": int(item.get("email_count", 0) or 0),
-            "last_emailed_at": emailed_at,
-        })
+        rows.append(row)
 
     if not rows:
         return [], datetime.min.replace(tzinfo=timezone.utc)
@@ -78,10 +91,22 @@ def load_latest_deals(memory_file: Path = MEMORY_FILE) -> tuple[list[dict], date
     latest = max(row["last_emailed_at"] for row in rows)
     latest_rows = [row for row in rows if row["last_emailed_at"] == latest]
     latest_rows.sort(key=lambda row: row["savings"], reverse=True)
-    for row in latest_rows:
-        row["category"] = _category_from_title(row["title"])
-        row["merchant"] = _merchant_from_title(row["title"])
     return latest_rows, latest
+
+
+def load_all_memory_deals(memory_file: Path = MEMORY_FILE) -> tuple[list[dict], datetime]:
+    """Load every remembered deal for the public site filter UI."""
+    payload = json.loads(memory_file.read_text())
+    rows = [_row_from_memory_item(item) for item in payload.get("deals", {}).values()]
+    rows = [row for row in rows if row["savings"] > 0 or row["best_savings"] > 0]
+    rows.sort(key=lambda row: (row["savings"], row["best_savings"], row["last_seen_at"]), reverse=True)
+    if not rows:
+        return [], datetime.min.replace(tzinfo=timezone.utc)
+    generated_at = max(
+        row["last_emailed_at"] if row["last_emailed_at"] != datetime.min.replace(tzinfo=timezone.utc) else row["last_seen_at"]
+        for row in rows
+    )
+    return rows, generated_at
 
 
 def deals_from_monitor_run(deals: list[dict], generated_at: datetime | None = None) -> tuple[list[dict], datetime]:
@@ -298,16 +323,34 @@ def _render_card(deal: dict, rank: int) -> str:
 </article>"""
 
 
+def _deal_payload(deals: list[dict]) -> str:
+    payload = []
+    for deal in deals:
+        payload.append({
+            "title": deal["title"],
+            "link": deal["link"],
+            "node_id": deal["node_id"],
+            "savings": int(deal["savings"]),
+            "best_savings": int(deal["best_savings"]),
+            "times_seen": int(deal["times_seen"]),
+            "email_count": int(deal["email_count"]),
+            "last_emailed_at": deal["last_emailed_at"].isoformat(),
+            "last_seen_at": deal.get("last_seen_at", deal["last_emailed_at"]).isoformat(),
+            "category": deal["category"],
+            "merchant": deal["merchant"],
+        })
+    return json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
+
+
 def render_jekyll_html(deals: list[dict], generated_at: datetime) -> str:
     total = sum(d["savings"] for d in deals)
     top = deals[0]["savings"] if deals else 0
     categories = sorted({d["category"] for d in deals})
-    cards = "\n".join(_render_card(deal, i + 1) for i, deal in enumerate(deals))
-    chips = "\n".join(
-        f'<button class="chip" data-filter="{escape(category)}">{escape(category)}</button>'
-        for category in categories
-    )
+    merchants = sorted({d["merchant"] for d in deals})
     generated = generated_at.astimezone().strftime("%d %b %Y, %I:%M %p")
+    category_options = "\n".join(f'<option value="{escape(category, quote=True)}">{escape(category)}</option>' for category in categories)
+    merchant_options = "\n".join(f'<option value="{escape(merchant, quote=True)}">{escape(merchant)}</option>' for merchant in merchants)
+    deal_json = _deal_payload(deals)
 
     return f"""---
 layout: default
@@ -316,60 +359,182 @@ title: Today's best quantified deals
 <div class="deal-radar">
   <section class="radar-intro">
     <div class="stamp">Latest run: {escape(generated)}</div>
-    <p>A clean public view of the latest OzBargain monitor run. Deals are ranked by parsed potential saving and link back to the original OzBargain posts.</p>
+    <p>A public view of every remembered OzBargain opportunity. Adjust the filters to reshape the list from the browser without waiting for a new run.</p>
     <div class="stats">
-      <div class="stat"><div class="label">Deals</div><div class="value">{len(deals)}</div></div>
-      <div class="stat"><div class="label">Potential Value</div><div class="value">{_money(total)}</div></div>
-      <div class="stat"><div class="label">Top Saving</div><div class="value">{_money(top)}</div></div>
+      <div class="stat"><div class="label">Matching Deals</div><div class="value" id="stat-count">{len(deals)}</div></div>
+      <div class="stat"><div class="label">Potential Value</div><div class="value" id="stat-total">{_money(total)}</div></div>
+      <div class="stat"><div class="label">Top Saving</div><div class="value" id="stat-top">{_money(top)}</div></div>
     </div>
   </section>
   <div class="toolbar">
     <input id="search" placeholder="Search deals, merchants, categories" aria-label="Search deals">
-    <div class="filters">
-      <button class="chip active" data-filter="All">All</button>
-      {chips}
-    </div>
+    <button class="filter-toggle" id="filter-toggle" type="button" aria-expanded="true" aria-controls="filter-panel">Filters</button>
   </div>
+  <section class="filter-panel" id="filter-panel">
+    <label>
+      Category
+      <select id="category">
+        <option value="All">All categories</option>
+        {category_options}
+      </select>
+    </label>
+    <label>
+      Merchant
+      <select id="merchant">
+        <option value="All">All merchants</option>
+        {merchant_options}
+      </select>
+    </label>
+    <label>
+      Minimum saving
+      <input id="min-saving" type="number" min="0" step="50" value="0">
+    </label>
+    <label>
+      Seen at least
+      <input id="min-seen" type="number" min="0" step="1" value="0">
+    </label>
+    <label>
+      Sort
+      <select id="sort">
+        <option value="savings-desc">Savings high to low</option>
+        <option value="best-desc">Best ever high to low</option>
+        <option value="seen-desc">Most seen</option>
+        <option value="emailed-desc">Most emailed</option>
+        <option value="recent-desc">Most recent</option>
+      </select>
+    </label>
+    <div class="checks">
+      <label><input id="emailed-only" type="checkbox"> Emailed only</label>
+      <label><input id="repeat-only" type="checkbox"> Repeated sightings</label>
+    </div>
+    <button class="reset" id="reset-filters" type="button">Reset</button>
+  </section>
   <section class="grid" id="deals">
-    {cards}
   </section>
   <div class="empty" id="empty">No matching deals.</div>
   <p class="fineprint">Potential savings are parsed from explicit deal text and should be verified before purchase.</p>
 </div>
+<script id="deal-data" type="application/json">{deal_json}</script>
 <script>
-  const search = document.querySelector('#search');
-  const cards = Array.from(document.querySelectorAll('.card'));
-  const buttons = Array.from(document.querySelectorAll('.chip'));
-  const empty = document.querySelector('#empty');
-  let filter = 'All';
+  const deals = JSON.parse(document.querySelector('#deal-data').textContent);
+  const els = {{
+    search: document.querySelector('#search'),
+    category: document.querySelector('#category'),
+    merchant: document.querySelector('#merchant'),
+    minSaving: document.querySelector('#min-saving'),
+    minSeen: document.querySelector('#min-seen'),
+    sort: document.querySelector('#sort'),
+    emailedOnly: document.querySelector('#emailed-only'),
+    repeatOnly: document.querySelector('#repeat-only'),
+    reset: document.querySelector('#reset-filters'),
+    toggle: document.querySelector('#filter-toggle'),
+    panel: document.querySelector('#filter-panel'),
+    grid: document.querySelector('#deals'),
+    empty: document.querySelector('#empty'),
+    statCount: document.querySelector('#stat-count'),
+    statTotal: document.querySelector('#stat-total'),
+    statTop: document.querySelector('#stat-top'),
+  }};
+
+  function money(value) {{
+    return '$' + Math.round(value || 0).toLocaleString();
+  }}
+
+  function escapeHtml(value) {{
+    return String(value || '').replace(/[&<>"']/g, char => ({{
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }}[char]));
+  }}
+
+  function matchesSearch(deal, query) {{
+    if (!query) return true;
+    return [deal.title, deal.merchant, deal.category, deal.node_id].join(' ').toLowerCase().includes(query);
+  }}
+
+  function rankDeals(rows) {{
+    const sort = els.sort.value;
+    const copy = [...rows];
+    copy.sort((a, b) => {{
+      if (sort === 'best-desc') return (b.best_savings - a.best_savings) || (b.savings - a.savings);
+      if (sort === 'seen-desc') return (b.times_seen - a.times_seen) || (b.savings - a.savings);
+      if (sort === 'emailed-desc') return (b.email_count - a.email_count) || (b.savings - a.savings);
+      if (sort === 'recent-desc') return Date.parse(b.last_seen_at) - Date.parse(a.last_seen_at);
+      return (b.savings - a.savings) || (b.best_savings - a.best_savings);
+    }});
+    return copy;
+  }}
+
+  function cardHtml(deal, index) {{
+    const node = deal.node_id ? `Node ${{escapeHtml(deal.node_id)}}` : 'OzBargain';
+    const seen = deal.times_seen ? `Seen ${{deal.times_seen}}x` : 'New';
+    return `<article class="card">
+      <div>
+        <div class="rank">#${{index + 1}} · ${{escapeHtml(deal.category)}}</div>
+        <a class="title" href="${{escapeHtml(deal.link)}}" target="_blank" rel="noopener">${{escapeHtml(deal.title)}}</a>
+        <div class="meta">${{escapeHtml(deal.merchant)}} · ${{node}}</div>
+        <div class="pillrow">
+          <span class="pill">${{seen}}</span>
+          <span class="pill">Best ${{money(deal.best_savings)}}</span>
+          <span class="pill">Emailed ${{deal.email_count}}x</span>
+        </div>
+      </div>
+      <div class="save">${{money(deal.savings)}}<span>potential</span></div>
+    </article>`;
+  }}
 
   function applyFilters() {{
-    const q = search.value.trim().toLowerCase();
-    let shown = 0;
-    for (const card of cards) {{
-      const inCategory = filter === 'All' || card.dataset.category === filter;
-      const inSearch = !q || card.dataset.search.includes(q);
-      const visible = inCategory && inSearch;
-      card.style.display = visible ? 'grid' : 'none';
-      if (visible) shown += 1;
-    }}
-    empty.style.display = shown ? 'none' : 'block';
+    const query = els.search.value.trim().toLowerCase();
+    const minSaving = Number(els.minSaving.value || 0);
+    const minSeen = Number(els.minSeen.value || 0);
+    const rows = rankDeals(deals.filter(deal => {{
+      if (els.category.value !== 'All' && deal.category !== els.category.value) return false;
+      if (els.merchant.value !== 'All' && deal.merchant !== els.merchant.value) return false;
+      if (deal.savings < minSaving) return false;
+      if (deal.times_seen < minSeen) return false;
+      if (els.emailedOnly.checked && deal.email_count < 1) return false;
+      if (els.repeatOnly.checked && deal.times_seen < 2) return false;
+      return matchesSearch(deal, query);
+    }}));
+
+    els.grid.innerHTML = rows.map(cardHtml).join('');
+    els.empty.style.display = rows.length ? 'none' : 'block';
+    els.statCount.textContent = rows.length.toLocaleString();
+    els.statTotal.textContent = money(rows.reduce((sum, deal) => sum + deal.savings, 0));
+    els.statTop.textContent = money(rows[0]?.savings || 0);
   }}
 
-  search.addEventListener('input', applyFilters);
-  for (const button of buttons) {{
-    button.addEventListener('click', () => {{
-      filter = button.dataset.filter;
-      buttons.forEach(b => b.classList.toggle('active', b === button));
-      applyFilters();
-    }});
+  function resetFilters() {{
+    els.search.value = '';
+    els.category.value = 'All';
+    els.merchant.value = 'All';
+    els.minSaving.value = '0';
+    els.minSeen.value = '0';
+    els.sort.value = 'savings-desc';
+    els.emailedOnly.checked = false;
+    els.repeatOnly.checked = false;
+    applyFilters();
   }}
+
+  els.toggle.addEventListener('click', () => {{
+    const hidden = els.panel.toggleAttribute('hidden');
+    els.toggle.setAttribute('aria-expanded', String(!hidden));
+  }});
+  els.reset.addEventListener('click', resetFilters);
+  for (const el of [els.search, els.category, els.merchant, els.minSaving, els.minSeen, els.sort, els.emailedOnly, els.repeatOnly]) {{
+    el.addEventListener('input', applyFilters);
+    el.addEventListener('change', applyFilters);
+  }}
+  applyFilters();
 </script>
 """
 
 
 def build(memory_file: Path = MEMORY_FILE, output_file: Path = OUTPUT_FILE) -> tuple[int, Path]:
-    deals, generated_at = load_latest_deals(memory_file)
+    deals, generated_at = load_all_memory_deals(memory_file)
     output_file.parent.mkdir(parents=True, exist_ok=True)
     output_file.write_text(render_jekyll_html(deals, generated_at))
     return len(deals), output_file

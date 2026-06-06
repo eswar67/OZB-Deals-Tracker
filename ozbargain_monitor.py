@@ -225,9 +225,9 @@ def publish_deals_site(deals: list[dict]) -> None:
     if not ENABLE_SITE_BUILD:
         return
     try:
-        from scripts.build_deals_site import build_from_deals
+        from scripts.build_deals_site import build
 
-        count, output = build_from_deals(deals)
+        count, output = build()
         log.info("Deals site built: %s (%s deals)", output, count)
     except Exception as exc:
         log.warning("Deals site build failed: %s", exc)
