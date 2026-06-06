@@ -265,7 +265,7 @@ def render_html(deals: list[dict], generated_at: datetime) -> str:
     <div class="empty" id="empty">No matching deals.</div>
   </main>
   <footer>
-    <div class="wrap">Potential savings are parsed from explicit deal text and should be verified before purchase.</div>
+    <div class="wrap">Potential value is AI-derived from deal signals and should be verified before purchase. Built with Claude AI Code and OpenAI Codex.</div>
   </footer>
   <script>
     const search = document.querySelector('#search');
@@ -427,7 +427,7 @@ title: Today's best quantified deals
     <button class="drawer-close" id="drawer-close" type="button" aria-label="Close deal details">Close</button>
     <div id="drawer-content"></div>
   </aside>
-  <p class="fineprint">Potential savings are parsed from explicit deal text and should be verified before purchase.</p>
+  <p class="fineprint">Potential value is AI-derived from deal signals and should be verified before purchase. Built with Claude AI Code and OpenAI Codex.</p>
 </div>
 <script id="deal-data" type="application/json">{deal_json}</script>
 <script>
