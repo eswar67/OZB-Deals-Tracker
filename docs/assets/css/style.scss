@@ -108,6 +108,11 @@ section {
   padding: 0.75rem 0 0.45rem;
 }
 
+.deal-radar .toolbar button {
+  min-width: 5.5rem;
+  white-space: nowrap;
+}
+
 .deal-radar input,
 .deal-radar select {
   width: 100%;
@@ -438,11 +443,16 @@ section {
 
 @media (max-width: 760px) {
   .deal-radar .toolbar {
-    display: block;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
   }
 
+  .deal-radar .toolbar input {
+    grid-column: 1 / -1;
+  }
+
+  .deal-radar .clear-filters,
   .deal-radar .filter-toggle {
-    margin-top: 0.65rem;
     width: 100%;
   }
 
