@@ -393,8 +393,9 @@ def _match_two_prices(t: str):
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-# Cap — no single consumer deal saves more than this via regex
-MAX_REGEX_SAVINGS = 5000
+# Sanity cap for regex-derived savings. This needs to allow high-ticket
+# consumer categories such as large TVs, appliances, cars, and premium laptops.
+MAX_REGEX_SAVINGS = 25000
 
 MATCHERS = [
     ("explicit_save",  _match_explicit_save),

@@ -77,6 +77,15 @@ class ValueParserRegressionTests(unittest.TestCase):
         self.assertEqual(scored[0].get("market_price", 0), 0)
         self.assertEqual(scored[0].get("savings_percent", 0), 0.0)
 
+    def test_high_ticket_rrp_savings_are_not_dropped(self):
+        result = parse_deal_value({
+            "title": 'Samsung 115" QN90F Mini LED $14,929 (RRP $24,883) @ JB Hi Fi',
+            "description": "",
+        })
+
+        self.assertEqual(result["deal_price"], 14929)
+        self.assertEqual(result["savings"], 9954)
+
 
 if __name__ == "__main__":
     unittest.main()
