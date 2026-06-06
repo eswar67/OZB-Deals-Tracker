@@ -48,6 +48,18 @@ section {
   margin: 1rem 0 0;
 }
 
+.deal-radar .preset-bar,
+.deal-radar .category-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.deal-radar .category-summary {
+  padding-bottom: 0.25rem;
+}
+
 .deal-radar .stat {
   background: var(--radar-card);
   border: 1px solid var(--radar-line);
@@ -90,7 +102,7 @@ section {
 
 .deal-radar .filter-panel {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.75rem;
   align-items: end;
   margin: 0.35rem 0 0.85rem;
@@ -111,6 +123,10 @@ section {
   font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.deal-radar label.wide {
+  grid-column: span 2;
 }
 
 .deal-radar .checks {
@@ -146,6 +162,61 @@ section {
   background: var(--radar-accent);
   color: #111;
   border-color: var(--radar-accent);
+}
+
+.deal-radar .preset,
+.deal-radar .cat-chip {
+  border-color: #315f37;
+  font-size: 0.82rem;
+  padding: 0.5rem 0.65rem;
+}
+
+.deal-radar .cat-chip span {
+  color: var(--radar-accent-dark);
+  margin-left: 0.25rem;
+}
+
+.deal-radar .top-strip {
+  margin: 1rem 0 0.5rem;
+}
+
+.deal-radar .strip-title {
+  color: var(--radar-muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+  margin-bottom: 0.45rem;
+  text-transform: uppercase;
+}
+
+.deal-radar .strip-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.deal-radar .mini-deal {
+  display: grid;
+  gap: 0.25rem;
+  min-height: 116px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.deal-radar .mini-deal span,
+.deal-radar .mini-deal em {
+  color: var(--radar-muted);
+  font-size: 0.7rem;
+  font-style: normal;
+}
+
+.deal-radar .mini-deal b {
+  color: var(--radar-ink);
+  display: -webkit-box;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .deal-radar .grid {
@@ -201,6 +272,22 @@ section {
   flex-wrap: wrap;
 }
 
+.deal-radar .badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+
+.deal-radar .badge {
+  border: 1px solid #315f37;
+  border-radius: 999px;
+  color: var(--radar-accent-dark);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.18rem 0.45rem;
+}
+
 .deal-radar .pill {
   border: 1px solid var(--radar-line);
   background: #071007;
@@ -208,6 +295,11 @@ section {
   padding: 0.25rem 0.5rem;
   font-size: 0.75rem;
   color: var(--radar-muted);
+}
+
+.deal-radar .details {
+  margin-top: 0.75rem;
+  padding: 0.45rem 0.65rem;
 }
 
 .deal-radar .save {
@@ -237,6 +329,61 @@ section {
   font-size: 0.85rem;
 }
 
+.deal-radar .detail-drawer {
+  background: #060b06;
+  border: 1px solid var(--radar-line);
+  border-radius: 8px;
+  bottom: 1rem;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.48);
+  max-height: calc(100vh - 2rem);
+  max-width: 420px;
+  overflow: auto;
+  padding: 1rem;
+  position: fixed;
+  right: 1rem;
+  width: calc(100% - 2rem);
+  z-index: 20;
+}
+
+.deal-radar .drawer-close {
+  float: right;
+}
+
+.deal-radar .detail-drawer h2 {
+  border-bottom: 0;
+  color: var(--radar-ink);
+  font-size: 1.15rem;
+  margin: 0.25rem 0 0.6rem;
+}
+
+.deal-radar .drawer-save {
+  color: var(--radar-good);
+  font-size: 1rem;
+  font-weight: 900;
+  margin-bottom: 0.6rem;
+}
+
+.deal-radar .detail-drawer dl {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0.45rem 0.7rem;
+  margin-top: 0.8rem;
+}
+
+.deal-radar .detail-drawer dt {
+  color: var(--radar-muted);
+  font-weight: 900;
+}
+
+.deal-radar .detail-drawer dd {
+  margin: 0;
+}
+
+.deal-radar .drawer-link {
+  display: inline-block;
+  margin-top: 0.9rem;
+}
+
 @media (max-width: 760px) {
   .deal-radar .toolbar {
     display: block;
@@ -251,8 +398,13 @@ section {
     grid-template-columns: 1fr;
   }
 
+  .deal-radar label.wide {
+    grid-column: auto;
+  }
+
   .deal-radar .stats,
-  .deal-radar .grid {
+  .deal-radar .grid,
+  .deal-radar .strip-row {
     grid-template-columns: 1fr;
   }
 
@@ -262,5 +414,11 @@ section {
 
   .deal-radar .save {
     text-align: left;
+  }
+
+  .deal-radar .detail-drawer {
+    bottom: 0.5rem;
+    right: 0.5rem;
+    width: calc(100% - 1rem);
   }
 }

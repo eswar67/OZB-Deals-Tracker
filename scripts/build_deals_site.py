@@ -336,6 +336,7 @@ def _deal_payload(deals: list[dict]) -> str:
             "email_count": int(deal["email_count"]),
             "last_emailed_at": deal["last_emailed_at"].isoformat(),
             "last_seen_at": deal.get("last_seen_at", deal["last_emailed_at"]).isoformat(),
+            "first_seen_at": deal.get("first_seen_at", deal["last_emailed_at"]).isoformat(),
             "category": deal["category"],
             "merchant": deal["merchant"],
         })
@@ -359,13 +360,21 @@ title: Today's best quantified deals
 <div class="deal-radar">
   <section class="radar-intro">
     <div class="stamp">Latest run: {escape(generated)}</div>
-    <p>A public view of every remembered OzBargain opportunity. Adjust the filters to reshape the list from the browser without waiting for a new run.</p>
+    <p>A public view of every remembered OzBargain opportunity. Use presets, watchlist terms, shareable filters and deal details to tune the page to your preferences.</p>
     <div class="stats">
       <div class="stat"><div class="label">Matching Deals</div><div class="value" id="stat-count">{len(deals)}</div></div>
       <div class="stat"><div class="label">Potential Value</div><div class="value" id="stat-total">{_money(total)}</div></div>
       <div class="stat"><div class="label">Top Saving</div><div class="value" id="stat-top">{_money(top)}</div></div>
     </div>
   </section>
+  <section class="preset-bar" aria-label="Saved preference presets">
+    <button type="button" class="preset" data-preset="high">High savings</button>
+    <button type="button" class="preset" data-preset="tech">Tech deals</button>
+    <button type="button" class="preset" data-preset="home">Home deals</button>
+    <button type="button" class="preset" data-preset="finance">Finance/cashback</button>
+    <button type="button" class="preset" data-preset="watchlist">My watchlist</button>
+  </section>
+  <section class="category-summary" id="category-summary" aria-label="Category summary"></section>
   <div class="toolbar">
     <input id="search" placeholder="Search deals, merchants, categories" aria-label="Search deals">
     <button class="filter-toggle" id="filter-toggle" type="button" aria-expanded="true" aria-controls="filter-panel">Filters</button>
@@ -380,10 +389,10 @@ title: Today's best quantified deals
     </label>
     <label>
       Merchant
-      <select id="merchant">
-        <option value="All">All merchants</option>
+      <input id="merchant" list="merchant-list" placeholder="All merchants" aria-label="Merchant filter">
+      <datalist id="merchant-list">
         {merchant_options}
-      </select>
+      </datalist>
     </label>
     <label>
       Minimum saving
@@ -403,15 +412,25 @@ title: Today's best quantified deals
         <option value="recent-desc">Most recent</option>
       </select>
     </label>
+    <label class="wide">
+      Watchlist terms
+      <input id="watchlist" placeholder="TV, Dyson, iPhone, travel, solar">
+    </label>
     <div class="checks">
       <label><input id="emailed-only" type="checkbox"> Emailed only</label>
       <label><input id="repeat-only" type="checkbox"> Repeated sightings</label>
+      <label><input id="hide-expired" type="checkbox" checked> Hide expired/OOS</label>
     </div>
     <button class="reset" id="reset-filters" type="button">Reset</button>
   </section>
+  <section class="top-strip" id="top-strip" aria-label="Top 10 deals"></section>
   <section class="grid" id="deals">
   </section>
   <div class="empty" id="empty">No matching deals.</div>
+  <aside class="detail-drawer" id="detail-drawer" hidden aria-live="polite">
+    <button class="drawer-close" id="drawer-close" type="button" aria-label="Close deal details">Close</button>
+    <div id="drawer-content"></div>
+  </aside>
   <p class="fineprint">Potential savings are parsed from explicit deal text and should be verified before purchase.</p>
 </div>
 <script id="deal-data" type="application/json">{deal_json}</script>
@@ -424,17 +443,25 @@ title: Today's best quantified deals
     minSaving: document.querySelector('#min-saving'),
     minSeen: document.querySelector('#min-seen'),
     sort: document.querySelector('#sort'),
+    watchlist: document.querySelector('#watchlist'),
     emailedOnly: document.querySelector('#emailed-only'),
     repeatOnly: document.querySelector('#repeat-only'),
+    hideExpired: document.querySelector('#hide-expired'),
     reset: document.querySelector('#reset-filters'),
     toggle: document.querySelector('#filter-toggle'),
     panel: document.querySelector('#filter-panel'),
     grid: document.querySelector('#deals'),
+    topStrip: document.querySelector('#top-strip'),
+    categorySummary: document.querySelector('#category-summary'),
+    drawer: document.querySelector('#detail-drawer'),
+    drawerClose: document.querySelector('#drawer-close'),
+    drawerContent: document.querySelector('#drawer-content'),
     empty: document.querySelector('#empty'),
     statCount: document.querySelector('#stat-count'),
     statTotal: document.querySelector('#stat-total'),
     statTop: document.querySelector('#stat-top'),
   }};
+  let currentRows = [];
 
   function money(value) {{
     return '$' + Math.round(value || 0).toLocaleString();
@@ -450,15 +477,56 @@ title: Today's best quantified deals
     }}[char]));
   }}
 
+  function parseTerms(value) {{
+    return String(value || '').split(',').map(term => term.trim().toLowerCase()).filter(Boolean);
+  }}
+
+  function dealText(deal) {{
+    return [deal.title, deal.merchant, deal.category, deal.node_id].join(' ').toLowerCase();
+  }}
+
+  function isExpired(deal) {{
+    return /\\b(oos|expired|sold out|out of stock)\\b/i.test(deal.title || '');
+  }}
+
+  function daysSince(value) {{
+    const ms = Date.now() - Date.parse(value || 0);
+    if (!Number.isFinite(ms)) return 999;
+    return Math.max(0, Math.floor(ms / 86400000));
+  }}
+
+  function qualityScore(deal) {{
+    const savingScore = Math.min(45, Math.log10(Math.max(deal.savings, 1)) * 12);
+    const bestScore = Math.min(15, Math.log10(Math.max(deal.best_savings, 1)) * 4);
+    const repeatScore = Math.min(12, Math.max(0, deal.times_seen - 1) * 4);
+    const emailScore = Math.min(8, deal.email_count * 3);
+    const freshScore = Math.max(0, 12 - daysSince(deal.last_seen_at) * 3);
+    const penalty = isExpired(deal) ? 18 : 0;
+    return Math.max(1, Math.min(100, Math.round(savingScore + bestScore + repeatScore + emailScore + freshScore + 10 - penalty)));
+  }}
+
+  function freshnessBadges(deal) {{
+    const badges = [];
+    const seenDays = daysSince(deal.last_seen_at);
+    const firstSeenDays = daysSince(deal.first_seen_at);
+    if (isExpired(deal)) badges.push('Expired/OOS');
+    if (firstSeenDays <= 1) badges.push('New today');
+    if (deal.times_seen > 1) badges.push('Repeated deal');
+    if (deal.best_savings && deal.savings >= deal.best_savings) badges.push('Best seen');
+    if (seenDays >= 7) badges.push('Stale');
+    return badges.length ? badges : ['Fresh memory'];
+  }}
+
   function matchesSearch(deal, query) {{
     if (!query) return true;
-    return [deal.title, deal.merchant, deal.category, deal.node_id].join(' ').toLowerCase().includes(query);
+    return dealText(deal).includes(query);
   }}
 
   function rankDeals(rows) {{
     const sort = els.sort.value;
     const copy = [...rows];
     copy.sort((a, b) => {{
+      if (sort === 'score-desc') return (qualityScore(b) - qualityScore(a)) || (b.savings - a.savings);
       if (sort === 'best-desc') return (b.best_savings - a.best_savings) || (b.savings - a.savings);
       if (sort === 'seen-desc') return (b.times_seen - a.times_seen) || (b.savings - a.savings);
       if (sort === 'emailed-desc') return (b.email_count - a.email_count) || (b.savings - a.savings);
@@ -471,52 +539,162 @@ title: Today's best quantified deals
   function cardHtml(deal, index) {{
     const node = deal.node_id ? `Node ${{escapeHtml(deal.node_id)}}` : 'OzBargain';
     const seen = deal.times_seen ? `Seen ${{deal.times_seen}}x` : 'New';
+    const badges = freshnessBadges(deal).map(badge => `<span class="badge">${{escapeHtml(badge)}}</span>`).join('');
+    const score = qualityScore(deal);
     return `<article class="card">
       <div>
-        <div class="rank">#${{index + 1}} · ${{escapeHtml(deal.category)}}</div>
+        <div class="rank">#${{index + 1}} · ${{escapeHtml(deal.category)}} · Value Score ${{score}}/100</div>
         <a class="title" href="${{escapeHtml(deal.link)}}" target="_blank" rel="noopener">${{escapeHtml(deal.title)}}</a>
         <div class="meta">${{escapeHtml(deal.merchant)}} · ${{node}}</div>
+        <div class="badges">${{badges}}</div>
         <div class="pillrow">
           <span class="pill">${{seen}}</span>
           <span class="pill">Best ${{money(deal.best_savings)}}</span>
           <span class="pill">Emailed ${{deal.email_count}}x</span>
         </div>
+        <button class="details" type="button" data-index="${{index}}">Details</button>
       </div>
       <div class="save">${{money(deal.savings)}}<span>potential</span></div>
     </article>`;
+  }}
+
+  function topStripHtml(rows) {{
+    const top = [...rows].sort((a, b) => (qualityScore(b) - qualityScore(a)) || (b.savings - a.savings)).slice(0, 10);
+    if (!top.length) return '';
+    return `<div class="strip-title">Top 10 strongest opportunities</div><div class="strip-row">${{top.map((deal, i) => `
+      <button type="button" class="mini-deal" data-top-index="${{i}}">
+        <span>#${{i + 1}} · Score ${{qualityScore(deal)}}</span>
+        <b>${{escapeHtml(deal.title)}}</b>
+        <em>${{money(deal.savings)}} potential</em>
+      </button>`).join('')}}</div>`;
+  }}
+
+  function renderCategorySummary(rows) {{
+    const counts = new Map();
+    for (const deal of rows) counts.set(deal.category, (counts.get(deal.category) || 0) + 1);
+    const items = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    els.categorySummary.innerHTML = items.map(([category, count]) =>
+      `<button type="button" class="cat-chip" data-category="${{escapeHtml(category)}}">${{escapeHtml(category)}} <span>${{count}}</span></button>`
+    ).join('');
+  }}
+
+  function encodeState() {{
+    const params = new URLSearchParams();
+    if (els.search.value.trim()) params.set('q', els.search.value.trim());
+    if (els.category.value !== 'All') params.set('category', els.category.value);
+    if (els.merchant.value.trim()) params.set('merchant', els.merchant.value.trim());
+    if (Number(els.minSaving.value || 0) > 0) params.set('min', els.minSaving.value);
+    if (Number(els.minSeen.value || 0) > 0) params.set('seen', els.minSeen.value);
+    if (els.sort.value !== 'savings-desc') params.set('sort', els.sort.value);
+    if (els.watchlist.value.trim()) params.set('watchlist', els.watchlist.value.trim());
+    if (els.emailedOnly.checked) params.set('emailed', '1');
+    if (els.repeatOnly.checked) params.set('repeat', '1');
+    if (!els.hideExpired.checked) params.set('expired', 'show');
+    const next = `${{location.pathname}}${{params.toString() ? '?' + params.toString() : ''}}`;
+    history.replaceState(null, '', next);
+  }}
+
+  function loadStateFromUrl() {{
+    const params = new URLSearchParams(location.search);
+    els.search.value = params.get('q') || '';
+    els.category.value = params.get('category') || 'All';
+    els.merchant.value = params.get('merchant') || '';
+    els.minSaving.value = params.get('min') || '0';
+    els.minSeen.value = params.get('seen') || '0';
+    els.sort.value = params.get('sort') || 'savings-desc';
+    els.watchlist.value = params.get('watchlist') || '';
+    els.emailedOnly.checked = params.get('emailed') === '1';
+    els.repeatOnly.checked = params.get('repeat') === '1';
+    els.hideExpired.checked = params.get('expired') !== 'show';
   }}
 
   function applyFilters() {{
     const query = els.search.value.trim().toLowerCase();
     const minSaving = Number(els.minSaving.value || 0);
     const minSeen = Number(els.minSeen.value || 0);
+    const merchantQuery = els.merchant.value.trim().toLowerCase();
+    const watchTerms = parseTerms(els.watchlist.value);
     const rows = rankDeals(deals.filter(deal => {{
       if (els.category.value !== 'All' && deal.category !== els.category.value) return false;
-      if (els.merchant.value !== 'All' && deal.merchant !== els.merchant.value) return false;
+      if (merchantQuery && !deal.merchant.toLowerCase().includes(merchantQuery)) return false;
       if (deal.savings < minSaving) return false;
       if (deal.times_seen < minSeen) return false;
       if (els.emailedOnly.checked && deal.email_count < 1) return false;
       if (els.repeatOnly.checked && deal.times_seen < 2) return false;
+      if (els.hideExpired.checked && isExpired(deal)) return false;
+      if (watchTerms.length && !watchTerms.some(term => dealText(deal).includes(term))) return false;
       return matchesSearch(deal, query);
     }}));
 
+    currentRows = rows;
     els.grid.innerHTML = rows.map(cardHtml).join('');
+    els.topStrip.innerHTML = topStripHtml(rows);
+    renderCategorySummary(rows);
     els.empty.style.display = rows.length ? 'none' : 'block';
     els.statCount.textContent = rows.length.toLocaleString();
     els.statTotal.textContent = money(rows.reduce((sum, deal) => sum + deal.savings, 0));
     els.statTop.textContent = money(rows[0]?.savings || 0);
+    encodeState();
   }}
 
   function resetFilters() {{
     els.search.value = '';
     els.category.value = 'All';
-    els.merchant.value = 'All';
+    els.merchant.value = '';
     els.minSaving.value = '0';
     els.minSeen.value = '0';
     els.sort.value = 'savings-desc';
+    els.watchlist.value = '';
     els.emailedOnly.checked = false;
     els.repeatOnly.checked = false;
+    els.hideExpired.checked = true;
     applyFilters();
+  }}
+
+  function applyPreset(name) {{
+    resetFilters();
+    if (name === 'high') {{
+      els.minSaving.value = '1000';
+      els.sort.value = 'score-desc';
+    }}
+    if (name === 'tech') {{
+      els.watchlist.value = 'tv, samsung, iphone, ipad, laptop, monitor, gaming pc, headphones';
+      els.sort.value = 'score-desc';
+    }}
+    if (name === 'home') {{
+      els.category.value = 'Home';
+      els.sort.value = 'score-desc';
+    }}
+    if (name === 'finance') {{
+      els.category.value = 'Finance';
+      els.watchlist.value = 'cashback, credit card, qantas, velocity, home loan';
+    }}
+    if (name === 'watchlist') {{
+      els.watchlist.value = 'dyson, iphone, tv, travel, solar, gaming pc';
+      els.sort.value = 'score-desc';
+    }}
+    applyFilters();
+  }}
+
+  function detailHtml(deal) {{
+    const badges = freshnessBadges(deal).map(badge => `<span class="badge">${{escapeHtml(badge)}}</span>`).join('');
+    return `<h2>${{escapeHtml(deal.title)}}</h2>
+      <div class="drawer-save">${{money(deal.savings)}} potential · Score ${{qualityScore(deal)}}/100</div>
+      <div class="badges">${{badges}}</div>
+      <dl>
+        <dt>Merchant</dt><dd>${{escapeHtml(deal.merchant)}}</dd>
+        <dt>Category</dt><dd>${{escapeHtml(deal.category)}}</dd>
+        <dt>Best seen saving</dt><dd>${{money(deal.best_savings)}}</dd>
+        <dt>First seen</dt><dd>${{new Date(deal.first_seen_at).toLocaleString()}}</dd>
+        <dt>Last seen</dt><dd>${{new Date(deal.last_seen_at).toLocaleString()}}</dd>
+        <dt>Memory</dt><dd>Seen ${{deal.times_seen}}x · Emailed ${{deal.email_count}}x</dd>
+      </dl>
+      <a class="drawer-link" href="${{escapeHtml(deal.link)}}" target="_blank" rel="noopener">Open OzBargain deal</a>`;
+  }}
+
+  function openDetails(deal) {{
+    els.drawerContent.innerHTML = detailHtml(deal);
+    els.drawer.hidden = false;
   }}
 
   els.toggle.addEventListener('click', () => {{
@@ -524,10 +702,36 @@ title: Today's best quantified deals
     els.toggle.setAttribute('aria-expanded', String(!hidden));
   }});
   els.reset.addEventListener('click', resetFilters);
-  for (const el of [els.search, els.category, els.merchant, els.minSaving, els.minSeen, els.sort, els.emailedOnly, els.repeatOnly]) {{
+  els.drawerClose.addEventListener('click', () => els.drawer.hidden = true);
+  document.querySelectorAll('.preset').forEach(button => {{
+    button.addEventListener('click', () => applyPreset(button.dataset.preset));
+  }});
+  els.categorySummary.addEventListener('click', event => {{
+    const button = event.target.closest('.cat-chip');
+    if (!button) return;
+    els.category.value = button.dataset.category;
+    applyFilters();
+  }});
+  els.grid.addEventListener('click', event => {{
+    const button = event.target.closest('.details');
+    if (!button) return;
+    openDetails(currentRows[Number(button.dataset.index)]);
+  }});
+  els.topStrip.addEventListener('click', event => {{
+    const button = event.target.closest('.mini-deal');
+    if (!button) return;
+    const top = [...currentRows].sort((a, b) => (qualityScore(b) - qualityScore(a)) || (b.savings - a.savings));
+    openDetails(top[Number(button.dataset.topIndex)]);
+  }});
+  for (const el of [els.search, els.category, els.merchant, els.minSaving, els.minSeen, els.sort, els.watchlist, els.emailedOnly, els.repeatOnly, els.hideExpired]) {{
     el.addEventListener('input', applyFilters);
     el.addEventListener('change', applyFilters);
   }}
+  const scoreOption = document.createElement('option');
+  scoreOption.value = 'score-desc';
+  scoreOption.textContent = 'Value score high to low';
+  els.sort.prepend(scoreOption);
+  loadStateFromUrl();
   applyFilters();
 </script>
 """

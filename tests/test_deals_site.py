@@ -63,6 +63,14 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn("Dyson Vacuum", html)
             self.assertIn("deal-data", html)
             self.assertIn("Minimum saving", html)
+            self.assertIn("Saved preference presets", html)
+            self.assertIn("Top 10 strongest opportunities", html)
+            self.assertIn("Value score high to low", html)
+            self.assertIn("Hide expired/OOS", html)
+            self.assertIn("Watchlist terms", html)
+            self.assertIn("detail-drawer", html)
+            self.assertIn("category-summary", html)
+            self.assertIn("URLSearchParams", html)
 
     def test_build_uses_all_memory_deals_for_filtering(self):
         with tempfile.TemporaryDirectory() as tmp:
