@@ -142,6 +142,29 @@ class CashbackRegressionTests(unittest.TestCase):
         self.assertIn("Open clean website view", html)
         self.assertIn("https://example.com/deals/", html)
 
+    def test_email_sections_sort_deals_by_savings_descending(self):
+        html = build_email_html([
+            {
+                "title": "Lower Computing Deal Save $250 @ Example",
+                "link": "https://www.ozbargain.com.au/node/low",
+                "savings": 250,
+                "merchant_name": "Example",
+                "categories": ["Computing"],
+            },
+            {
+                "title": "Higher Computing Deal Save $900 @ Example",
+                "link": "https://www.ozbargain.com.au/node/high",
+                "savings": 900,
+                "merchant_name": "Example",
+                "categories": ["Computing"],
+            },
+        ], min_savings=200)
+
+        self.assertLess(
+            html.index("Higher Computing Deal"),
+            html.index("Lower Computing Deal"),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -179,6 +179,7 @@ def _deal_row(deal: dict, rank: int) -> str:
 def _section(title: str, deals: list[dict], start_rank: int, section_id: str = "") -> str:
     if not deals:
         return ""
+    deals = sorted(deals, key=lambda d: int(d.get("savings", 0) or 0), reverse=True)
     total = sum(int(d.get("savings", 0) or 0) for d in deals)
     rows = "\n".join(_deal_row(d, start_rank + i) for i, d in enumerate(deals))
     anchor = f'<a id="{escape(section_id, quote=True)}" name="{escape(section_id, quote=True)}"></a>' if section_id else ""
