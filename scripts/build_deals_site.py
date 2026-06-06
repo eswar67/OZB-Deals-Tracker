@@ -359,8 +359,12 @@ title: Today's best quantified deals
 ---
 <div class="deal-radar">
   <section class="radar-intro">
-    <div class="stamp">Latest run: {escape(generated)}</div>
-    <p>A public view of every remembered OzBargain opportunity. Use presets, watchlist terms, shareable filters and deal details to tune the page to your preferences.</p>
+    <div class="summary-head">
+      <div>
+        <div class="stamp">Latest run: {escape(generated)}</div>
+        <p>Every remembered deal, ranked by potential value. Use quick views or open filters when you want to narrow the list.</p>
+      </div>
+    </div>
     <div class="stats">
       <div class="stat"><div class="label">Matching Deals</div><div class="value" id="stat-count">{len(deals)}</div></div>
       <div class="stat"><div class="label">Potential Value</div><div class="value" id="stat-total">{_money(total)}</div></div>
@@ -377,9 +381,9 @@ title: Today's best quantified deals
   <section class="category-summary" id="category-summary" aria-label="Category summary"></section>
   <div class="toolbar">
     <input id="search" placeholder="Search deals, merchants, categories" aria-label="Search deals">
-    <button class="filter-toggle" id="filter-toggle" type="button" aria-expanded="true" aria-controls="filter-panel">Filters</button>
+    <button class="filter-toggle" id="filter-toggle" type="button" aria-expanded="false" aria-controls="filter-panel">Filters</button>
   </div>
-  <section class="filter-panel" id="filter-panel">
+  <section class="filter-panel" id="filter-panel" hidden>
     <label>
       Category
       <select id="category">
@@ -561,7 +565,7 @@ title: Today's best quantified deals
   function topStripHtml(rows) {{
     const top = [...rows].sort((a, b) => (qualityScore(b) - qualityScore(a)) || (b.savings - a.savings)).slice(0, 10);
     if (!top.length) return '';
-    return `<div class="strip-title">Top 10 strongest opportunities</div><div class="strip-row">${{top.map((deal, i) => `
+    return `<div class="strip-head"><div class="strip-title">Top 10 strongest opportunities</div><button type="button" class="link-button" data-preset="high">High savings view</button></div><div class="strip-row">${{top.map((deal, i) => `
       <button type="button" class="mini-deal" data-top-index="${{i}}">
         <span>#${{i + 1}} · Score ${{qualityScore(deal)}}</span>
         <b>${{escapeHtml(deal.title)}}</b>
@@ -572,8 +576,8 @@ title: Today's best quantified deals
   function renderCategorySummary(rows) {{
     const counts = new Map();
     for (const deal of rows) counts.set(deal.category, (counts.get(deal.category) || 0) + 1);
-    const items = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-    els.categorySummary.innerHTML = items.map(([category, count]) =>
+    const items = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+    els.categorySummary.innerHTML = `<button type="button" class="cat-chip" data-category="All">All <span>${{rows.length}}</span></button>` + items.map(([category, count]) =>
       `<button type="button" class="cat-chip" data-category="${{escapeHtml(category)}}">${{escapeHtml(category)}} <span>${{count}}</span></button>`
     ).join('');
   }}
@@ -709,8 +713,13 @@ title: Today's best quantified deals
   els.categorySummary.addEventListener('click', event => {{
     const button = event.target.closest('.cat-chip');
     if (!button) return;
-    els.category.value = button.dataset.category;
+    els.category.value = button.dataset.category || 'All';
     applyFilters();
+  }});
+  els.topStrip.addEventListener('click', event => {{
+    const presetButton = event.target.closest('.link-button');
+    if (!presetButton) return;
+    applyPreset(presetButton.dataset.preset);
   }});
   els.grid.addEventListener('click', event => {{
     const button = event.target.closest('.details');

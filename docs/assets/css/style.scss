@@ -32,51 +32,70 @@ section {
 }
 
 .deal-radar .radar-intro {
-  margin: 0 0 1rem;
+  background: linear-gradient(180deg, rgba(181, 232, 83, 0.08), rgba(181, 232, 83, 0.02));
+  border: 1px solid var(--radar-line);
+  border-radius: 8px;
+  margin: 0 0 0.85rem;
+  padding: 0.9rem;
+}
+
+.deal-radar .summary-head {
+  align-items: start;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.deal-radar .radar-intro p {
+  color: var(--radar-muted);
+  line-height: 1.45;
+  margin: 0.25rem 0 0;
+  max-width: 720px;
 }
 
 .deal-radar .stamp {
   color: var(--radar-muted);
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   font-weight: 700;
 }
 
 .deal-radar .stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.7rem;
-  margin: 1rem 0 0;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
 }
 
 .deal-radar .preset-bar,
 .deal-radar .category-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.75rem 0;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
 }
 
 .deal-radar .category-summary {
-  padding-bottom: 0.25rem;
+  border-bottom: 1px solid rgba(181, 232, 83, 0.14);
+  padding-bottom: 0.65rem;
 }
 
 .deal-radar .stat {
-  background: var(--radar-card);
-  border: 1px solid var(--radar-line);
+  background: rgba(16, 24, 16, 0.72);
+  border: 1px solid rgba(181, 232, 83, 0.18);
   border-radius: 8px;
-  padding: 0.85rem;
+  padding: 0.65rem 0.75rem;
 }
 
 .deal-radar .label {
   color: var(--radar-muted);
-  font-size: 0.75rem;
+  font-size: 0.66rem;
   font-weight: 800;
   text-transform: uppercase;
 }
 
 .deal-radar .value {
   margin-top: 0.25rem;
-  font-size: 1.55rem;
+  font-size: 1.2rem;
   line-height: 1.1;
   font-weight: 900;
 }
@@ -86,7 +105,7 @@ section {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.75rem;
   align-items: center;
-  padding: 1.1rem 0 0.75rem;
+  padding: 0.75rem 0 0.45rem;
 }
 
 .deal-radar input,
@@ -105,7 +124,7 @@ section {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.75rem;
   align-items: end;
-  margin: 0.35rem 0 0.85rem;
+  margin: 0.35rem 0 0.7rem;
   padding: 0.85rem;
   background: var(--radar-panel);
   border: 1px solid var(--radar-line);
@@ -157,18 +176,29 @@ section {
 }
 
 .deal-radar button:hover,
-.deal-radar .filter-toggle,
 .deal-radar .reset {
   background: var(--radar-accent);
   color: #111;
   border-color: var(--radar-accent);
 }
 
+.deal-radar .filter-toggle {
+  background: #101810;
+  color: var(--radar-accent);
+}
+
 .deal-radar .preset,
 .deal-radar .cat-chip {
-  border-color: #315f37;
-  font-size: 0.82rem;
-  padding: 0.5rem 0.65rem;
+  background: rgba(16, 24, 16, 0.6);
+  border-color: rgba(181, 232, 83, 0.22);
+  color: var(--radar-muted);
+  font-size: 0.76rem;
+  padding: 0.42rem 0.56rem;
+}
+
+.deal-radar .preset:hover,
+.deal-radar .cat-chip:hover {
+  color: #111;
 }
 
 .deal-radar .cat-chip span {
@@ -177,29 +207,45 @@ section {
 }
 
 .deal-radar .top-strip {
-  margin: 1rem 0 0.5rem;
+  margin: 0.85rem 0 0.75rem;
+}
+
+.deal-radar .strip-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
 }
 
 .deal-radar .strip-title {
   color: var(--radar-muted);
   font-size: 0.75rem;
   font-weight: 900;
-  margin-bottom: 0.45rem;
   text-transform: uppercase;
 }
 
 .deal-radar .strip-row {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.55rem;
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
 }
 
 .deal-radar .mini-deal {
   display: grid;
   gap: 0.25rem;
-  min-height: 116px;
+  flex: 0 0 220px;
+  min-height: 96px;
   overflow: hidden;
   text-align: left;
+}
+
+.deal-radar .link-button {
+  background: transparent;
+  border: 0;
+  color: var(--radar-accent);
+  padding: 0;
 }
 
 .deal-radar .mini-deal span,
@@ -403,9 +449,13 @@ section {
   }
 
   .deal-radar .stats,
-  .deal-radar .grid,
-  .deal-radar .strip-row {
+  .deal-radar .grid {
     grid-template-columns: 1fr;
+  }
+
+  .deal-radar .summary-head,
+  .deal-radar .strip-head {
+    display: block;
   }
 
   .deal-radar .card {
