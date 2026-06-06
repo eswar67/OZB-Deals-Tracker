@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Installs ozbargain_monitor.py as a launchd agent that:
-#   - Runs once daily at 7:00 PM
-#   - Uses caffeinate -s to prevent system sleep during each run
-#   - Works even when the lid is closed (on AC power)
+# Manual Mac fallback for ozbargain_monitor.py.
 #
-# Usage:  bash install_launchd.sh
+# GitHub Actions is the primary scheduler. Use this launchd fallback only if
+# GitHub Actions is failing or unavailable.
+#
+# Usage:  bash install_launchd.sh --install
 # Remove: bash install_launchd.sh --uninstall
 
 set -e
@@ -24,6 +24,23 @@ if [ "${1:-}" = "--uninstall" ]; then
   exit 0
 fi
 
+if [ "${1:-}" != "--install" ]; then
+  echo ""
+  echo "Mac launchd fallback is not installed by default."
+  echo ""
+  echo "GitHub Actions is the primary scheduler for:"
+  echo "  • 2:00 PM Australia/Sydney"
+  echo "  • 7:15 PM Australia/Sydney"
+  echo ""
+  echo "Only if GitHub Actions fails, install the Mac fallback with:"
+  echo "  bash install_launchd.sh --install"
+  echo ""
+  echo "To remove the fallback:"
+  echo "  bash install_launchd.sh --uninstall"
+  echo ""
+  exit 0
+fi
+
 # ── Verify script exists ───────────────────────────────────────────────────────
 if [ ! -f "$SCRIPT_DIR/ozbargain_monitor.py" ]; then
   echo "ERROR: ozbargain_monitor.py not found in $SCRIPT_DIR"
@@ -31,8 +48,8 @@ if [ ! -f "$SCRIPT_DIR/ozbargain_monitor.py" ]; then
 fi
 
 # ── Write plist ────────────────────────────────────────────────────────────────
-# AEST = UTC+10, so run times in local time (launchd uses local time):
-#   6am, 12pm, 6pm, 11:59pm  (midnight overshoots into next day so use 23:59)
+# launchd uses local time. These fallback times mirror GitHub Actions:
+#   2:00 PM and 7:15 PM Australia/Sydney
 cat > "$PLIST" << PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -42,13 +59,8 @@ cat > "$PLIST" << PLIST_EOF
   <key>Label</key>
   <string>${LABEL}</string>
 
-  <!-- caffeinate -s prevents system sleep for the duration of the run.
-       Works when on AC power even with lid closed.
-       -i also prevents idle sleep. -->
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/bin/caffeinate</string>
-    <string>-si</string>
     <string>${PYTHON}</string>
     <string>${SCRIPT_DIR}/ozbargain_monitor.py</string>
   </array>
@@ -56,12 +68,18 @@ cat > "$PLIST" << PLIST_EOF
   <key>WorkingDirectory</key>
   <string>${SCRIPT_DIR}</string>
 
-  <!-- Run once daily at 7:00 PM -->
+  <!-- Manual fallback schedule: 2:00 PM and 7:15 PM local time -->
   <key>StartCalendarInterval</key>
-  <dict>
-    <key>Hour</key><integer>19</integer>
-    <key>Minute</key><integer>0</integer>
-  </dict>
+  <array>
+    <dict>
+      <key>Hour</key><integer>14</integer>
+      <key>Minute</key><integer>0</integer>
+    </dict>
+    <dict>
+      <key>Hour</key><integer>19</integer>
+      <key>Minute</key><integer>15</integer>
+    </dict>
+  </array>
 
   <!-- If the Mac was asleep at the scheduled time, run as soon as it wakes -->
   <key>RunAtLoad</key>
@@ -98,18 +116,16 @@ launchctl unload "$PLIST" 2>/dev/null || true
 launchctl load "$PLIST"
 
 echo ""
-echo "✅ launchd agent installed: $LABEL"
+echo "✅ Mac fallback launchd agent installed: $LABEL"
 echo ""
-echo "Schedule: once daily at 7:00 PM"
+echo "Schedule: 2:00 PM and 7:15 PM Australia/Sydney"
 echo "Logs:     $LOG"
 echo "Errors:   $ERR_LOG"
 echo ""
 echo "Notes:"
-echo "  • caffeinate -si keeps the Mac awake during each run"
-echo "  • If the Mac was asleep at run time, it will run on next wake"
-echo "  • For reliable lid-closed operation: plug into AC power"
-echo "  • To keep awake overnight: run  sudo pmset -a sleep 0"
-echo "    (restore with: sudo pmset -a sleep 10)"
+echo "  • Use this only as a backup if GitHub Actions fails"
+echo "  • If the Mac is asleep at a scheduled time, the fallback may be missed"
+echo "  • Remove this fallback once GitHub Actions is healthy again"
 echo ""
 echo "Useful commands:"
 echo "  Check status:   launchctl list | grep ozbargain"
