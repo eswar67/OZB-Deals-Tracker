@@ -199,6 +199,93 @@ section {
   color: var(--radar-muted);
 }
 
+.deal-radar .chat-panel {
+  background: rgba(16, 24, 16, 0.72);
+  border: 1px solid rgba(181, 232, 83, 0.2);
+  border-radius: 8px;
+  margin: 0.75rem 0;
+  padding: 0.8rem;
+}
+
+.deal-radar .chat-head {
+  align-items: start;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.deal-radar .chat-title {
+  color: var(--radar-accent);
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.deal-radar .chat-subtitle {
+  color: var(--radar-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  margin-top: 0.15rem;
+}
+
+.deal-radar .chat-clear {
+  background: transparent;
+  border-color: rgba(181, 232, 83, 0.24);
+  color: var(--radar-muted);
+}
+
+.deal-radar .chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+}
+
+.deal-radar .chat-suggestions button {
+  background: rgba(5, 8, 5, 0.72);
+  border-color: rgba(181, 232, 83, 0.18);
+  color: var(--radar-muted);
+  font-size: 0.75rem;
+  padding: 0.38rem 0.55rem;
+}
+
+.deal-radar .chat-log {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.deal-radar .chat-message {
+  border: 1px solid rgba(181, 232, 83, 0.14);
+  border-radius: 8px;
+  color: var(--radar-ink);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  padding: 0.55rem 0.65rem;
+  white-space: pre-wrap;
+}
+
+.deal-radar .chat-message.user {
+  background: rgba(181, 232, 83, 0.08);
+  justify-self: end;
+  max-width: 82%;
+}
+
+.deal-radar .chat-message.assistant {
+  background: rgba(5, 8, 5, 0.82);
+  color: var(--radar-muted);
+  max-width: 92%;
+}
+
+.deal-radar .chat-form {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 0.7rem;
+}
+
 .deal-radar .preset,
 .deal-radar .cat-chip {
   background: rgba(16, 24, 16, 0.6);
@@ -483,6 +570,20 @@ section {
 
   .deal-radar .clear-filters,
   .deal-radar .filter-toggle {
+    width: 100%;
+  }
+
+  .deal-radar .chat-head,
+  .deal-radar .chat-form {
+    grid-template-columns: 1fr;
+  }
+
+  .deal-radar .chat-head {
+    display: grid;
+  }
+
+  .deal-radar .chat-clear,
+  .deal-radar .chat-form button {
     width: 100%;
   }
 

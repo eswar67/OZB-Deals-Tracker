@@ -85,6 +85,11 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn("clear-filters", html)
             self.assertIn("Potential value is AI-derived from deal signals", html)
             self.assertIn("Built with Claude AI Code and OpenAI Codex", html)
+            self.assertIn("Deal Assistant", html)
+            self.assertIn("chat-panel", html)
+            self.assertIn("assistantReply", html)
+            self.assertIn("data-chat-prompt", html)
+            self.assertIn("AI confidence", html)
 
     def test_build_uses_all_memory_deals_for_filtering(self):
         with tempfile.TemporaryDirectory() as tmp:

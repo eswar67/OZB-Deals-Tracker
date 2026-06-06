@@ -419,6 +419,26 @@ title: Today's best quantified deals
     </div>
     <button class="reset" id="reset-filters" type="button">Reset</button>
   </section>
+  <section class="chat-panel" id="deal-chat" aria-label="Deal assistant">
+    <div class="chat-head">
+      <div>
+        <div class="chat-title">Deal Assistant</div>
+        <div class="chat-subtitle">Ask the agent about value, urgency, categories, merchants, or risk signals.</div>
+      </div>
+      <button class="chat-clear" id="chat-clear" type="button">Clear</button>
+    </div>
+    <div class="chat-suggestions" aria-label="Suggested questions">
+      <button type="button" data-chat-prompt="What are the best deals right now?">Best now</button>
+      <button type="button" data-chat-prompt="Show urgent deals">Urgent</button>
+      <button type="button" data-chat-prompt="Which deals have cashback or voucher risk?">Cashback risk</button>
+      <button type="button" data-chat-prompt="Find TV and electronics deals">Electronics</button>
+    </div>
+    <div class="chat-log" id="chat-log" aria-live="polite"></div>
+    <form class="chat-form" id="chat-form">
+      <input id="chat-input" autocomplete="off" placeholder="Ask: best laptop deals, urgent finance offers, explain top deal..." aria-label="Ask the deal assistant">
+      <button type="submit">Ask</button>
+    </form>
+  </section>
   <section class="top-strip" id="top-strip" aria-label="Top 10 deals"></section>
   <section class="grid" id="deals">
   </section>
@@ -456,6 +476,10 @@ title: Today's best quantified deals
     statCount: document.querySelector('#stat-count'),
     statTotal: document.querySelector('#stat-total'),
     statTop: document.querySelector('#stat-top'),
+    chatLog: document.querySelector('#chat-log'),
+    chatForm: document.querySelector('#chat-form'),
+    chatInput: document.querySelector('#chat-input'),
+    chatClear: document.querySelector('#chat-clear'),
   }};
   let currentRows = [];
 
@@ -768,6 +792,67 @@ title: Today's best quantified deals
     els.drawer.hidden = false;
   }}
 
+  function dealSummaryLine(deal, index) {{
+    return `${{index + 1}}. ${{deal.title}} — ${{money(deal.savings)}} potential, AI ${{aiConfidence(deal)}}%, urgency ${{urgencyScore(deal)}}%, action: ${{agentAction(deal)}}.`;
+  }}
+
+  function chatRowsForPrompt(prompt) {{
+    const text = prompt.toLowerCase();
+    let rows = currentRows.length ? [...currentRows] : rankDeals(deals);
+    const terms = parseTerms(text.replace(/\\b(best|top|show|find|deals|deal|urgent|right now|what are|which|with|about|please|me|risk|offers|offer|explain)\\b/g, ' '));
+    if (/\\burgent|flash|time|ending|limited|today\\b/.test(text)) rows = rows.filter(isTimeSensitive);
+    if (/\\bcashback|voucher|gift card|points|loan|finance|insurance|rebate\\b/.test(text)) {{
+      rows = rows.filter(deal => /\\b(cashback|voucher|gift card|points|loan|finance|insurance|rebate|qantas|velocity)\\b/i.test(deal.title + ' ' + deal.category));
+    }}
+    if (/\\brisk|terms|verify|caution\\b/.test(text)) {{
+      rows = rows.filter(deal => riskSignal(deal) !== 'Low friction');
+    }}
+    if (/\\bconfidence|ai pick|agent pick|shortlist\\b/.test(text)) rows = rows.filter(deal => aiConfidence(deal) >= 75);
+    if (terms.length) {{
+      const narrowed = rows.filter(deal => terms.some(term => dealText(deal).includes(term)));
+      if (narrowed.length) rows = narrowed;
+    }}
+    if (/\\burgency|urgent|flash|time\\b/.test(text)) return rows.sort((a, b) => (urgencyScore(b) - urgencyScore(a)) || (b.savings - a.savings));
+    if (/\\bconfidence|ai\\b/.test(text)) return rows.sort((a, b) => (aiConfidence(b) - aiConfidence(a)) || (b.savings - a.savings));
+    return rows.sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a)));
+  }}
+
+  function assistantReply(prompt) {{
+    const text = prompt.toLowerCase();
+    const rows = chatRowsForPrompt(prompt).filter(deal => !isExpired(deal)).slice(0, 5);
+    if (/\\bhello|hi|help|what can you do\\b/.test(text)) {{
+      return 'I can rank current deals by savings, urgency, AI confidence, merchant, category, cashback or voucher risk, and explain why a deal is worth checking.';
+    }}
+    if (/\\bexplain|why|top deal|first deal\\b/.test(text)) {{
+      const deal = rows[0] || currentRows[0] || deals[0];
+      if (!deal) return 'I do not have any deal data loaded yet.';
+      return `${{deal.title}} looks like ${{agentAction(deal).toLowerCase()}}: ${{money(deal.savings)}} potential value, ${{aiConfidence(deal)}}% AI confidence, ${{urgencyScore(deal)}}% urgency. Agent read: ${{agentInsight(deal)}}.`;
+    }}
+    if (!rows.length) return 'I could not find matching active deals for that question. Try a category, merchant, product type, or ask for urgent/high-confidence deals.';
+    const intro = /\\brisk|terms|verify|caution\\b/.test(text)
+      ? 'These are the deals I would verify carefully:'
+      : /\\burgent|flash|time|ending|limited|today\\b/.test(text)
+        ? 'These are the most time-sensitive deals I found:'
+        : 'Here are the strongest matching deals:';
+    return `${{intro}}\\n${{rows.map(dealSummaryLine).join('\\n')}}`;
+  }}
+
+  function addChatMessage(role, text) {{
+    const message = document.createElement('div');
+    message.className = `chat-message ${{role}}`;
+    message.textContent = text;
+    els.chatLog.append(message);
+    els.chatLog.scrollTop = els.chatLog.scrollHeight;
+  }}
+
+  function askAssistant(prompt) {{
+    const question = prompt.trim();
+    if (!question) return;
+    addChatMessage('user', question);
+    addChatMessage('assistant', assistantReply(question));
+    els.chatInput.value = '';
+  }}
+
   els.toggle.addEventListener('click', () => {{
     const hidden = els.panel.toggleAttribute('hidden');
     els.toggle.setAttribute('aria-expanded', String(!hidden));
@@ -805,6 +890,17 @@ title: Today's best quantified deals
     const top = [...currentRows].sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a)));
     openDetails(top[Number(button.dataset.topIndex)]);
   }});
+  els.chatForm.addEventListener('submit', event => {{
+    event.preventDefault();
+    askAssistant(els.chatInput.value);
+  }});
+  els.chatClear.addEventListener('click', () => {{
+    els.chatLog.innerHTML = '';
+    addChatMessage('assistant', 'Ask me for best deals, urgent offers, cashback risk, or a product/category you care about.');
+  }});
+  document.querySelectorAll('[data-chat-prompt]').forEach(button => {{
+    button.addEventListener('click', () => askAssistant(button.dataset.chatPrompt || ''));
+  }});
   for (const el of [els.search, els.category, els.merchant, els.minSaving, els.sort, els.watchlist, els.agentPicksOnly, els.urgentOnly, els.hideExpired]) {{
     el.addEventListener('input', applyFilters);
     el.addEventListener('change', applyFilters);
@@ -815,6 +911,7 @@ title: Today's best quantified deals
   els.sort.prepend(scoreOption);
   loadStateFromUrl();
   applyFilters();
+  addChatMessage('assistant', 'Ask me for best deals, urgent offers, cashback risk, or a product/category you care about.');
 </script>
 """
 
