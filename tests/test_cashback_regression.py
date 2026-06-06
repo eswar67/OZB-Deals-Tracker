@@ -128,6 +128,20 @@ class CashbackRegressionTests(unittest.TestCase):
         self.assertIn("View 1 watchlist priority deal", html)
         self.assertIn("New find", html)
 
+    def test_email_html_links_public_deals_site(self):
+        html = build_email_html([
+            {
+                "title": "Samsung OLED TV $999 (Was $1999) @ Example",
+                "link": "https://www.ozbargain.com.au/node/1",
+                "savings": 1000,
+                "merchant_name": "Example",
+                "categories": ["Electrical & Electronics"],
+            },
+        ], min_savings=200, public_deals_url="https://example.com/deals/")
+
+        self.assertIn("Open clean website view", html)
+        self.assertIn("https://example.com/deals/", html)
+
 
 if __name__ == "__main__":
     unittest.main()

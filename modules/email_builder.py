@@ -231,6 +231,7 @@ def build_email_html(
     travel_min_savings: int = 200,
     extra_deals: list = None,
     briefing: dict = None,
+    public_deals_url: str = "",
 ) -> str:
     financial_deals = financial_deals or []
     cc_travel_deals = cc_travel_deals or []
@@ -238,6 +239,7 @@ def build_email_html(
     home_deals = home_deals or []
     extra_deals = extra_deals or []
     briefing = briefing or {}
+    public_deals_url = public_deals_url or ""
 
     all_deals = deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     all_deals = sorted(all_deals, key=lambda d: int(d.get("savings", 0) or 0), reverse=True)
@@ -268,6 +270,14 @@ def build_email_html(
         rank += len(category_deals)
     sections_html = "\n".join(sections)
     briefing_html = _briefing_section(briefing)
+    site_cta = ""
+    if public_deals_url:
+        safe_url = escape(public_deals_url, quote=True)
+        site_cta = (
+            f'<br><a href="{safe_url}" style="display:inline-block;background:{BRAND};'
+            f'color:#fff;text-decoration:none;border-radius:6px;padding:8px 10px;'
+            f'font-weight:800;margin-top:8px;">Open clean website view</a>'
+        )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -321,6 +331,7 @@ def build_email_html(
               </table>
               <div class="note">
                 Inclusion: quantified potential saving opportunities of at least {_money(min_savings)}. Votes, comments and clicks are shown as context only.
+                {site_cta}
                 {f'<br><a href="#watchlist-priority" style="font-weight:700;">View {len(priority_deals)} watchlist priority deal(s)</a>' if priority_deals else ''}
                 {f'<br><a href="#time-sensitive" style="font-weight:700;">View {len(flash_deals)} time-sensitive deal(s)</a>' if flash_deals else ''}
               </div>
@@ -336,6 +347,7 @@ def build_email_html(
             <td class="foot">
               Potential value and percentage-off values are inferred from explicit title or description prices when available.
               <br>
+              {f'<a href="{escape(public_deals_url, quote=True)}" style="text-decoration:none;font-weight:700;">Open clean website view</a> · ' if public_deals_url else ''}
               <a href="https://www.ozbargain.com.au/deals" style="text-decoration:none;font-weight:700;">Open OzBargain Deals</a>
             </td>
           </tr>

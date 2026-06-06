@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.build_deals_site import build, load_latest_deals
+from scripts.build_deals_site import build, build_from_deals, load_latest_deals
 
 
 class DealsSiteTests(unittest.TestCase):
@@ -60,6 +60,24 @@ class DealsSiteTests(unittest.TestCase):
             self.assertEqual(count, 1)
             self.assertIn("OzBargain Deal Radar", html)
             self.assertIn("Dyson Vacuum", html)
+
+    def test_build_from_live_monitor_deals(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "index.html"
+            count, path = build_from_deals([
+                {
+                    "title": "Samsung 115 TV $14929 (RRP $24883) @ JB Hi Fi",
+                    "link": "https://www.ozbargain.com.au/node/962268",
+                    "node_id": "962268",
+                    "merchant_name": "JB Hi-Fi",
+                    "savings": 9954,
+                }
+            ], output)
+
+            html = path.read_text()
+            self.assertEqual(count, 1)
+            self.assertIn("Samsung 115 TV", html)
+            self.assertIn("$9,954", html)
 
 
 if __name__ == "__main__":

@@ -84,6 +84,28 @@ def load_latest_deals(memory_file: Path = MEMORY_FILE) -> tuple[list[dict], date
     return latest_rows, latest
 
 
+def deals_from_monitor_run(deals: list[dict], generated_at: datetime | None = None) -> tuple[list[dict], datetime]:
+    """Convert live monitor deal dictionaries into website rows."""
+    generated_at = generated_at or datetime.now(timezone.utc)
+    rows = []
+    for deal in deals:
+        row = {
+            "title": deal.get("title") or "Untitled deal",
+            "link": deal.get("link") or "#",
+            "node_id": str(deal.get("node_id") or ""),
+            "savings": int(deal.get("savings", 0) or 0),
+            "best_savings": int(deal.get("best_savings") or deal.get("previous_best_savings") or deal.get("savings", 0) or 0),
+            "times_seen": int(deal.get("times_seen", 0) or 0) + 1,
+            "email_count": int(deal.get("email_count", 0) or 0) + 1,
+            "last_emailed_at": generated_at,
+            "category": _category_from_title(deal.get("title", "")),
+            "merchant": deal.get("merchant_name") or _merchant_from_title(deal.get("title", "")),
+        }
+        rows.append(row)
+    rows.sort(key=lambda row: row["savings"], reverse=True)
+    return rows, generated_at
+
+
 def render_html(deals: list[dict], generated_at: datetime) -> str:
     total = sum(d["savings"] for d in deals)
     top = deals[0]["savings"] if deals else 0
@@ -281,6 +303,13 @@ def build(memory_file: Path = MEMORY_FILE, output_file: Path = OUTPUT_FILE) -> t
     output_file.parent.mkdir(parents=True, exist_ok=True)
     output_file.write_text(render_html(deals, generated_at))
     return len(deals), output_file
+
+
+def build_from_deals(deals: list[dict], output_file: Path = OUTPUT_FILE) -> tuple[int, Path]:
+    rows, generated_at = deals_from_monitor_run(deals)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    output_file.write_text(render_html(rows, generated_at))
+    return len(rows), output_file
 
 
 def main() -> None:

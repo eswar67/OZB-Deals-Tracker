@@ -26,6 +26,7 @@ import logging
 import xml.etree.ElementTree as ET
 import re
 import urllib.parse
+import subprocess
 from datetime import datetime, timezone, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -174,6 +175,9 @@ GMAIL_TO           = os.getenv("GMAIL_TO")   # comma-separated for multiple reci
 GMAIL_CC           = os.getenv("GMAIL_CC")   # optional CC recipients, comma-separated
 TOKEN_FILE         = os.getenv("TOKEN_FILE", "token.json")
 CREDENTIALS_FILE   = os.getenv("CREDENTIALS_FILE", "credentials.json")
+PUBLIC_DEALS_URL   = os.getenv("PUBLIC_DEALS_URL", "https://eswar67.github.io/OZB-Deals-Tracker/")
+ENABLE_SITE_BUILD  = os.getenv("ENABLE_SITE_BUILD", "true").lower() in ("1", "true", "yes", "on")
+ENABLE_SITE_AUTO_PUBLISH = os.getenv("ENABLE_SITE_AUTO_PUBLISH", "false").lower() in ("1", "true", "yes", "on")
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.send",
@@ -214,6 +218,36 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 log = logging.getLogger(__name__)
+
+
+def publish_deals_site(deals: list[dict]) -> None:
+    """Build the static website and optionally commit/push it from the Mac."""
+    if not ENABLE_SITE_BUILD:
+        return
+    try:
+        from scripts.build_deals_site import build_from_deals
+
+        count, output = build_from_deals(deals)
+        log.info("Deals site built: %s (%s deals)", output, count)
+    except Exception as exc:
+        log.warning("Deals site build failed: %s", exc)
+        return
+
+    if not ENABLE_SITE_AUTO_PUBLISH:
+        return
+
+    try:
+        subprocess.run(["git", "add", "docs/index.html"], check=True)
+        diff = subprocess.run(["git", "diff", "--cached", "--quiet"])
+        if diff.returncode == 0:
+            log.info("Deals site unchanged; nothing to publish")
+            return
+        stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        subprocess.run(["git", "commit", "-m", f"Update deals site {stamp}"], check=True)
+        subprocess.run(["git", "push", "origin", "main"], check=True)
+        log.info("Deals site published to origin/main")
+    except Exception as exc:
+        log.warning("Deals site auto-publish failed: %s", exc)
 
 
 def _deal_priority(deal: dict) -> tuple:
@@ -1777,6 +1811,8 @@ def send_gmail_alert(
         + (f"\nCashback likely via {d['cashback_platform']} — check rate" if d.get('cashback_platform') else "")
         for d in all_categorised
     )
+    if PUBLIC_DEALS_URL:
+        plain = f"Clean website view: {PUBLIC_DEALS_URL}\n\n{plain}"
     msg.attach(MIMEText(plain, "plain"))
 
     html = build_email_html(
@@ -1794,6 +1830,7 @@ def send_gmail_alert(
         fin_min_savings=FIN_MIN_SAVINGS,
         travel_min_savings=TRAVEL_MIN_SAVINGS,
         briefing=briefing,
+        public_deals_url=PUBLIC_DEALS_URL,
     )
     msg.attach(MIMEText(html, "html"))
 
@@ -1928,6 +1965,8 @@ def main():
     top_by_savings = top_deals[:5]
     briefing = build_briefing(top_by_savings)
     log.info(f"Briefing: {briefing['action_count']} actions · ${briefing['total_value']:,}")
+
+    publish_deals_site(top_deals)
 
     creds = get_google_creds()
     send_gmail_alert(
