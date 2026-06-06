@@ -377,6 +377,13 @@ section {
   color: var(--radar-muted);
 }
 
+.deal-radar .agent-note {
+  color: var(--radar-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  margin-top: 0.55rem;
+}
+
 .deal-radar .details {
   margin-top: 0.75rem;
   padding: 0.45rem 0.65rem;

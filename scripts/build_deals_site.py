@@ -306,17 +306,14 @@ def _render_card(deal: dict, rank: int) -> str:
     category = deal["category"]
     merchant = deal["merchant"]
     search = " ".join([title, category, merchant]).lower()
-    seen = f"Seen {deal['times_seen']}x" if deal["times_seen"] else "New"
-    node = f"Node {deal['node_id']}" if deal["node_id"] else "OzBargain"
     return f"""<article class="card" data-category="{escape(category, quote=True)}" data-search="{escape(search, quote=True)}">
   <div>
     <div class="rank">#{rank} · {escape(category)}</div>
     <a class="title" href="{escape(deal['link'], quote=True)}" target="_blank" rel="noopener">{escape(title)}</a>
-    <div class="meta">{escape(merchant)} · {escape(node)}</div>
+    <div class="meta">{escape(merchant)} · OzBargain signal</div>
     <div class="pillrow">
-      <span class="pill">{escape(seen)}</span>
       <span class="pill">Best {_money(deal['best_savings'])}</span>
-      <span class="pill">Emailed {deal['email_count']}x</span>
+      <span class="pill">Agent pick</span>
     </div>
   </div>
   <div class="save">{_money(deal['savings'])}<span>potential</span></div>
@@ -329,11 +326,8 @@ def _deal_payload(deals: list[dict]) -> str:
         payload.append({
             "title": deal["title"],
             "link": deal["link"],
-            "node_id": deal["node_id"],
             "savings": int(deal["savings"]),
             "best_savings": int(deal["best_savings"]),
-            "times_seen": int(deal["times_seen"]),
-            "email_count": int(deal["email_count"]),
             "last_emailed_at": deal["last_emailed_at"].isoformat(),
             "last_seen_at": deal.get("last_seen_at", deal["last_emailed_at"]).isoformat(),
             "first_seen_at": deal.get("first_seen_at", deal["last_emailed_at"]).isoformat(),
@@ -405,16 +399,12 @@ title: Today's best quantified deals
       <input id="min-saving" type="number" min="0" step="50" value="0">
     </label>
     <label>
-      Seen at least
-      <input id="min-seen" type="number" min="0" step="1" value="0">
-    </label>
-    <label>
       Sort
       <select id="sort">
         <option value="savings-desc">Savings high to low</option>
-        <option value="best-desc">Best ever high to low</option>
-        <option value="seen-desc">Most seen</option>
-        <option value="emailed-desc">Most emailed</option>
+        <option value="best-desc">Best benchmark high to low</option>
+        <option value="confidence-desc">AI confidence high to low</option>
+        <option value="urgency-desc">Urgency high to low</option>
         <option value="recent-desc">Most recent</option>
       </select>
     </label>
@@ -423,8 +413,8 @@ title: Today's best quantified deals
       <input id="watchlist" placeholder="TV, Dyson, iPhone, travel, solar">
     </label>
     <div class="checks">
-      <label><input id="emailed-only" type="checkbox"> Emailed only</label>
-      <label><input id="repeat-only" type="checkbox"> Repeated sightings</label>
+      <label><input id="agent-picks-only" type="checkbox"> Agent picks only</label>
+      <label><input id="urgent-only" type="checkbox"> Urgent signals only</label>
       <label><input id="hide-expired" type="checkbox" checked> Hide expired/OOS</label>
     </div>
     <button class="reset" id="reset-filters" type="button">Reset</button>
@@ -447,11 +437,10 @@ title: Today's best quantified deals
     category: document.querySelector('#category'),
     merchant: document.querySelector('#merchant'),
     minSaving: document.querySelector('#min-saving'),
-    minSeen: document.querySelector('#min-seen'),
     sort: document.querySelector('#sort'),
     watchlist: document.querySelector('#watchlist'),
-    emailedOnly: document.querySelector('#emailed-only'),
-    repeatOnly: document.querySelector('#repeat-only'),
+    agentPicksOnly: document.querySelector('#agent-picks-only'),
+    urgentOnly: document.querySelector('#urgent-only'),
     hideExpired: document.querySelector('#hide-expired'),
     resetButtons: Array.from(document.querySelectorAll('#reset-filters, #clear-filters')),
     toggle: document.querySelector('#filter-toggle'),
@@ -489,7 +478,7 @@ title: Today's best quantified deals
   }}
 
   function dealText(deal) {{
-    return [deal.title, deal.merchant, deal.category, deal.node_id].join(' ').toLowerCase();
+    return [deal.title, deal.merchant, deal.category].join(' ').toLowerCase();
   }}
 
   function isExpired(deal) {{
@@ -505,11 +494,62 @@ title: Today's best quantified deals
   function qualityScore(deal) {{
     const savingScore = Math.min(45, Math.log10(Math.max(deal.savings, 1)) * 12);
     const bestScore = Math.min(15, Math.log10(Math.max(deal.best_savings, 1)) * 4);
-    const repeatScore = Math.min(12, Math.max(0, deal.times_seen - 1) * 4);
-    const emailScore = Math.min(8, deal.email_count * 3);
     const freshScore = Math.max(0, 12 - daysSince(deal.last_seen_at) * 3);
     const penalty = isExpired(deal) ? 18 : 0;
-    return Math.max(1, Math.min(100, Math.round(savingScore + bestScore + repeatScore + emailScore + freshScore + 10 - penalty)));
+    const signalScore = deal.best_savings && deal.savings >= deal.best_savings ? 8 : 0;
+    return Math.max(1, Math.min(100, Math.round(savingScore + bestScore + freshScore + signalScore + 14 - penalty)));
+  }}
+
+  function aiConfidence(deal) {{
+    let score = 46;
+    if (deal.savings >= 1000) score += 18;
+    else if (deal.savings >= 500) score += 12;
+    else if (deal.savings >= 200) score += 8;
+    if (deal.best_savings && deal.savings >= deal.best_savings) score += 10;
+    if (daysSince(deal.last_seen_at) <= 1) score += 10;
+    if (deal.merchant && deal.merchant !== 'OzBargain') score += 6;
+    if (isTimeSensitive(deal)) score += 5;
+    if (isExpired(deal)) score -= 28;
+    return Math.max(1, Math.min(99, Math.round(score)));
+  }}
+
+  function urgencyScore(deal) {{
+    let score = 20;
+    if (isTimeSensitive(deal)) score += 35;
+    if (daysSince(deal.first_seen_at) <= 1) score += 18;
+    if (daysSince(deal.last_seen_at) <= 1) score += 10;
+    if (deal.savings >= 1000) score += 10;
+    if (/\\b(limited|clearance|ends|today|cashback|code|coupon|bonus)\\b/i.test(deal.title || '')) score += 12;
+    if (isExpired(deal)) score = 5;
+    return Math.max(1, Math.min(99, Math.round(score)));
+  }}
+
+  function valueSignal(deal) {{
+    if (deal.savings >= 3000) return 'Exceptional value';
+    if (deal.savings >= 1000) return 'High-value lead';
+    if (deal.savings >= 500) return 'Strong saving';
+    return 'Worth checking';
+  }}
+
+  function agentAction(deal) {{
+    if (isExpired(deal)) return 'Skip or verify stock';
+    if (urgencyScore(deal) >= 75 && aiConfidence(deal) >= 75) return 'Inspect now';
+    if (aiConfidence(deal) >= 80) return 'Shortlist';
+    if (urgencyScore(deal) >= 70) return 'Check window';
+    return 'Monitor';
+  }}
+
+  function riskSignal(deal) {{
+    const title = String(deal.title || '').toLowerCase();
+    if (isExpired(deal)) return 'Availability risk';
+    if (/\\b(cashback|rebate|voucher|gift card|points|refinance|loan|insurance)\\b/.test(title)) return 'Terms dependent';
+    if (/\\b(code|coupon|limited|clearance|while stocks last)\\b/.test(title)) return 'Stock/window risk';
+    if (deal.savings >= 1000) return 'Verify price';
+    return 'Low friction';
+  }}
+
+  function agentInsight(deal) {{
+    return `${{valueSignal(deal)}} · ${{riskSignal(deal)}} · ${{timeSensitiveReason(deal) || 'Stable window'}}`;
   }}
 
   function freshnessBadges(deal) {{
@@ -517,11 +557,12 @@ title: Today's best quantified deals
     const seenDays = daysSince(deal.last_seen_at);
     const firstSeenDays = daysSince(deal.first_seen_at);
     if (isExpired(deal)) badges.push('Expired/OOS');
-    if (firstSeenDays <= 1) badges.push('New today');
-    if (deal.times_seen > 1) badges.push('Repeated deal');
-    if (deal.best_savings && deal.savings >= deal.best_savings) badges.push('Best seen');
+    if (firstSeenDays <= 1) badges.push('Fresh lead');
+    if (deal.best_savings && deal.savings >= deal.best_savings) badges.push('Best detected');
     if (seenDays >= 7) badges.push('Stale');
-    return badges.length ? badges : ['Fresh memory'];
+    if (aiConfidence(deal) >= 80) badges.push('High confidence');
+    if (urgencyScore(deal) >= 75) badges.push('Action window');
+    return badges.length ? badges : ['Agent reviewed'];
   }}
 
   function timeSensitiveReason(deal) {{
@@ -549,8 +590,8 @@ title: Today's best quantified deals
     copy.sort((a, b) => {{
       if (sort === 'score-desc') return (qualityScore(b) - qualityScore(a)) || (b.savings - a.savings);
       if (sort === 'best-desc') return (b.best_savings - a.best_savings) || (b.savings - a.savings);
-      if (sort === 'seen-desc') return (b.times_seen - a.times_seen) || (b.savings - a.savings);
-      if (sort === 'emailed-desc') return (b.email_count - a.email_count) || (b.savings - a.savings);
+      if (sort === 'confidence-desc') return (aiConfidence(b) - aiConfidence(a)) || (b.savings - a.savings);
+      if (sort === 'urgency-desc') return (urgencyScore(b) - urgencyScore(a)) || (b.savings - a.savings);
       if (sort === 'recent-desc') return Date.parse(b.last_seen_at) - Date.parse(a.last_seen_at);
       return (b.savings - a.savings) || (b.best_savings - a.best_savings);
     }});
@@ -558,21 +599,20 @@ title: Today's best quantified deals
   }}
 
   function cardHtml(deal, index) {{
-    const node = deal.node_id ? `Node ${{escapeHtml(deal.node_id)}}` : 'OzBargain';
-    const seen = deal.times_seen ? `Seen ${{deal.times_seen}}x` : 'New';
     const badges = freshnessBadges(deal).map(badge => `<span class="badge">${{escapeHtml(badge)}}</span>`).join('');
     const score = qualityScore(deal);
     return `<article class="card">
       <div>
-        <div class="rank">#${{index + 1}} · ${{escapeHtml(deal.category)}} · Value Score ${{score}}/100</div>
+        <div class="rank">#${{index + 1}} · ${{escapeHtml(deal.category)}} · Agent Score ${{score}}/100</div>
         <a class="title" href="${{escapeHtml(deal.link)}}" target="_blank" rel="noopener">${{escapeHtml(deal.title)}}</a>
-        <div class="meta">${{escapeHtml(deal.merchant)}} · ${{node}}</div>
+        <div class="meta">${{escapeHtml(deal.merchant)}} · OzBargain signal</div>
         <div class="badges">${{badges}}</div>
         <div class="pillrow">
-          <span class="pill">${{seen}}</span>
-          <span class="pill">Best ${{money(deal.best_savings)}}</span>
-          <span class="pill">Emailed ${{deal.email_count}}x</span>
+          <span class="pill">AI confidence ${{aiConfidence(deal)}}%</span>
+          <span class="pill">Urgency ${{urgencyScore(deal)}}%</span>
+          <span class="pill">${{escapeHtml(agentAction(deal))}}</span>
         </div>
+        <div class="agent-note">${{escapeHtml(agentInsight(deal))}}</div>
         <button class="details" type="button" data-index="${{index}}">Details</button>
       </div>
       <div class="save">${{money(deal.savings)}}<span>potential</span></div>
@@ -584,7 +624,7 @@ title: Today's best quantified deals
     if (!top.length) return '';
     return `<div class="strip-head"><div class="strip-title">Top 10 strongest opportunities</div><button type="button" class="link-button" data-preset="high">High savings view</button></div><div class="strip-row">${{top.map((deal, i) => `
       <button type="button" class="mini-deal" data-top-index="${{i}}">
-        <span>#${{i + 1}} · Score ${{qualityScore(deal)}}</span>
+        <span>#${{i + 1}} · AI ${{aiConfidence(deal)}}% · ${{escapeHtml(agentAction(deal))}}</span>
         <b>${{escapeHtml(deal.title)}}</b>
         <em>${{money(deal.savings)}} potential</em>
       </button>`).join('')}}</div>`;
@@ -595,7 +635,7 @@ title: Today's best quantified deals
     if (!urgent.length) return '';
     return `<div class="strip-head"><div><div class="strip-title urgent-title">Flash / time-sensitive deals</div><div class="strip-subtitle">Fresh, limited, ending, code, or cashback deals sorted by savings</div></div></div><div class="strip-row">${{urgent.map((deal, i) => `
       <button type="button" class="mini-deal urgent-deal" data-urgent-index="${{i}}">
-        <span>#${{i + 1}} · ${{escapeHtml(timeSensitiveReason(deal))}}</span>
+        <span>#${{i + 1}} · Urgency ${{urgencyScore(deal)}}% · ${{escapeHtml(timeSensitiveReason(deal))}}</span>
         <b>${{escapeHtml(deal.title)}}</b>
         <em>${{money(deal.savings)}} potential</em>
       </button>`).join('')}}</div>`;
@@ -616,11 +656,10 @@ title: Today's best quantified deals
     if (els.category.value !== 'All') params.set('category', els.category.value);
     if (els.merchant.value.trim()) params.set('merchant', els.merchant.value.trim());
     if (Number(els.minSaving.value || 0) > 0) params.set('min', els.minSaving.value);
-    if (Number(els.minSeen.value || 0) > 0) params.set('seen', els.minSeen.value);
     if (els.sort.value !== 'savings-desc') params.set('sort', els.sort.value);
     if (els.watchlist.value.trim()) params.set('watchlist', els.watchlist.value.trim());
-    if (els.emailedOnly.checked) params.set('emailed', '1');
-    if (els.repeatOnly.checked) params.set('repeat', '1');
+    if (els.agentPicksOnly.checked) params.set('agent', '1');
+    if (els.urgentOnly.checked) params.set('urgent', '1');
     if (!els.hideExpired.checked) params.set('expired', 'show');
     const next = `${{location.pathname}}${{params.toString() ? '?' + params.toString() : ''}}`;
     history.replaceState(null, '', next);
@@ -632,27 +671,24 @@ title: Today's best quantified deals
     els.category.value = params.get('category') || 'All';
     els.merchant.value = params.get('merchant') || '';
     els.minSaving.value = params.get('min') || '0';
-    els.minSeen.value = params.get('seen') || '0';
     els.sort.value = params.get('sort') || 'savings-desc';
     els.watchlist.value = params.get('watchlist') || '';
-    els.emailedOnly.checked = params.get('emailed') === '1';
-    els.repeatOnly.checked = params.get('repeat') === '1';
+    els.agentPicksOnly.checked = params.get('agent') === '1';
+    els.urgentOnly.checked = params.get('urgent') === '1';
     els.hideExpired.checked = params.get('expired') !== 'show';
   }}
 
   function applyFilters() {{
     const query = els.search.value.trim().toLowerCase();
     const minSaving = Number(els.minSaving.value || 0);
-    const minSeen = Number(els.minSeen.value || 0);
     const merchantQuery = els.merchant.value.trim().toLowerCase();
     const watchTerms = parseTerms(els.watchlist.value);
     const rows = rankDeals(deals.filter(deal => {{
       if (els.category.value !== 'All' && deal.category !== els.category.value) return false;
       if (merchantQuery && !deal.merchant.toLowerCase().includes(merchantQuery)) return false;
       if (deal.savings < minSaving) return false;
-      if (deal.times_seen < minSeen) return false;
-      if (els.emailedOnly.checked && deal.email_count < 1) return false;
-      if (els.repeatOnly.checked && deal.times_seen < 2) return false;
+      if (els.agentPicksOnly.checked && aiConfidence(deal) < 75) return false;
+      if (els.urgentOnly.checked && !isTimeSensitive(deal)) return false;
       if (els.hideExpired.checked && isExpired(deal)) return false;
       if (watchTerms.length && !watchTerms.some(term => dealText(deal).includes(term))) return false;
       return matchesSearch(deal, query);
@@ -675,11 +711,10 @@ title: Today's best quantified deals
     els.category.value = 'All';
     els.merchant.value = '';
     els.minSaving.value = '0';
-    els.minSeen.value = '0';
     els.sort.value = 'savings-desc';
     els.watchlist.value = '';
-    els.emailedOnly.checked = false;
-    els.repeatOnly.checked = false;
+    els.agentPicksOnly.checked = false;
+    els.urgentOnly.checked = false;
     els.hideExpired.checked = true;
     applyFilters();
   }}
@@ -712,15 +747,18 @@ title: Today's best quantified deals
   function detailHtml(deal) {{
     const badges = freshnessBadges(deal).map(badge => `<span class="badge">${{escapeHtml(badge)}}</span>`).join('');
     return `<h2>${{escapeHtml(deal.title)}}</h2>
-      <div class="drawer-save">${{money(deal.savings)}} potential · Score ${{qualityScore(deal)}}/100</div>
+      <div class="drawer-save">${{money(deal.savings)}} potential · Agent Score ${{qualityScore(deal)}}/100</div>
       <div class="badges">${{badges}}</div>
       <dl>
+        <dt>AI confidence</dt><dd>${{aiConfidence(deal)}}%</dd>
+        <dt>Urgency</dt><dd>${{urgencyScore(deal)}}%</dd>
+        <dt>Recommended action</dt><dd>${{escapeHtml(agentAction(deal))}}</dd>
+        <dt>Agent read</dt><dd>${{escapeHtml(agentInsight(deal))}}</dd>
         <dt>Merchant</dt><dd>${{escapeHtml(deal.merchant)}}</dd>
         <dt>Category</dt><dd>${{escapeHtml(deal.category)}}</dd>
-        <dt>Best seen saving</dt><dd>${{money(deal.best_savings)}}</dd>
-        <dt>First seen</dt><dd>${{new Date(deal.first_seen_at).toLocaleString()}}</dd>
-        <dt>Last seen</dt><dd>${{new Date(deal.last_seen_at).toLocaleString()}}</dd>
-        <dt>Memory</dt><dd>Seen ${{deal.times_seen}}x · Emailed ${{deal.email_count}}x</dd>
+        <dt>Value benchmark</dt><dd>${{money(deal.best_savings)}} best detected saving</dd>
+        <dt>First detected</dt><dd>${{new Date(deal.first_seen_at).toLocaleString()}}</dd>
+        <dt>Last checked</dt><dd>${{new Date(deal.last_seen_at).toLocaleString()}}</dd>
       </dl>
       <a class="drawer-link" href="${{escapeHtml(deal.link)}}" target="_blank" rel="noopener">Open OzBargain deal</a>`;
   }}
@@ -767,7 +805,7 @@ title: Today's best quantified deals
     const top = [...currentRows].sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a)));
     openDetails(top[Number(button.dataset.topIndex)]);
   }});
-  for (const el of [els.search, els.category, els.merchant, els.minSaving, els.minSeen, els.sort, els.watchlist, els.emailedOnly, els.repeatOnly, els.hideExpired]) {{
+  for (const el of [els.search, els.category, els.merchant, els.minSaving, els.sort, els.watchlist, els.agentPicksOnly, els.urgentOnly, els.hideExpired]) {{
     el.addEventListener('input', applyFilters);
     el.addEventListener('change', applyFilters);
   }}

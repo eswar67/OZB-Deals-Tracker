@@ -67,7 +67,16 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn("Flash / time-sensitive deals", html)
             self.assertIn("urgent-strip", html)
             self.assertIn("Top 10 strongest opportunities", html)
-            self.assertIn("Value score high to low", html)
+            self.assertIn("AI confidence high to low", html)
+            self.assertIn("Urgency high to low", html)
+            self.assertIn("Agent picks only", html)
+            self.assertIn("agentInsight", html)
+            self.assertNotIn("Seen at least", html)
+            self.assertNotIn("Most seen", html)
+            self.assertNotIn("Most emailed", html)
+            self.assertNotIn("Emailed only", html)
+            self.assertNotIn("First seen", html)
+            self.assertNotIn("Node ", html)
             self.assertIn("Hide expired/OOS", html)
             self.assertIn("Watchlist terms", html)
             self.assertIn("detail-drawer", html)
@@ -112,6 +121,9 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn("Old Laptop", html)
             self.assertIn("Samsung TV", html)
             self.assertIn("Savings high to low", html)
+            self.assertNotIn('"times_seen"', html)
+            self.assertNotIn('"email_count"', html)
+            self.assertNotIn('"node_id"', html)
 
     def test_build_from_live_monitor_deals(self):
         with tempfile.TemporaryDirectory() as tmp:
