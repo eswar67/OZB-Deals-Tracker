@@ -26,6 +26,7 @@ title: Today's best quantified deals
   <section class="category-summary" id="category-summary" aria-label="Category summary"></section>
   <div class="toolbar">
     <input id="search" placeholder="Search deals, merchants, categories" aria-label="Search deals">
+    <button class="clear-filters" id="clear-filters" type="button">Reset</button>
     <button class="filter-toggle" id="filter-toggle" type="button" aria-expanded="false" aria-controls="filter-panel">Filters</button>
   </div>
   <section class="filter-panel" id="filter-panel" hidden>
@@ -162,7 +163,7 @@ title: Today's best quantified deals
     emailedOnly: document.querySelector('#emailed-only'),
     repeatOnly: document.querySelector('#repeat-only'),
     hideExpired: document.querySelector('#hide-expired'),
-    reset: document.querySelector('#reset-filters'),
+    resetButtons: Array.from(document.querySelectorAll('#reset-filters, #clear-filters')),
     toggle: document.querySelector('#filter-toggle'),
     panel: document.querySelector('#filter-panel'),
     grid: document.querySelector('#deals'),
@@ -416,7 +417,7 @@ title: Today's best quantified deals
     const hidden = els.panel.toggleAttribute('hidden');
     els.toggle.setAttribute('aria-expanded', String(!hidden));
   });
-  els.reset.addEventListener('click', resetFilters);
+  els.resetButtons.forEach(button => button.addEventListener('click', resetFilters));
   els.drawerClose.addEventListener('click', () => els.drawer.hidden = true);
   document.querySelectorAll('.preset').forEach(button => {
     button.addEventListener('click', () => applyPreset(button.dataset.preset));

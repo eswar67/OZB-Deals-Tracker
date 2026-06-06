@@ -71,6 +71,7 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn("detail-drawer", html)
             self.assertIn("category-summary", html)
             self.assertIn("URLSearchParams", html)
+            self.assertIn("clear-filters", html)
 
     def test_build_uses_all_memory_deals_for_filtering(self):
         with tempfile.TemporaryDirectory() as tmp:
