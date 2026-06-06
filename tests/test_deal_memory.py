@@ -1,0 +1,47 @@
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from modules import deal_memory
+
+
+class DealMemoryTests(unittest.TestCase):
+    def test_record_run_updates_memory_and_audit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            with patch.object(deal_memory, "OUTPUT_DIR", out), \
+                 patch.object(deal_memory, "MEMORY_FILE", out / "deal_memory.json"), \
+                 patch.object(deal_memory, "AUDIT_FILE", out / "missed_deal_audit.jsonl"), \
+                 patch.object(deal_memory, "LATEST_AUDIT_FILE", out / "latest_missed_deal_audit.json"):
+
+                deals = [
+                    {
+                        "node_id": "1",
+                        "title": "Good Deal Save $250 @ Example",
+                        "link": "https://www.ozbargain.com.au/node/1",
+                        "savings": 250,
+                    },
+                    {
+                        "node_id": "2",
+                        "title": "Small Deal Save $50 @ Example",
+                        "link": "https://www.ozbargain.com.au/node/2",
+                        "savings": 50,
+                    },
+                ]
+
+                deal_memory.annotate_deals(deals)
+                audit = deal_memory.record_run(deals, [deals[0]], min_savings=200)
+                deal_memory.annotate_deals(deals)
+
+                self.assertEqual(audit["emailed"], 1)
+                self.assertEqual(audit["reason_counts"]["emailed"], 1)
+                self.assertEqual(audit["reason_counts"]["below_savings_threshold"], 1)
+                self.assertEqual(deals[0]["times_seen"], 1)
+                self.assertFalse(deals[0]["is_new_deal"])
+                self.assertTrue((out / "deal_memory.json").exists())
+                self.assertTrue((out / "latest_missed_deal_audit.json").exists())
+
+
+if __name__ == "__main__":
+    unittest.main()

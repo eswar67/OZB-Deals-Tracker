@@ -46,6 +46,7 @@ from modules.prefs          import match_all
 from modules.email_builder  import build_email_html
 from modules.value_parser   import parse_all as parse_deal_values
 from modules.briefing       import build_briefing
+from modules.deal_memory    import annotate_deals, record_run
 
 # ── Config ────────────────────────────────────────────────────────────────────
 _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
@@ -1886,7 +1887,10 @@ def main():
                         f"(market baseline) — {d['title'][:50]}"
                     )
 
-    # 7. Savings-first inclusion. Optional quality scoring is off by default.
+    # 7. Deal memory — annotate new/repeat/best-seen status before selection.
+    deals = annotate_deals(deals)
+
+    # 8. Savings-first inclusion. Optional quality scoring is off by default.
     deals = score_deals(deals)
 
     top_deals = sorted(
@@ -1896,7 +1900,7 @@ def main():
     )
     log.info(f"{len(top_deals)} deal(s) have quantified savings ≥ ${MIN_SAVINGS}")
 
-    # 8. Flash deal flagging
+    # 9. Flash deal flagging
     for d in top_deals:
         d["is_flash"] = is_flash_deal(d, flash_hours=6.0, flash_min_score=8)
 
@@ -1904,18 +1908,22 @@ def main():
     if flash:
         log.info(f"⚡ {len(flash)} flash deal(s) detected")
 
-    # 9. Preference matching + relevance tagging
+    # 10. Preference matching + relevance tagging
     top_deals = match_all(top_deals)
+    for d in top_deals:
+        tags = d.get("relevance_tags", [])
+        d["is_priority_watchlist"] = any("Watchlist" in tag for tag in tags)
 
     if not top_deals:
         log.info("No deals with quantified savings above threshold — no email sent.")
+        record_run(deals, [], MIN_SAVINGS)
         return
 
     if ENABLE_PRE_SEND_REVIEW:
         log.info("── Pre-send quality review ──")
         top_deals, _, _, _, _ = review_and_fix_deals(top_deals, [], [], [], [])
 
-    # 10. Morning Briefing — top deals by savings.
+    # 11. Morning Briefing — top deals by savings.
     log.info("── Morning Briefing ──")
     top_by_savings = top_deals[:5]
     briefing = build_briefing(top_by_savings)
@@ -1926,6 +1934,7 @@ def main():
         creds, top_deals,
         briefing=briefing,
     )
+    record_run(deals, top_deals, MIN_SAVINGS)
 
     log.info("=== Done ===")
 

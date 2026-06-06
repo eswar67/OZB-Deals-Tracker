@@ -107,6 +107,27 @@ class CashbackRegressionTests(unittest.TestCase):
         self.assertIn("potential</span>", html)
         self.assertEqual(html.count("Flash Laptop Save $300"), 1)
 
+    def test_email_html_promotes_watchlist_priority_and_memory_cues(self):
+        html = build_email_html([
+            {
+                "title": "Samsung OLED TV $999 (Was $1999) @ Example",
+                "link": "https://www.ozbargain.com.au/node/1",
+                "savings": 1000,
+                "deal_price": 999,
+                "merchant_name": "Example",
+                "categories": ["Electrical & Electronics"],
+                "relevance_tags": ["👀 Watchlist: samsung"],
+                "relevance_score": 50,
+                "is_priority_watchlist": True,
+                "is_new_deal": True,
+                "memory_key": "node:1",
+            },
+        ], min_savings=200)
+
+        self.assertIn("Watchlist priority", html)
+        self.assertIn("View 1 watchlist priority deal", html)
+        self.assertIn("New find", html)
+
 
 if __name__ == "__main__":
     unittest.main()

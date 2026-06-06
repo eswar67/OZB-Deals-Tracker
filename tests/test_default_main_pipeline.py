@@ -29,10 +29,12 @@ class DefaultMainPipelineTests(unittest.TestCase):
              patch.object(monitor, "fetch_lifestyle_deals", side_effect=AssertionError("legacy lifestyle feed called")), \
              patch.object(monitor.anthropic, "Anthropic", side_effect=AssertionError("Anthropic should be disabled by default")), \
              patch.object(monitor, "get_google_creds", return_value=object()), \
+             patch.object(monitor, "record_run") as record_run, \
              patch.object(monitor, "send_gmail_alert") as send_email:
             monitor.main()
 
         send_email.assert_called_once()
+        record_run.assert_called_once()
         sent_deals = send_email.call_args.args[1]
         self.assertEqual(len(sent_deals), 1)
         self.assertEqual(sent_deals[0]["savings"], 250)

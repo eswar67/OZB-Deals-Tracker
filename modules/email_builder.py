@@ -141,6 +141,22 @@ def _deal_row(deal: dict, rank: int) -> str:
         proof += f" · Cashback likely via {deal['cashback_platform']}"
     if deal.get("is_flash"):
         proof = f"⚡ Time-sensitive · {proof}"
+    memory_bits = []
+    if deal.get("is_new_deal"):
+        memory_bits.append("New find")
+    elif deal.get("times_seen", 0):
+        memory_bits.append(f"Seen {int(deal.get('times_seen', 0)) + 1}x")
+    if deal.get("is_best_seen") and deal.get("previous_best_savings", 0):
+        memory_bits.append("Best seen so far")
+    if deal.get("is_priority_watchlist"):
+        memory_bits.append("Watchlist priority")
+    if memory_bits:
+        proof += " · " + " · ".join(memory_bits)
+
+    tags_html = ""
+    relevance_tags = deal.get("relevance_tags") or []
+    if relevance_tags:
+        tags_html = '<div class="tags">' + "".join(_chip(t) for t in relevance_tags[:3]) + "</div>"
 
     merchant_html = escape(merchant or "Merchant")
     if ext_url:
@@ -155,7 +171,7 @@ def _deal_row(deal: dict, rank: int) -> str:
         f'<tr><td class="num" width="42" valign="top">#{rank}<br>{_deal_icon(deal.get("title", ""))}</td>'
         f'<td class="deal" valign="top"><a class="title" href="{escape(ozb_link, quote=True)}">{title}</a>'
         f'<div class="meta">{meta_html}</div><div class="why">{explanation}</div>'
-        f'<div class="proof">{proof_html}</div></td>'
+        f'<div class="proof">{proof_html}</div>{tags_html}</td>'
         f'<td class="save" width="104" valign="top">{_money(savings)}<br><span>potential{escape(pct)}</span></td></tr>'
     )
 
@@ -225,8 +241,14 @@ def build_email_html(
 
     all_deals = deals + financial_deals + cc_travel_deals + food_deals + home_deals + extra_deals
     all_deals = sorted(all_deals, key=lambda d: int(d.get("savings", 0) or 0), reverse=True)
-    flash_deals = [d for d in all_deals if d.get("is_flash")]
-    non_flash_deals = [d for d in all_deals if not d.get("is_flash")]
+    priority_deals = [d for d in all_deals if d.get("is_priority_watchlist")]
+    priority_keys = {d.get("memory_key") or d.get("link") or d.get("title") for d in priority_deals}
+    remaining_deals = [
+        d for d in all_deals
+        if (d.get("memory_key") or d.get("link") or d.get("title")) not in priority_keys
+    ]
+    flash_deals = [d for d in remaining_deals if d.get("is_flash")]
+    non_flash_deals = [d for d in remaining_deals if not d.get("is_flash")]
     total_savings = sum(int(d.get("savings", 0) or 0) for d in all_deals)
     top_saving = int(all_deals[0].get("savings", 0) or 0) if all_deals else 0
     top_link = all_deals[0].get("link", "#all-deals") if all_deals else "#all-deals"
@@ -235,6 +257,9 @@ def build_email_html(
     sections = []
     rank = 1
     sections.append('<a id="all-deals" name="all-deals"></a>')
+    if priority_deals:
+        sections.append(_section("Watchlist priority", priority_deals, rank, "watchlist-priority"))
+        rank += len(priority_deals)
     if flash_deals:
         sections.append(_section("⚡ Time-sensitive opportunities", flash_deals, rank, "time-sensitive"))
         rank += len(flash_deals)
@@ -269,6 +294,7 @@ def build_email_html(
     .deal{{padding:10px 8px;border-top:1px solid #eaecf0}} .title{{color:{INK};text-decoration:none;font-size:14px;line-height:19px;font-weight:800}}
     .meta{{font-size:12px;line-height:17px;color:{MUTED};margin-top:2px}} .meta a{{text-decoration:none;font-weight:700}}
     .why{{font-size:12px;line-height:17px;color:#344054;margin-top:4px}} .proof{{font-size:11px;line-height:15px;color:{MUTED};margin-top:3px}}
+    .tags{{margin-top:5px}}
     .save{{padding:10px 8px;border-top:1px solid #eaecf0;text-align:right;color:{GREEN};font-size:18px;line-height:22px;font-weight:900}} .save span{{font-size:11px;line-height:14px;font-weight:800}}
     .foot{{padding:18px 4px 6px;text-align:center;font-size:11px;line-height:17px;color:{MUTED}}}
   </style>
@@ -295,6 +321,7 @@ def build_email_html(
               </table>
               <div class="note">
                 Inclusion: quantified potential saving opportunities of at least {_money(min_savings)}. Votes, comments and clicks are shown as context only.
+                {f'<br><a href="#watchlist-priority" style="font-weight:700;">View {len(priority_deals)} watchlist priority deal(s)</a>' if priority_deals else ''}
                 {f'<br><a href="#time-sensitive" style="font-weight:700;">View {len(flash_deals)} time-sensitive deal(s)</a>' if flash_deals else ''}
               </div>
             </td>
