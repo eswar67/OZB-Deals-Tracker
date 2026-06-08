@@ -4,6 +4,8 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
 
+import requests
+
 import ozbargain_monitor as monitor
 
 
@@ -105,6 +107,31 @@ class ParallelHtmlCrawlTests(unittest.TestCase):
         self.assertEqual(deals, [])
         self.assertLessEqual(max_active, 3)
         self.assertGreater(max_active, 1)
+
+    def test_fetch_all_deals_stops_on_first_404_page(self):
+        parsed_pages = []
+
+        def fake_fetch_html(url):
+            page = _page_from_url(url)
+            if page >= 4:
+                response = requests.Response()
+                response.status_code = 404
+                raise requests.HTTPError("404 Client Error", response=response)
+            return f"page:{page}"
+
+        def fake_parse_html(html):
+            page = int(html.split(":", 1)[1])
+            parsed_pages.append(page)
+            return [_deal(f"https://www.ozbargain.com.au/node/{page}", f"Page {page} deal")]
+
+        with patch.object(monitor, "OZB_MAX_PAGES", 12), \
+             patch.object(monitor, "OZB_HTML_WORKERS", 3), \
+             patch.object(monitor, "fetch_html", side_effect=fake_fetch_html), \
+             patch.object(monitor, "parse_html_deal_cards", side_effect=fake_parse_html):
+            deals = monitor.fetch_all_deals()
+
+        self.assertEqual(parsed_pages, [0, 1, 2, 3])
+        self.assertEqual([deal["node_id"] for deal in deals], ["0", "1", "2", "3"])
 
 
 if __name__ == "__main__":

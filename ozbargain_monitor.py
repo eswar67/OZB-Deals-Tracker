@@ -435,6 +435,7 @@ def fetch_all_deals() -> list[dict]:
     page = 0
     highest_processed_page = -1
     workers = min(OZB_HTML_WORKERS, max(1, OZB_MAX_PAGES))
+    end_of_feed = object()
 
     def _fetch_page(page_number: int):
         url = DEALS_URL if page_number == 0 else f"{DEALS_URL}?page={page_number}"
@@ -443,6 +444,16 @@ def fetch_all_deals() -> list[dict]:
         for attempt in range(2):
             try:
                 return page_number, fetch_html(url)
+            except requests.HTTPError as e:
+                status_code = getattr(e.response, "status_code", None)
+                if status_code == 404:
+                    log.info(f"  Page {page_number} returned 404; reached end of feed.")
+                    return page_number, end_of_feed
+                if attempt == 0:
+                    log.info(f"  Page {page_number} error ({e}); retrying…")
+                    time.sleep(1.0)
+                else:
+                    log.warning(f"  Page {page_number} failed twice: {e}")
             except Exception as e:
                 if attempt == 0:
                     log.info(f"  Page {page_number} error ({e}); retrying…")
@@ -469,6 +480,10 @@ def fetch_all_deals() -> list[dict]:
         for page_number in batch_pages:
             html_text = batch_results.get(page_number)
             highest_processed_page = page_number
+
+            if html_text is end_of_feed:
+                stop_crawl = True
+                break
 
             if html_text is None:
                 consecutive_fail += 1
