@@ -159,6 +159,7 @@ MAX_AGE_HOURS  = 999999  # No age limit — fetch all available deals
 MIN_SCORE      = int(os.getenv("MIN_SCORE",    "6"))
 MIN_SAVINGS    = int(os.getenv("MIN_SAVINGS",  "200"))
 OZB_MAX_PAGES  = int(os.getenv("OZB_MAX_PAGES", "200"))
+OZB_HTML_WORKERS = max(1, int(os.getenv("OZB_HTML_WORKERS", "6")))
 
 ENABLE_MARKET_PRICE_LOOKUP = os.getenv("ENABLE_MARKET_PRICE_LOOKUP", "false").lower() in ("1", "true", "yes", "on")
 LIVE_GIFT_VALUE_LOOKUP     = os.getenv("LIVE_GIFT_VALUE_LOOKUP", "false").lower() in ("1", "true", "yes", "on")
@@ -422,6 +423,8 @@ def fetch_all_deals() -> list[dict]:
 
     RSS is capped at page 10 by OzBargain, while /deals?page=N keeps working
     beyond that. Use HTML as the canonical source for broad coverage.
+    Pages are fetched with bounded parallelism, then processed in page order so
+    dedupe and end-of-feed detection stay deterministic.
     """
     cutoff = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
     MAX_CONSECUTIVE_FAILURES = 4   # stop after 4 pages in a row that fail or are empty
@@ -430,58 +433,82 @@ def fetch_all_deals() -> list[dict]:
     seen = set()
     consecutive_fail = 0
     page = 0
+    highest_processed_page = -1
+    workers = min(OZB_HTML_WORKERS, max(1, OZB_MAX_PAGES))
 
-    while page < OZB_MAX_PAGES:
-        url = DEALS_URL if page == 0 else f"{DEALS_URL}?page={page}"
-        log.info(f"Fetching page {page}: {url}")
+    def _fetch_page(page_number: int):
+        url = DEALS_URL if page_number == 0 else f"{DEALS_URL}?page={page_number}"
+        log.info(f"Fetching page {page_number}: {url}")
 
-        html_text = None
         for attempt in range(2):
             try:
-                html_text = fetch_html(url)
-                break
+                return page_number, fetch_html(url)
             except Exception as e:
                 if attempt == 0:
-                    log.info(f"  Page {page} error ({e}); retrying…")
+                    log.info(f"  Page {page_number} error ({e}); retrying…")
                     time.sleep(1.0)
                 else:
-                    log.warning(f"  Page {page} failed twice: {e}")
+                    log.warning(f"  Page {page_number} failed twice: {e}")
+        return page_number, None
 
-        if html_text is None:
-            consecutive_fail += 1
-            if consecutive_fail >= MAX_CONSECUTIVE_FAILURES:
-                log.info(f"{MAX_CONSECUTIVE_FAILURES} consecutive failures — end of feed.")
+    log.info(f"HTML crawl using {workers} parallel worker(s), max_pages={OZB_MAX_PAGES}")
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed as _as_completed
+
+    while page < OZB_MAX_PAGES:
+        batch_pages = list(range(page, min(page + workers, OZB_MAX_PAGES)))
+        batch_results = {}
+
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            futures = {ex.submit(_fetch_page, page_number): page_number for page_number in batch_pages}
+            for future in _as_completed(futures):
+                page_number, html_text = future.result()
+                batch_results[page_number] = html_text
+
+        stop_crawl = False
+        for page_number in batch_pages:
+            html_text = batch_results.get(page_number)
+            highest_processed_page = page_number
+
+            if html_text is None:
+                consecutive_fail += 1
+                if consecutive_fail >= MAX_CONSECUTIVE_FAILURES:
+                    log.info(f"{MAX_CONSECUTIVE_FAILURES} consecutive failures — end of feed.")
+                    stop_crawl = True
+                    break
+                continue
+
+            items = parse_html_deal_cards(html_text)
+            new_items = []
+            for deal in items:
+                key = deal.get("link") or deal.get("node_id")
+                if key and key not in seen:
+                    seen.add(key)
+                    new_items.append(deal)
+
+            if not items or not new_items:
+                consecutive_fail += 1
+                if consecutive_fail >= MAX_CONSECUTIVE_FAILURES:
+                    log.info(f"{MAX_CONSECUTIVE_FAILURES} consecutive empty/failed pages — end of feed.")
+                    stop_crawl = True
+                    break
+                continue
+            consecutive_fail = 0   # good page — reset the failure counter
+
+            in_window = [d for d in new_items if d.get("pubDate", datetime.now(timezone.utc)) >= cutoff]
+            if not in_window and MAX_AGE_HOURS < 999999:
+                log.info(f"  Page {page_number}: all {len(new_items)} new item(s) older than age window; stopping")
+                stop_crawl = True
                 break
-            page += 1
-            continue
 
-        items = parse_html_deal_cards(html_text)
-        new_items = []
-        for deal in items:
-            key = deal.get("link") or deal.get("node_id")
-            if key and key not in seen:
-                seen.add(key)
-                new_items.append(deal)
+            all_deals.extend(in_window)
+            log.info(f"  Page {page_number}: {len(items)} items, {len(new_items)} new, total={len(all_deals)}")
 
-        if not items or not new_items:
-            consecutive_fail += 1
-            if consecutive_fail >= MAX_CONSECUTIVE_FAILURES:
-                log.info(f"{MAX_CONSECUTIVE_FAILURES} consecutive empty/failed pages — end of feed.")
-                break
-            page += 1
-            continue
-        consecutive_fail = 0   # good page — reset the failure counter
-
-        in_window = [d for d in new_items if d.get("pubDate", datetime.now(timezone.utc)) >= cutoff]
-        if not in_window and MAX_AGE_HOURS < 999999:
-            log.info(f"  Page {page}: all {len(new_items)} new item(s) older than age window; stopping")
+        if stop_crawl:
             break
+        page += workers
 
-        all_deals.extend(in_window)
-        log.info(f"  Page {page}: {len(items)} items, {len(new_items)} new, total={len(all_deals)}")
-        page += 1
-
-    log.info(f"Fetched {len(all_deals)} unique deals across {page} page(s) (HTML crawl)")
+    log.info(f"Fetched {len(all_deals)} unique deals across {highest_processed_page + 1} page(s) (HTML crawl)")
     return all_deals
 
 # ── Threshold filter ──────────────────────────────────────────────────────────
