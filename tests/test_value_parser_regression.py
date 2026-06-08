@@ -97,6 +97,55 @@ class ValueParserRegressionTests(unittest.TestCase):
         self.assertIn("$550 cart discount", result["explanation"])
         self.assertIn("$450 trade-in bonus", result["explanation"])
 
+    def test_comments_can_state_best_combined_saving(self):
+        result = parse_deal_value({
+            "title": "Samsung Galaxy Tab S11 Ultra 256GB Wi-Fi $1099 Less Trade-in with $550 off in Cart @ Samsung",
+            "description": "",
+            "top_comments": [
+                {"text": "Best combined saving is $1000 after stacking the $550 cart discount and $450 trade-in bonus."}
+            ],
+        })
+
+        self.assertEqual(result["deal_price"], 1099)
+        self.assertEqual(result["savings"], 1000)
+        self.assertIn("AI-derived combined saving/value", result["explanation"])
+
+    def test_stacks_multiple_distinct_savings_components(self):
+        result = parse_deal_value({
+            "title": "Laptop $1299 with $300 off, $150 cashback and $100 gift card @ Example",
+            "description": "",
+        })
+
+        self.assertEqual(result["deal_price"], 1299)
+        self.assertEqual(result["savings"], 550)
+        self.assertIn("$300 discount", result["explanation"])
+        self.assertIn("$150 cashback", result["explanation"])
+        self.assertIn("$100 gift card", result["explanation"])
+
+    def test_description_denomination_list_is_not_stacked(self):
+        result = parse_deal_value({
+            "title": "Digital Gift Card Store: 7% off IKEA eGift Cards @ CommBank Yello",
+            "description": "$20, $50, $100, $200, $500 and $1000 denominations available.",
+        })
+
+        self.assertEqual(result["savings"], 0)
+
+    def test_or_alternatives_are_not_stacked(self):
+        result = parse_deal_value({
+            "title": "$1000 Fuel Card or $1000 off the Purchase Price of Chery Tiggo 4 @ Chery",
+            "description": "",
+        })
+
+        self.assertEqual(result["savings"], 1000)
+
+    def test_repeated_title_in_description_is_not_double_counted(self):
+        result = parse_deal_value({
+            "title": "$10 off with $150+ App Spend @ Woolworths",
+            "description": "$10 off with $150+ App Spend @ Woolworths",
+        })
+
+        self.assertEqual(result["savings"], 10)
+
 
 if __name__ == "__main__":
     unittest.main()

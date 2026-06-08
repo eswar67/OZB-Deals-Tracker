@@ -7,13 +7,14 @@ No API calls — parses price patterns directly from the title string.
 Returns: {"savings": int, "explanation": str, "deal_price": int}
 
 Patterns handled (in priority order):
-  0. Combined cart/trade-in discounts e.g. "$550 off in cart + $450 trade-in bonus"
-  1. "Save $X"  /  "$X off"  /  "$X saving"
-  2. "Was $Y, Now $X"  /  "$X (Was $Y)"  /  "RRP $Y ... $X"
-  3. "X% off $Y"  →  savings = Y × X%
-  4. Bundled free item with stated value  e.g. "+ Free Buds ($Y)"
-  5. Points bonuses  e.g. "50,000 Qantas Points"
-  6. Gift card discount  e.g. "$100 gift card for $80"
+  0. Best combined saving statements in deal text/comments
+  1. Stacked savings components e.g. "$550 off in cart + $450 trade-in bonus"
+  2. "Save $X"  /  "$X off"  /  "$X saving"
+  3. "Was $Y, Now $X"  /  "$X (Was $Y)"  /  "RRP $Y ... $X"
+  4. "X% off $Y"  →  savings = Y × X%
+  5. Bundled free item with stated value  e.g. "+ Free Buds ($Y)"
+  6. Points bonuses  e.g. "50,000 Qantas Points"
+  7. Gift card discount  e.g. "$100 gift card for $80"
 """
 
 import re
@@ -33,6 +34,27 @@ def _price(s: str) -> int:
 def _all_prices(title: str) -> list:
     """Return all dollar amounts found in title, in order."""
     return [int(float(x.replace(",", ""))) for x in re.findall(r"\$\s*([\d,]+(?:\.\d+)?)", title)]
+
+
+def _normalise_text(text: str) -> str:
+    """Strip HTML and collapse whitespace for parser-friendly text."""
+    text = re.sub(r"<[^>]+>", " ", text or "")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _comments_text(deal: dict) -> str:
+    """Return a compact string from top_comments in either string or dict form."""
+    comments = deal.get("top_comments") or []
+    parts = []
+    for item in comments:
+        if isinstance(item, str):
+            parts.append(item)
+        elif isinstance(item, dict):
+            for key in ("text", "comment", "body", "html"):
+                if item.get(key):
+                    parts.append(str(item[key]))
+                    break
+    return _normalise_text(" ".join(parts))
 
 
 # ── Pattern matchers (return (savings, explanation) or None) ──────────────────
@@ -66,6 +88,121 @@ def _match_combined_trade_in_discount(t: str):
         return None
     detail = " + ".join(f"${value:,} {label}" for label, value in components)
     return total, f"Combined discount stack: {detail} = ${total:,} potential saving"
+
+
+def _match_best_combined_value(t: str):
+    """
+    Deal descriptions/comments often contain the final community-derived answer:
+    "best combined saving is $1000", "total value $450", etc. Prefer that over
+    trying to infer every component when the wording is clearly about savings.
+    """
+    patterns = [
+        r"\b(?:best|maximum|max|optimal|combined|stack(?:ed|ing)?|total|overall|final|net|effective)\b"
+        r"[^.\n$]{0,80}?\b(?:sav(?:e|ing|ings)|discount|value|benefit|bonus|cashback|cash\s*back)\b"
+        r"[^.\n$]{0,40}?\$\s*([\d,]+)",
+        r"\$\s*([\d,]+)[^.\n]{0,50}?\b(?:best|maximum|max|optimal|combined|stack(?:ed|ing)?|total|overall|final|net|effective)\b"
+        r"[^.\n]{0,50}?\b(?:sav(?:e|ing|ings)|discount|value|benefit|bonus|cashback|cash\s*back)\b",
+    ]
+    for pat in patterns:
+        m = re.search(pat, t, re.IGNORECASE)
+        if m:
+            value = _price(m.group(1))
+            if value > 0:
+                return value, f"AI-derived combined saving/value stated in deal text or comments: ${value:,}"
+    return None
+
+
+def _component_kind(label: str) -> str:
+    """Collapse detailed labels to broad stackable benefit kinds."""
+    if "cashback" in label:
+        return "cashback"
+    if "trade-in" in label:
+        return "trade-in"
+    if "gift card" in label or "voucher" in label or "credit" in label:
+        return "reward"
+    if "points" in label:
+        return "points"
+    if "coupon" in label or "code" in label:
+        return "coupon"
+    if "cart" in label:
+        return "cart"
+    if "discount" in label or "off" in label:
+        return "discount"
+    if "bonus" in label:
+        return "bonus"
+    return label
+
+
+def _stack_component_matches(t: str) -> list:
+    """Extract clearly stackable dollar-value savings components from text."""
+    patterns = [
+        ("cart discount", r"\$\s*([\d,]+)\s*(?:off\s+in\s+cart|cart\s+discount|instant\s+discount)"),
+        ("discount", r"\$\s*([\d,]+)\s*off\b(?!\s+in\s+cart)"),
+        ("coupon/code discount", r"\$\s*([\d,]+)\s*(?:coupon|code|promo\s*code|voucher\s*code)\b"),
+        ("cashback", r"\$\s*([\d,]+)\s*(?:cash\s*back|cashback)"),
+        ("cashback", r"(?:cash\s*back|cashback)\s*(?:of\s+)?\$\s*([\d,]+)"),
+        ("trade-in bonus", r"\$\s*([\d,]+)\s*(?:trade[-\s]?in\s+bonus|trade\s+bonus)"),
+        ("trade-in bonus", r"(?:trade[-\s]?in\s+bonus|trade\s+bonus)\s*(?:of\s+)?\$\s*([\d,]+)"),
+        ("bonus", r"\$\s*([\d,]+)\s*(?:bonus|switching\s+bonus|port[-\s]?in\s+bonus)"),
+        ("gift card", r"\$\s*([\d,]+)\s*(?:gift\s*card|voucher|store\s*credit|credit)"),
+        ("gift card", r"(?:gift\s*card|voucher|store\s*credit|credit)\s*(?:of\s+)?\$\s*([\d,]+)"),
+    ]
+    components = []
+    seen = set()
+    for label, pat in patterns:
+        for m in re.finditer(pat, t, re.IGNORECASE):
+            value = _price(m.group(1))
+            if value <= 0:
+                continue
+            key = (m.start(), m.end(), value, _component_kind(label))
+            if key in seen:
+                continue
+            seen.add(key)
+            components.append({"label": label, "kind": _component_kind(label), "value": value, "span": m.span()})
+
+    points = _match_points(t)
+    if points:
+        value, explanation = points
+        components.append({"label": "points value", "kind": "points", "value": value, "span": (-1, -1), "detail": explanation})
+
+    return components
+
+
+def _match_savings_stack(t: str):
+    """
+    Sum multiple savings components when the text indicates an optimal stack.
+    This intentionally ignores generic was/now prices and spend thresholds.
+    """
+    stack_signal = re.search(
+        r"\b(?:stack|stacked|stacking|combine|combined|together|plus|\+|with|after|net|effective|total|best|max(?:imum)?|optimal)\b",
+        t,
+        re.IGNORECASE,
+    )
+    components = _stack_component_matches(t)
+    if len(components) < 2:
+        return None
+
+    ordered = sorted((c for c in components if c["span"][0] >= 0), key=lambda c: c["span"][0])
+    for left, right in zip(ordered, ordered[1:]):
+        between = t[left["span"][1]:right["span"][0]]
+        if re.search(r"\bor\b|/", between, re.IGNORECASE):
+            return None
+
+    kinds = {c["kind"] for c in components}
+    if not stack_signal and len(kinds) < 2:
+        return None
+
+    # If the same benefit kind appears repeatedly without clear stack wording,
+    # treat it as tiers/options rather than additive value.
+    if not stack_signal and len(kinds) != len(components):
+        return None
+
+    total = sum(c["value"] for c in components)
+    if total <= 0:
+        return None
+
+    detail = " + ".join(f"${c['value']:,} {c['label']}" for c in components)
+    return total, f"AI-derived optimal savings stack: {detail} = ${total:,} potential saving"
 
 
 def _match_explicit_save(t: str):
@@ -430,6 +567,8 @@ def _match_two_prices(t: str):
 MAX_REGEX_SAVINGS = 25000
 
 MATCHERS = [
+    ("best_combined_value", _match_best_combined_value),
+    ("savings_stack", _match_savings_stack),
     ("combined_trade_in", _match_combined_trade_in_discount),
     ("explicit_save",  _match_explicit_save),
     ("spend_get",      _match_spend_get_value),
@@ -495,7 +634,8 @@ def parse_deal_value(deal: dict, live_gift_lookup: bool = False) -> dict:
     """
     title = deal.get("title", "")
     desc  = deal.get("description", "") or ""
-    desc_clean = re.sub(r"<[^>]+>", " ", desc)
+    desc_clean = _normalise_text(desc)
+    comments_clean = _comments_text(deal)
 
     # Combined text for free gift lookup (title + desc)
     combined = title + " " + desc_clean
@@ -503,26 +643,49 @@ def parse_deal_value(deal: dict, live_gift_lookup: bool = False) -> dict:
     base_savings = 0
     base_explanation = ""
 
-    # Run broad matchers on the title only. Descriptions often contain price
-    # tiers, spend examples, denominations, or comments that are not the deal's
-    # saving. Use description only for explicit "save $X" text.
-    TITLE_MATCHERS = [(n, m) for n, m in MATCHERS if n != "free_bundle"]
-    DESCRIPTION_MATCHERS = [("explicit_save", _match_explicit_save), ("spend_get", _match_spend_get_value)]
-    for text_src, matchers in [(title, TITLE_MATCHERS), (desc_clean, DESCRIPTION_MATCHERS)]:
-        if not text_src.strip():
+    # Run high-confidence stack/community-total matchers across title,
+    # description, and top comments first. OzBargain comments often contain the
+    # best "do these together" savings answer that the title only hints at.
+    rich_text = _normalise_text(" ".join([title, desc_clean, comments_clean]))
+    high_confidence_inputs = [
+        ("all_text", rich_text, _match_best_combined_value),
+        ("title_stack", title, _match_savings_stack),
+        ("description_stack", desc_clean, _match_savings_stack),
+        ("comments_stack", comments_clean, _match_savings_stack),
+    ]
+    for name, text_src, matcher in high_confidence_inputs:
+        if not text_src:
             continue
-        for name, matcher in matchers:
-            result = matcher(text_src)
-            if result:
-                savings, explanation = result
-                if savings > MAX_REGEX_SAVINGS:
-                    log.warning(f"  Regex cap: ${savings:,} > ${MAX_REGEX_SAVINGS:,} for '{title[:55]}' [{name}]")
-                    continue
+        result = matcher(text_src)
+        if result:
+            savings, explanation = result
+            if savings <= MAX_REGEX_SAVINGS:
                 base_savings = savings
                 base_explanation = explanation
                 break
-        if base_savings:
-            break
+            log.warning(f"  Regex cap: ${savings:,} > ${MAX_REGEX_SAVINGS:,} for '{title[:55]}' [{name}]")
+
+    # Run broad matchers on the title only. Descriptions often contain price
+    # tiers, spend examples, denominations, or comments that are not the deal's
+    # saving. Use description only for explicit/reward text if no stack was found.
+    TITLE_MATCHERS = [(n, m) for n, m in MATCHERS if n != "free_bundle"]
+    DESCRIPTION_MATCHERS = [("explicit_save", _match_explicit_save), ("spend_get", _match_spend_get_value)]
+    if not base_savings:
+        for text_src, matchers in [(title, TITLE_MATCHERS), (desc_clean, DESCRIPTION_MATCHERS)]:
+            if not text_src.strip():
+                continue
+            for name, matcher in matchers:
+                result = matcher(text_src)
+                if result:
+                    savings, explanation = result
+                    if savings > MAX_REGEX_SAVINGS:
+                        log.warning(f"  Regex cap: ${savings:,} > ${MAX_REGEX_SAVINGS:,} for '{title[:55]}' [{name}]")
+                        continue
+                    base_savings = savings
+                    base_explanation = explanation
+                    break
+            if base_savings:
+                break
 
     # Check for free gift value (additive on top of base savings)
     gift_val, gift_desc = 0, ""
