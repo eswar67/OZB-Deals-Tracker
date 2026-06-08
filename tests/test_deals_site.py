@@ -2,7 +2,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
+import ozbargain_monitor as monitor
 from scripts.build_deals_site import build, build_from_deals, load_all_memory_deals, load_latest_deals
 
 
@@ -149,6 +151,22 @@ class DealsSiteTests(unittest.TestCase):
             self.assertEqual(count, 1)
             self.assertIn("Samsung 115 TV", html)
             self.assertIn("$9,954", html)
+
+    def test_monitor_publish_uses_current_run_deals(self):
+        deals = [{
+            "title": "Fresh Deal Save $500 @ Store",
+            "link": "https://www.ozbargain.com.au/node/5",
+            "node_id": "5",
+            "savings": 500,
+        }]
+        build_mock = MagicMock(return_value=(1, Path("docs/index.html")))
+
+        with patch.object(monitor, "ENABLE_SITE_BUILD", True), \
+             patch.object(monitor, "ENABLE_SITE_AUTO_PUBLISH", False), \
+             patch("scripts.build_deals_site.build_from_deals", build_mock):
+            monitor.publish_deals_site(deals)
+
+        build_mock.assert_called_once_with(deals)
 
 
 if __name__ == "__main__":
