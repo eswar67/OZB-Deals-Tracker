@@ -7,6 +7,7 @@ No API calls — parses price patterns directly from the title string.
 Returns: {"savings": int, "explanation": str, "deal_price": int}
 
 Patterns handled (in priority order):
+  0. Combined cart/trade-in discounts e.g. "$550 off in cart + $450 trade-in bonus"
   1. "Save $X"  /  "$X off"  /  "$X saving"
   2. "Was $Y, Now $X"  /  "$X (Was $Y)"  /  "RRP $Y ... $X"
   3. "X% off $Y"  →  savings = Y × X%
@@ -35,6 +36,37 @@ def _all_prices(title: str) -> list:
 
 
 # ── Pattern matchers (return (savings, explanation) or None) ──────────────────
+
+def _match_combined_trade_in_discount(t: str):
+    """Sum stacked cart/off discounts and trade-in bonuses in the same title."""
+    if not re.search(r"\btrade[-\s]?in\b", t, re.IGNORECASE):
+        return None
+
+    components = []
+    seen_spans = set()
+    patterns = [
+        ("cart discount", r"\$\s*([\d,]+)\s*(?:off\b(?:\s+in\s+cart)?|cart\s+discount)"),
+        ("trade-in bonus", r"\$\s*([\d,]+)\s*(?:trade[-\s]?in\s+bonus|trade\s+bonus)"),
+        ("trade-in bonus", r"(?:trade[-\s]?in\s+bonus|trade\s+bonus)\s*(?:of\s+)?\$\s*([\d,]+)"),
+    ]
+    for label, pat in patterns:
+        for m in re.finditer(pat, t, re.IGNORECASE):
+            if m.span() in seen_spans:
+                continue
+            value = _price(m.group(1))
+            if value > 0:
+                seen_spans.add(m.span())
+                components.append((label, value))
+
+    if len(components) < 2:
+        return None
+
+    total = sum(value for _, value in components)
+    if total <= 0:
+        return None
+    detail = " + ".join(f"${value:,} {label}" for label, value in components)
+    return total, f"Combined discount stack: {detail} = ${total:,} potential saving"
+
 
 def _match_explicit_save(t: str):
     """'Save $200', '$200 off', '$200 saving'"""
@@ -398,6 +430,7 @@ def _match_two_prices(t: str):
 MAX_REGEX_SAVINGS = 25000
 
 MATCHERS = [
+    ("combined_trade_in", _match_combined_trade_in_discount),
     ("explicit_save",  _match_explicit_save),
     ("spend_get",      _match_spend_get_value),
     ("reward_value",   _match_reward_value),

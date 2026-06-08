@@ -86,6 +86,17 @@ class ValueParserRegressionTests(unittest.TestCase):
         self.assertEqual(result["deal_price"], 14929)
         self.assertEqual(result["savings"], 9954)
 
+    def test_trade_in_bonus_stacks_with_cart_discount(self):
+        result = parse_deal_value({
+            "title": "Samsung Galaxy Tab S11 Ultra 256GB Wi-Fi $1099 Less Trade-in (with $550 off in Cart & $450 Trade in Bonus) Delivered @ Samsung",
+            "description": "",
+        })
+
+        self.assertEqual(result["deal_price"], 1099)
+        self.assertEqual(result["savings"], 1000)
+        self.assertIn("$550 cart discount", result["explanation"])
+        self.assertIn("$450 trade-in bonus", result["explanation"])
+
 
 if __name__ == "__main__":
     unittest.main()
