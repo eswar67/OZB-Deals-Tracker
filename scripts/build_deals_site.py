@@ -557,7 +557,7 @@ title: Today's best quantified deals
 
   function agentAction(deal) {{
     if (isExpired(deal)) return 'Skip or verify stock';
-    if (urgencyScore(deal) >= 75 && aiConfidence(deal) >= 75) return 'Inspect now';
+    if (urgencyScore(deal) >= 75 && aiConfidence(deal) >= 75) return 'Review now';
     if (aiConfidence(deal) >= 80) return 'Shortlist';
     if (urgencyScore(deal) >= 70) return 'Check window';
     return 'Monitor';
