@@ -2,19 +2,12 @@ name: OzBargain Monitor
 
 on:
   schedule:
-    # GitHub cron is UTC-only, so include both AEST and AEDT ticks.
-    # Each slot has one primary wake-up plus one backup. The gate below runs
-    # the first due Sydney slot only once per day, even if a backup tick arrives.
+    # GitHub cron is UTC-only and scheduled events can be delayed or dropped.
+    # Wake frequently across both AEST/AEDT afternoon/evening windows; the
+    # Sydney-time gate + cache below sends each slot only once per day.
     # AEST:  2:00 PM = 04:00 UTC, 7:15 PM = 09:15 UTC
     # AEDT:  2:00 PM = 03:00 UTC, 7:15 PM = 08:15 UTC
-    - cron: '7 3 * * *'
-    - cron: '37 3 * * *'
-    - cron: '7 4 * * *'
-    - cron: '37 4 * * *'
-    - cron: '17 8 * * *'
-    - cron: '47 8 * * *'
-    - cron: '17 9 * * *'
-    - cron: '47 9 * * *'
+    - cron: '*/15 3-10 * * *'
   workflow_dispatch:   # allow manual trigger from GitHub UI
 
 permissions:
