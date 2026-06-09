@@ -306,7 +306,19 @@ def get_google_creds() -> Credentials:
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             log.info("Refreshing Google OAuth token…")
-            creds.refresh(Request())
+            try:
+                creds.refresh(Request())
+            except Exception as exc:
+                if token_path.exists():
+                    stale_path = token_path.with_suffix(token_path.suffix + ".revoked")
+                    try:
+                        token_path.replace(stale_path)
+                    except Exception:
+                        pass
+                raise RuntimeError(
+                    "Google OAuth refresh failed. The saved token is expired or revoked; "
+                    "run setup_oauth.py to generate a new token.json."
+                ) from exc
             token_path.write_text(creds.to_json())
         else:
             raise RuntimeError(
@@ -2010,7 +2022,13 @@ def main():
 
     publish_deals_site(top_deals)
 
-    creds = get_google_creds()
+    try:
+        creds = get_google_creds()
+    except RuntimeError as exc:
+        log.error(str(exc))
+        log.error("Skipping Gmail send; re-authenticate with setup_oauth.py and rerun.")
+        raise
+
     send_gmail_alert(
         creds, top_deals,
         briefing=briefing,
