@@ -73,28 +73,62 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
 
+      - name: Check published site slot marker
+        id: site_slot
+        if: steps.schedule_gate.outputs.should_run == 'true' && github.event_name == 'schedule' && steps.schedule_cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import re
+          from datetime import datetime
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          sydney_now = datetime.now(ZoneInfo("Australia/Sydney"))
+          current_minutes = sydney_now.hour * 60 + sydney_now.minute
+          current_slot = "afternoon" if current_minutes < 19 * 60 + 15 else "evening"
+
+          text = Path("docs/index.html").read_text(errors="ignore") if Path("docs/index.html").exists() else ""
+          match = re.search(r"Latest run:\s*(\d{2}\s+\w{3}\s+\d{4},\s+\d{1,2}:\d{2}\s+[AP]M)", text)
+          if not match:
+              print("handled=false")
+              raise SystemExit
+
+          latest = datetime.strptime(match.group(1), "%d %b %Y, %I:%M %p").replace(tzinfo=ZoneInfo("Australia/Sydney"))
+          latest_minutes = latest.hour * 60 + latest.minute
+          latest_slot = "afternoon" if 14 * 60 <= latest_minutes < 19 * 60 + 15 else "evening"
+          handled = latest.date() == sydney_now.date() and latest_slot == current_slot
+          print(f"handled={'true' if handled else 'false'}")
+          print(f"latest_site_run={latest.isoformat()}")
+          print(f"current_slot={current_slot}")
+          PY
+
+      - name: Skip slot already published by Mac fallback
+        if: steps.schedule_gate.outputs.should_run == 'true' && github.event_name == 'schedule' && steps.site_slot.outputs.handled == 'true'
+        run: echo "Published site already shows this Sydney slot was handled by fallback."
+
       - uses: actions/setup-python@v5
-        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true' && steps.site_slot.outputs.handled != 'true'
         with:
           python-version: '3.11'
           cache: pip
 
       - name: Install dependencies
-        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true' && steps.site_slot.outputs.handled != 'true'
         run: pip install -r requirements.txt
 
       - name: Run tests
-        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true' && steps.site_slot.outputs.handled != 'true'
         run: python -m unittest discover -s tests
 
       - name: Write Google credentials
-        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true' && steps.site_slot.outputs.handled != 'true'
         run: |
           echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
           echo '${{ secrets.GOOGLE_TOKEN }}'        > token.json
 
       - name: Run monitor
-        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true'
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true' && steps.site_slot.outputs.handled != 'true'
         env:
           ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           GMAIL_TO:           ${{ secrets.GMAIL_TO }}
@@ -107,16 +141,17 @@ jobs:
           ENABLE_MARKET_PRICE_LOOKUP: "false"
           ENABLE_QUALITY_SCORING: "false"
           ENABLE_PRE_SEND_REVIEW: "false"
+          ENABLE_SITE_AUTO_PUBLISH: "false"
         run: python ozbargain_monitor.py
 
       - name: Mark scheduled slot sent
-        if: steps.schedule_gate.outputs.should_run == 'true' && github.event_name == 'schedule' && steps.schedule_cache.outputs.cache-hit != 'true' && success()
+        if: steps.schedule_gate.outputs.should_run == 'true' && github.event_name == 'schedule' && steps.schedule_cache.outputs.cache-hit != 'true' && (steps.site_slot.outputs.handled == 'true' || success())
         run: |
           mkdir -p .schedule-cache-marker
           echo "${{ steps.schedule_gate.outputs.slot_key }}" > .schedule-cache-marker/slot.txt
 
       - name: Save schedule slot marker
-        if: steps.schedule_gate.outputs.should_run == 'true' && github.event_name == 'schedule' && steps.schedule_cache.outputs.cache-hit != 'true' && success()
+        if: steps.schedule_gate.outputs.should_run == 'true' && github.event_name == 'schedule' && steps.schedule_cache.outputs.cache-hit != 'true' && (steps.site_slot.outputs.handled == 'true' || success())
         uses: actions/cache/save@v4
         with:
           path: .schedule-cache-marker
