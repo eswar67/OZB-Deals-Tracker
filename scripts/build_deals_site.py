@@ -40,8 +40,23 @@ def _title_percent(title: str) -> float:
     return pct if 0 < pct <= 95 else 0
 
 
+def _title_market_price(title: str) -> int:
+    match = re.search(r"\b(?:rrp|was|usually)\s*\$?\s*(\d[\d,]*(?:\.\d{1,2})?)\b", title or "", re.IGNORECASE)
+    if not match:
+        return 0
+    value = _number(match.group(1).replace(",", ""))
+    return int(value) if value > 0 else 0
+
+
 def _savings_percent(deal: dict) -> float:
-    return _title_percent(deal.get("title", ""))
+    title_pct = _title_percent(deal.get("title", ""))
+    if title_pct:
+        return title_pct
+    market_price = int(deal.get("market_price", 0) or 0) or _title_market_price(deal.get("title", ""))
+    savings = int(deal.get("savings", 0) or 0)
+    if market_price > 0 and 0 < savings < market_price:
+        return round((savings / market_price) * 100, 1)
+    return 0
 
 
 def _savings_percent_label(deal: dict) -> str:
@@ -87,6 +102,7 @@ def _row_from_memory_item(item: dict) -> dict:
     emailed_at = _parse_dt(item.get("last_emailed_at", ""))
     last_seen_at = _parse_dt(item.get("last_seen_at", ""))
     first_seen_at = _parse_dt(item.get("first_seen_at", ""))
+    market_price = int(item.get("market_price", 0) or 0) or _title_market_price(title)
     row = {
         "title": title,
         "link": item.get("link") or "#",
@@ -94,7 +110,7 @@ def _row_from_memory_item(item: dict) -> dict:
         "savings": int(item.get("last_savings", 0) or 0),
         "best_savings": int(item.get("best_savings", 0) or 0),
         "deal_price": int(item.get("deal_price", 0) or 0),
-        "market_price": int(item.get("market_price", 0) or 0),
+        "market_price": market_price,
         "savings_percent": 0,
         "times_seen": int(item.get("times_seen", 0) or 0),
         "email_count": int(item.get("email_count", 0) or 0),
@@ -146,21 +162,24 @@ def deals_from_monitor_run(deals: list[dict], generated_at: datetime | None = No
     generated_at = generated_at or datetime.now(timezone.utc)
     rows = []
     for deal in deals:
+        title = deal.get("title") or "Untitled deal"
+        market_price = int(deal.get("market_price", 0) or 0) or _title_market_price(title)
         row = {
-            "title": deal.get("title") or "Untitled deal",
+            "title": title,
             "link": deal.get("link") or "#",
             "node_id": str(deal.get("node_id") or ""),
             "savings": int(deal.get("savings", 0) or 0),
             "best_savings": int(deal.get("best_savings") or deal.get("previous_best_savings") or deal.get("savings", 0) or 0),
             "deal_price": int(deal.get("deal_price", 0) or 0),
-            "market_price": int(deal.get("market_price", 0) or 0),
-            "savings_percent": _savings_percent(deal),
+            "market_price": market_price,
+            "savings_percent": 0,
             "times_seen": int(deal.get("times_seen", 0) or 0) + 1,
             "email_count": int(deal.get("email_count", 0) or 0) + 1,
             "last_emailed_at": generated_at,
             "category": _category_from_title(deal.get("title", "")),
             "merchant": deal.get("merchant_name") or _merchant_from_title(deal.get("title", "")),
         }
+        row["savings_percent"] = _savings_percent(row)
         rows.append(row)
     rows.sort(key=lambda row: row["savings"], reverse=True)
     return rows, generated_at
