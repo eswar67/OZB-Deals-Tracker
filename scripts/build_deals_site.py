@@ -373,7 +373,7 @@ def _render_card(deal: dict, rank: int) -> str:
       <span class="pill">Agent pick</span>
     </div>
   </div>
-  <div class="save">{_money(deal['savings'])}{pct_html}<span>potential</span></div>
+  <div class="save">{_money(deal['savings'])}{pct_html}<span>AI-derived saving</span></div>
 </article>"""
 
 
@@ -412,6 +412,14 @@ layout: default
 title: Today's best quantified deals
 ---
 <div class="deal-radar">
+  <header class="brand-header">
+    <div>
+      <div class="brand-kicker">AI-powered OzBargain monitor</div>
+      <h1>OZB Deal Radar</h1>
+      <p>Gold-ranked deal intelligence with potential savings, urgency signals, and quick filters for the latest monitor run.</p>
+    </div>
+    <div class="brand-mark">OZB</div>
+  </header>
   <section class="radar-intro">
     <div class="summary-head">
       <div>
@@ -559,11 +567,12 @@ title: Today's best quantified deals
   }}
 
   function valueLine(deal) {{
-    const parts = ['potential'];
+    const parts = ['AI-derived saving'];
     const pct = percentLabel(deal);
     const rrp = rrpLabel(deal);
     if (pct) parts.push(pct);
     if (rrp) parts.push(rrp);
+    if (!pct && !rrp && Number(deal.best_savings || 0) > Number(deal.savings || 0)) parts.push(`Best seen ${{money(deal.best_savings)}}`);
     return parts.join(' · ');
   }}
 
@@ -730,7 +739,7 @@ title: Today's best quantified deals
       <button type="button" class="mini-deal" data-top-index="${{i}}">
         <span>#${{i + 1}} · AI ${{aiConfidence(deal)}}% · ${{escapeHtml(agentAction(deal))}}</span>
         <b>${{escapeHtml(deal.title)}}</b>
-        <em>${{money(deal.savings)}} ${{escapeHtml(valueLine(deal))}}</em>
+        <em><strong>${{money(deal.savings)}}</strong> ${{escapeHtml(valueLine(deal))}}</em>
       </button>`).join('')}}</div>`;
   }}
 
@@ -741,7 +750,7 @@ title: Today's best quantified deals
       <button type="button" class="mini-deal urgent-deal" data-urgent-index="${{i}}">
         <span>#${{i + 1}} · Urgency ${{urgencyScore(deal)}}% · ${{escapeHtml(timeSensitiveReason(deal))}}</span>
         <b>${{escapeHtml(deal.title)}}</b>
-        <em>${{money(deal.savings)}} ${{escapeHtml(valueLine(deal))}}</em>
+        <em><strong>${{money(deal.savings)}}</strong> ${{escapeHtml(valueLine(deal))}}</em>
       </button>`).join('')}}</div>`;
   }}
 
