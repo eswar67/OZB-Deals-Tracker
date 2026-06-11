@@ -48,6 +48,18 @@ def _title_market_price(title: str) -> int:
     return int(value) if value > 0 else 0
 
 
+def _title_deal_price(title: str) -> int:
+    matches = re.finditer(r"\$\s*(\d[\d,]*(?:\.\d{1,2})?)", title or "")
+    for match in matches:
+        prefix = (title[:match.start()] or "").lower()[-24:]
+        if re.search(r"(rrp|was|usually|save|saving|cashback|bonus|valued|value|voucher|gift card)\s*$", prefix):
+            continue
+        value = _number(match.group(1).replace(",", ""))
+        if value > 0:
+            return int(value)
+    return 0
+
+
 def _savings_percent(deal: dict) -> float:
     title_pct = _title_percent(deal.get("title", ""))
     if title_pct:
@@ -103,13 +115,14 @@ def _row_from_memory_item(item: dict) -> dict:
     last_seen_at = _parse_dt(item.get("last_seen_at", ""))
     first_seen_at = _parse_dt(item.get("first_seen_at", ""))
     market_price = int(item.get("market_price", 0) or 0) or _title_market_price(title)
+    deal_price = int(item.get("deal_price", 0) or 0) or _title_deal_price(title)
     row = {
         "title": title,
         "link": item.get("link") or "#",
         "node_id": item.get("node_id") or "",
         "savings": int(item.get("last_savings", 0) or 0),
         "best_savings": int(item.get("best_savings", 0) or 0),
-        "deal_price": int(item.get("deal_price", 0) or 0),
+        "deal_price": deal_price,
         "market_price": market_price,
         "savings_percent": 0,
         "times_seen": int(item.get("times_seen", 0) or 0),
@@ -164,13 +177,14 @@ def deals_from_monitor_run(deals: list[dict], generated_at: datetime | None = No
     for deal in deals:
         title = deal.get("title") or "Untitled deal"
         market_price = int(deal.get("market_price", 0) or 0) or _title_market_price(title)
+        deal_price = int(deal.get("deal_price", 0) or 0) or _title_deal_price(title)
         row = {
             "title": title,
             "link": deal.get("link") or "#",
             "node_id": str(deal.get("node_id") or ""),
             "savings": int(deal.get("savings", 0) or 0),
             "best_savings": int(deal.get("best_savings") or deal.get("previous_best_savings") or deal.get("savings", 0) or 0),
-            "deal_price": int(deal.get("deal_price", 0) or 0),
+            "deal_price": deal_price,
             "market_price": market_price,
             "savings_percent": 0,
             "times_seen": int(deal.get("times_seen", 0) or 0) + 1,
@@ -373,7 +387,7 @@ def _render_card(deal: dict, rank: int) -> str:
       <span class="pill">Agent pick</span>
     </div>
   </div>
-  <div class="save">{_money(deal['savings'])}{pct_html}<span>AI-derived saving</span></div>
+  <div class="save">{_money(deal['savings'])}{pct_html}<span>Approx saving</span></div>
 </article>"""
 
 
@@ -416,7 +430,7 @@ title: Today's best quantified deals
     <div>
       <div class="brand-kicker">AI-powered OzBargain monitor</div>
       <h1>OZB Deal Radar</h1>
-      <p>Gold-ranked deal intelligence with potential savings, urgency signals, and quick filters for the latest monitor run.</p>
+      <p>Ranked deal intelligence with potential savings, urgency signals, and quick filters for the latest monitor run.</p>
     </div>
     <div class="brand-mark">OZB</div>
   </header>
@@ -555,10 +569,24 @@ title: Today's best quantified deals
     return '$' + Math.round(value || 0).toLocaleString();
   }}
 
+  function rawApproxPercent(deal) {{
+    const explicit = Number(deal.savings_percent || 0);
+    if (explicit > 0) return explicit;
+    const savings = Number(deal.savings || 0);
+    const market = Number(deal.market_price || 0);
+    const dealPrice = Number(deal.deal_price || 0);
+    const baseline = market > 0 ? market : (dealPrice > 0 ? dealPrice + savings : 0);
+    if (savings > 0 && baseline > savings) return (savings / baseline) * 100;
+    return 0;
+  }}
+
   function percentLabel(deal) {{
     const explicit = Number(deal.savings_percent || 0);
-    if (explicit > 0) return explicit >= 10 ? `${{Math.round(explicit)}}% off` : `${{explicit.toFixed(1)}}% off`;
-    return '';
+    const pct = rawApproxPercent(deal);
+    if (pct <= 0) return '';
+    if (explicit > 0) return `~${{Math.round(pct)}}% saving`;
+    const rounded = Math.max(1, Math.round(pct / 5) * 5);
+    return `~${{rounded}}% saving`;
   }}
 
   function rrpLabel(deal) {{
@@ -567,10 +595,10 @@ title: Today's best quantified deals
   }}
 
   function valueLine(deal) {{
-    const parts = ['AI-derived saving'];
+    const parts = [];
     const pct = percentLabel(deal);
     const rrp = rrpLabel(deal);
-    if (pct) parts.push(pct);
+    parts.push(pct || 'Approx saving');
     if (rrp) parts.push(rrp);
     if (!pct && !rrp && Number(deal.best_savings || 0) > Number(deal.savings || 0)) parts.push(`Best seen ${{money(deal.best_savings)}}`);
     return parts.join(' · ');
