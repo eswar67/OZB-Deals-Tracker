@@ -9,11 +9,13 @@ import re
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 
 ROOT = Path(__file__).resolve().parent.parent
 MEMORY_FILE = ROOT / "outputs" / "deal_memory.json"
 OUTPUT_FILE = ROOT / "docs" / "index.html"
+SYDNEY_TZ = ZoneInfo("Australia/Sydney")
 
 
 def _money(value) -> str:
@@ -39,17 +41,6 @@ def _title_percent(title: str) -> float:
 
 
 def _savings_percent(deal: dict) -> float:
-    explicit = _number(deal.get("savings_percent"))
-    if 0 < explicit <= 100:
-        return explicit
-
-    savings = _number(deal.get("savings"))
-    market = _number(deal.get("market_price"))
-    deal_price = _number(deal.get("deal_price"))
-    if savings > 0 and market > 0:
-        return round((savings / market) * 100, 1)
-    if savings > 0 and deal_price > 0:
-        return round((savings / (savings + deal_price)) * 100, 1)
     return _title_percent(deal.get("title", ""))
 
 
@@ -84,11 +75,6 @@ def _category_from_title(title: str) -> str:
         if any(word in t for word in words):
             return category
     return "Other"
-
-
-def _is_laptop_deal(title: str) -> bool:
-    t = title.lower()
-    return any(word in t for word in ("laptop", "macbook", "notebook", "chromebook", "ultrabook"))
 
 
 def _merchant_from_title(title: str) -> str:
@@ -184,13 +170,12 @@ def render_html(deals: list[dict], generated_at: datetime) -> str:
     total = sum(d["savings"] for d in deals)
     top = deals[0]["savings"] if deals else 0
     categories = sorted({d["category"] for d in deals})
-    laptop_deals = [deal for deal in deals if _is_laptop_deal(deal["title"])]
     cards = "\n".join(_render_card(deal, i + 1) for i, deal in enumerate(deals))
     chips = "\n".join(
         f'<button class="chip" data-filter="{escape(category)}">{escape(category)}</button>'
         for category in categories
     )
-    generated = generated_at.astimezone().strftime("%d %b %Y, %I:%M %p")
+    generated = generated_at.astimezone(SYDNEY_TZ).strftime("%d %b %Y, %I:%M %p %Z")
 
     return f"""<!doctype html>
 <html lang="en">
@@ -253,37 +238,6 @@ def render_html(deals: list[dict], generated_at: datetime) -> str:
     }}
     button.active {{ background: var(--accent); color: #fff; border-color: var(--accent); }}
     .grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 8px 0 32px; }}
-    .section-block {{
-      margin: 10px 0 26px;
-      padding: 18px;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-    }}
-    .section-head {{
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 12px;
-    }}
-    .section-title {{ margin: 0; font-size: 20px; line-height: 1.2; }}
-    .section-meta {{ color: var(--muted); font-size: 13px; }}
-    .section-list {{ display: grid; gap: 10px; }}
-    .section-item {{
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      align-items: center;
-      padding: 12px 0;
-      border-top: 1px solid #eef2f7;
-    }}
-    .section-item:first-child {{ border-top: 0; padding-top: 0; }}
-    .section-item-title {{ display: block; color: var(--ink); text-decoration: none; font-weight: 850; line-height: 1.35; }}
-    .section-item-title:hover {{ color: var(--accent-dark); }}
-    .section-item-meta {{ color: var(--muted); font-size: 13px; margin-top: 4px; }}
-    .section-item-save {{ color: var(--good); font-weight: 900; white-space: nowrap; text-align: right; }}
-    .section-item-save span {{ display: block; color: var(--muted); font-size: 12px; font-weight: 800; margin-top: 2px; }}
     .card {{
       display: grid;
       grid-template-columns: 1fr auto;
@@ -424,46 +378,12 @@ def _deal_payload(deals: list[dict]) -> str:
     return json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
 
 
-def _render_named_section(title: str, deals: list[dict]) -> str:
-    if not deals:
-        return '<div class="section-meta">No matching deals.</div>'
-    ordered = sorted(deals, key=lambda d: (d["savings"], d["best_savings"], d["last_emailed_at"]), reverse=True)
-    rows = []
-    for deal in ordered:
-        pct = _savings_percent_label(deal)
-        pct_html = f'<span>Save {escape(pct)}</span>' if pct else ""
-        rows.append(
-            f'<div class="section-item">'
-            f'<div>'
-            f'<a class="section-item-title" href="{escape(deal["link"], quote=True)}" target="_blank" rel="noopener">{escape(deal["title"])}</a>'
-            f'<div class="section-item-meta">{escape(deal["merchant"])} · {escape(deal["category"])}</div>'
-            f'</div>'
-            f'<div class="section-item-save">{_money(deal["savings"])}{pct_html}</div>'
-            f'</div>'
-        )
-    total = sum(d["savings"] for d in ordered)
-    return (
-        f'<div class="section-head"><h3 class="section-title">{escape(title)}</h3>'
-        f'<div class="section-meta">{len(ordered)} deal(s) · {_money(total)} total potential</div></div>'
-        f'<div class="section-list">{"".join(rows)}</div>'
-    )
-
-
-def _render_category_sections(deals: list[dict]) -> str:
-    grouped: dict[str, list[dict]] = {}
-    for deal in deals:
-        grouped.setdefault(deal["category"], []).append(deal)
-    ordered = sorted(grouped.items(), key=lambda item: sum(d["savings"] for d in item[1]), reverse=True)
-    return "".join(_render_named_section(category, group) for category, group in ordered)
-
-
 def render_jekyll_html(deals: list[dict], generated_at: datetime) -> str:
     total = sum(d["savings"] for d in deals)
     top = deals[0]["savings"] if deals else 0
     categories = sorted({d["category"] for d in deals})
     merchants = sorted({d["merchant"] for d in deals})
-    laptop_deals = [deal for deal in deals if _is_laptop_deal(deal["title"])]
-    generated = generated_at.astimezone().strftime("%d %b %Y, %I:%M %p")
+    generated = generated_at.astimezone(SYDNEY_TZ).strftime("%d %b %Y, %I:%M %p %Z")
     category_options = "\n".join(f'<option value="{escape(category, quote=True)}">{escape(category)}</option>' for category in categories)
     merchant_options = "\n".join(f'<option value="{escape(merchant, quote=True)}">{escape(merchant)}</option>' for merchant in merchants)
     deal_json = _deal_payload(deals)
@@ -487,22 +407,12 @@ title: Today's best quantified deals
     </div>
   </section>
   <section class="top-strip urgent-strip" id="urgent-strip" aria-label="Flash and time-sensitive deals"></section>
-  <section class="section-block" aria-label="Laptop deals">
-    {_render_named_section("Laptop deals", laptop_deals)}
-  </section>
   <section class="preset-bar" aria-label="Saved preference presets">
     <button type="button" class="preset" data-preset="high">High savings</button>
     <button type="button" class="preset" data-preset="tech">Tech deals</button>
     <button type="button" class="preset" data-preset="home">Home deals</button>
     <button type="button" class="preset" data-preset="finance">Finance/cashback</button>
     <button type="button" class="preset" data-preset="watchlist">My watchlist</button>
-  </section>
-  <section class="section-block" aria-label="All category sections">
-    <div class="section-head">
-      <h2 class="section-title">All categories</h2>
-      <div class="section-meta">{len(categories)} categories published</div>
-    </div>
-    {_render_category_sections(deals)}
   </section>
   <section class="category-summary" id="category-summary" aria-label="Category summary"></section>
   <div class="toolbar">
@@ -621,18 +531,7 @@ title: Today's best quantified deals
   function percentLabel(deal) {{
     const explicit = Number(deal.savings_percent || 0);
     if (explicit > 0) return explicit >= 10 ? `${{Math.round(explicit)}}% off` : `${{explicit.toFixed(1)}}% off`;
-    const savings = Number(deal.savings || 0);
-    const market = Number(deal.market_price || 0);
-    const dealPrice = Number(deal.deal_price || 0);
-    let pct = 0;
-    if (savings > 0 && market > 0) pct = (savings / market) * 100;
-    else if (savings > 0 && dealPrice > 0) pct = (savings / (savings + dealPrice)) * 100;
-    if (!pct) {{
-      const match = String(deal.title || '').match(/\\b(\\d{{1,3}}(?:\\.\\d+)?)\\s*%\\s*(?:off|discount|saving|cashback)\\b/i);
-      pct = match ? Number(match[1]) : 0;
-    }}
-    if (!(pct > 0 && pct <= 100)) return '';
-    return pct >= 10 ? `${{Math.round(pct)}}% off` : `${{pct.toFixed(1)}}% off`;
+    return '';
   }}
 
   function escapeHtml(value) {{
