@@ -11,7 +11,7 @@ on:
   workflow_dispatch:   # allow manual trigger from GitHub UI
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ozbargain-monitor
@@ -127,6 +127,12 @@ jobs:
           echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
           echo '${{ secrets.GOOGLE_TOKEN }}'        > token.json
 
+      - name: Configure git for site publish
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true' && steps.site_slot.outputs.handled != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Run monitor
         if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true' && steps.site_slot.outputs.handled != 'true'
         env:
@@ -141,7 +147,7 @@ jobs:
           ENABLE_MARKET_PRICE_LOOKUP: "false"
           ENABLE_QUALITY_SCORING: "false"
           ENABLE_PRE_SEND_REVIEW: "false"
-          ENABLE_SITE_AUTO_PUBLISH: "false"
+          ENABLE_SITE_AUTO_PUBLISH: "true"
         run: python ozbargain_monitor.py
 
       - name: Mark scheduled slot sent
