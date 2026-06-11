@@ -132,7 +132,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           GMAIL_TO:           ${{ secrets.GMAIL_TO }}
-          GMAIL_CC:           ${{ secrets.GMAIL_CC }}
+          GMAIL_BCC:          ${{ secrets.GMAIL_BCC || secrets.GMAIL_CC }}
           SEATS_AERO_API_KEY: ${{ secrets.SEATS_AERO_API_KEY }}
           TOKEN_FILE:         token.json
           CREDENTIALS_FILE:   credentials.json

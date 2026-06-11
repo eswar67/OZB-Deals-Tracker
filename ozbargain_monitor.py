@@ -173,7 +173,7 @@ MAX_SECTION_SCORE_DEALS    = int(os.getenv("MAX_SECTION_SCORE_DEALS", "12"))
 
 ANTHROPIC_API_KEY  = os.getenv("ANTHROPIC_API_KEY")
 GMAIL_TO           = os.getenv("GMAIL_TO")   # comma-separated for multiple recipients
-GMAIL_CC           = os.getenv("GMAIL_CC")   # optional CC recipients, comma-separated
+GMAIL_BCC          = os.getenv("GMAIL_BCC") or os.getenv("GMAIL_CC")  # legacy GMAIL_CC is now sent as BCC
 TOKEN_FILE         = os.getenv("TOKEN_FILE", "token.json")
 CREDENTIALS_FILE   = os.getenv("CREDENTIALS_FILE", "credentials.json")
 PUBLIC_DEALS_URL   = os.getenv("PUBLIC_DEALS_URL", "https://eswar67.github.io/OZB-Deals-Tracker/")
@@ -1852,8 +1852,8 @@ def send_gmail_alert(
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["To"]      = GMAIL_TO
-    if GMAIL_CC:
-        msg["Cc"] = GMAIL_CC
+    if GMAIL_BCC:
+        msg["Bcc"] = GMAIL_BCC
 
     # Plain-text fallback
     plain = "\n\n".join(
@@ -1889,13 +1889,14 @@ def send_gmail_alert(
     msg.attach(MIMEText(html, "html"))
 
     all_recipients = [a.strip() for a in (GMAIL_TO or "").split(",") if a.strip()]
-    if GMAIL_CC:
-        all_recipients += [a.strip() for a in GMAIL_CC.split(",") if a.strip()]
+    bcc_recipients = [a.strip() for a in (GMAIL_BCC or "").split(",") if a.strip()]
+    all_recipients += bcc_recipients
 
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
     service.users().messages().send(userId="me", body={"raw": raw}).execute()
+    bcc_note = f" + {len(bcc_recipients)} BCC" if bcc_recipients else ""
     log.info(
-        f"Gmail alert sent to {', '.join(all_recipients)} "
+        f"Gmail alert sent to {GMAIL_TO}{bcc_note} "
         f"({len(deals)} product, {len(financial_deals)} financial, {len(cc_travel_deals)} CC/travel, "
         f"{len(food_deals)} food, {len(home_deals)} home)"
     )
