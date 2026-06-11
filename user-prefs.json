@@ -68,14 +68,6 @@
       "transfer bonus", "status match", "lounge"
     ],
 
-    "low_interest_keywords": [
-      "gaming chair", "skillet", "frying pan", "kettle", "toaster",
-      "desk lamp", "usb hub", "webcam", "mouse pad",
-      "bluetooth speaker", "phone case", "random laptop",
-      "gym equipment", "protein powder", "vitamin",
-      "pet food", "garden hose", "tool kit"
-    ],
-
     "stacking_platforms": ["ShopBack", "Cashrewards", "Qantas Shopping", "Everyday Rewards"]
   }
 }
