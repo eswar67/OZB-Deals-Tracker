@@ -375,8 +375,6 @@ def _render_card(deal: dict, rank: int) -> str:
     category = deal["category"]
     merchant = deal["merchant"]
     search = " ".join([title, category, merchant]).lower()
-    pct = _savings_percent_label(deal)
-    pct_html = f'<span class="percent">Save {escape(pct)}</span>' if pct else ""
     return f"""<article class="card" data-category="{escape(category, quote=True)}" data-search="{escape(search, quote=True)}">
   <div>
     <div class="rank">#{rank} · {escape(category)}</div>
@@ -387,7 +385,7 @@ def _render_card(deal: dict, rank: int) -> str:
       <span class="pill">Agent pick</span>
     </div>
   </div>
-  <div class="save">{_money(deal['savings'])}{pct_html}<span>Approx saving</span></div>
+  <div class="save">{_money(deal['savings'])}<span>Approx saving</span></div>
 </article>"""
 
 
@@ -569,38 +567,16 @@ title: Today's best quantified deals
     return '$' + Math.round(value || 0).toLocaleString();
   }}
 
-  function rawApproxPercent(deal) {{
-    const explicit = Number(deal.savings_percent || 0);
-    if (explicit > 0) return explicit;
-    const savings = Number(deal.savings || 0);
-    const market = Number(deal.market_price || 0);
-    const dealPrice = Number(deal.deal_price || 0);
-    const baseline = market > 0 ? market : (dealPrice > 0 ? dealPrice + savings : 0);
-    if (savings > 0 && baseline > savings) return (savings / baseline) * 100;
-    return 0;
-  }}
-
-  function percentLabel(deal) {{
-    const explicit = Number(deal.savings_percent || 0);
-    const pct = rawApproxPercent(deal);
-    if (pct <= 0) return '';
-    if (explicit > 0) return `~${{Math.round(pct)}}% saving`;
-    const rounded = Math.max(1, Math.round(pct / 5) * 5);
-    return `~${{rounded}}% saving`;
-  }}
-
   function rrpLabel(deal) {{
     const market = Number(deal.market_price || 0);
     return market > 0 ? `RRP ${{money(market)}}` : '';
   }}
 
   function valueLine(deal) {{
-    const parts = [];
-    const pct = percentLabel(deal);
+    const parts = ['Approx saving'];
     const rrp = rrpLabel(deal);
-    parts.push(pct || 'Approx saving');
     if (rrp) parts.push(rrp);
-    if (!pct && !rrp && Number(deal.best_savings || 0) > Number(deal.savings || 0)) parts.push(`Best seen ${{money(deal.best_savings)}}`);
+    if (!rrp && Number(deal.best_savings || 0) > Number(deal.savings || 0)) parts.push(`Best seen ${{money(deal.best_savings)}}`);
     return parts.join(' · ');
   }}
 
@@ -913,10 +889,57 @@ title: Today's best quantified deals
     return `${{index + 1}}. ${{deal.title}} — ${{money(deal.savings)}} ${{valueLine(deal)}}, AI ${{aiConfidence(deal)}}%, urgency ${{urgencyScore(deal)}}%, action: ${{agentAction(deal)}}.`;
   }}
 
+  const chatStopWords = new Set([
+    'a', 'an', 'and', 'any', 'are', 'around', 'ask', 'best', 'better', 'can', 'current', 'deal', 'deals',
+    'find', 'for', 'from', 'give', 'good', 'have', 'help', 'i', 'in', 'is', 'latest', 'list', 'me',
+    'now', 'of', 'offer', 'offers', 'on', 'or', 'please', 'present', 'relevant', 'result', 'results',
+    'right', 'search', 'show', 'some', 'the', 'these', 'this', 'to', 'top', 'what', 'which', 'with',
+  ]);
+
+  const categoryAliases = [
+    ['Computing', /\\b(laptop|macbook|computer|computing|pc|gaming pc|ssd|monitor|keyboard|mouse|nas|router|ubiquiti)\\b/],
+    ['Electronics', /\\b(tv|oled|qled|samsung|iphone|ipad|tablet|airpods|headphones|camera|phone|electronics)\\b/],
+    ['Home', /\\b(home|vacuum|dyson|robot|kitchen|fridge|mower|cooktop|appliance|furniture|mattress)\\b/],
+    ['Finance', /\\b(finance|cashback|credit card|qantas|velocity|points|loan|insurance|refinance|bank)\\b/],
+    ['Automotive', /\\b(car|suv|vehicle|automotive|tyres|charger|ev|dash cam|battery|vw|skoda|byd|chery)\\b/],
+    ['Gaming', /\\b(gaming|xbox|playstation|nintendo|switch|steam|lego)\\b/],
+    ['Travel', /\\b(travel|flight|hotel|airline|luggage)\\b/],
+  ];
+
+  function tokenizePrompt(prompt) {{
+    const tokens = String(prompt || '').toLowerCase().match(/[a-z0-9]+(?:\\.[a-z0-9]+)?/g) || [];
+    return [...new Set(tokens.filter(token => token.length >= 2 && !chatStopWords.has(token)))];
+  }}
+
+  function inferredCategories(text) {{
+    return categoryAliases
+      .filter(([, pattern]) => pattern.test(text))
+      .map(([category]) => category);
+  }}
+
+  function relevanceScore(deal, tokens) {{
+    if (!tokens.length) return 0;
+    const title = String(deal.title || '').toLowerCase();
+    const merchant = String(deal.merchant || '').toLowerCase();
+    const category = String(deal.category || '').toLowerCase();
+    const haystack = `${{title}} ${{merchant}} ${{category}}`;
+    let score = 0;
+    for (const token of tokens) {{
+      if (title.includes(token)) score += 6;
+      else if (merchant.includes(token)) score += 5;
+      else if (category.includes(token)) score += 4;
+      else if (haystack.includes(token)) score += 2;
+      else if (token.length > 4 && haystack.includes(token.slice(0, -1))) score += 1;
+    }}
+    if (tokens.length > 1 && tokens.every(token => haystack.includes(token))) score += 5;
+    return score;
+  }}
+
   function chatRowsForPrompt(prompt) {{
     const text = prompt.toLowerCase();
-    let rows = currentRows.length ? [...currentRows] : rankDeals(deals);
-    const terms = parseTerms(text.replace(/\\b(best|top|show|find|deals|deal|urgent|right now|what are|which|with|about|please|me|risk|offers|offer|explain)\\b/g, ' '));
+    let rows = rankDeals(deals).filter(deal => !isExpired(deal));
+    const categories = inferredCategories(text);
+    const tokens = tokenizePrompt(text).filter(token => !['urgent', 'flash', 'time', 'risk', 'terms', 'verify', 'caution', 'confidence', 'ai', 'pick', 'shortlist'].includes(token));
     if (/\\burgent|flash|time|ending|limited|today\\b/.test(text)) rows = rows.filter(isTimeSensitive);
     if (/\\bcashback|voucher|gift card|points|loan|finance|insurance|rebate\\b/.test(text)) {{
       rows = rows.filter(deal => /\\b(cashback|voucher|gift card|points|loan|finance|insurance|rebate|qantas|velocity)\\b/i.test(deal.title + ' ' + deal.category));
@@ -925,9 +948,16 @@ title: Today's best quantified deals
       rows = rows.filter(deal => riskSignal(deal) !== 'Low friction');
     }}
     if (/\\bconfidence|ai pick|agent pick|shortlist\\b/.test(text)) rows = rows.filter(deal => aiConfidence(deal) >= 75);
-    if (terms.length) {{
-      const narrowed = rows.filter(deal => terms.some(term => dealText(deal).includes(term)));
-      if (narrowed.length) rows = narrowed;
+    if (categories.length) {{
+      const wanted = new Set(categories);
+      rows = rows.filter(deal => wanted.has(deal.category) || categories.some(category => dealText(deal).includes(category.toLowerCase())));
+    }}
+    if (tokens.length) {{
+      const scored = rows
+        .map(deal => [deal, relevanceScore(deal, tokens)])
+        .filter(([, score]) => score > 0)
+        .sort((a, b) => (b[1] - a[1]) || (b[0].savings - a[0].savings) || (qualityScore(b[0]) - qualityScore(a[0])));
+      rows = scored.map(([deal]) => deal);
     }}
     if (/\\burgency|urgent|flash|time\\b/.test(text)) return rows.sort((a, b) => (urgencyScore(b) - urgencyScore(a)) || (b.savings - a.savings));
     if (/\\bconfidence|ai\\b/.test(text)) return rows.sort((a, b) => (aiConfidence(b) - aiConfidence(a)) || (b.savings - a.savings));
