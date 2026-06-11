@@ -23,6 +23,43 @@ def _money(value) -> str:
         return "$0"
 
 
+def _number(value, default=0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _title_percent(title: str) -> float:
+    match = re.search(r"\b(\d{1,3}(?:\.\d+)?)\s*%\s*(?:off|discount|saving|cashback)\b", title or "", re.IGNORECASE)
+    if not match:
+        return 0
+    pct = _number(match.group(1))
+    return pct if 0 < pct <= 95 else 0
+
+
+def _savings_percent(deal: dict) -> float:
+    explicit = _number(deal.get("savings_percent"))
+    if 0 < explicit <= 100:
+        return explicit
+
+    savings = _number(deal.get("savings"))
+    market = _number(deal.get("market_price"))
+    deal_price = _number(deal.get("deal_price"))
+    if savings > 0 and market > 0:
+        return round((savings / market) * 100, 1)
+    if savings > 0 and deal_price > 0:
+        return round((savings / (savings + deal_price)) * 100, 1)
+    return _title_percent(deal.get("title", ""))
+
+
+def _savings_percent_label(deal: dict) -> str:
+    pct = _savings_percent(deal)
+    if pct <= 0:
+        return ""
+    return f"{pct:.0f}% off" if pct >= 10 else f"{pct:.1f}% off"
+
+
 def _parse_dt(value: str) -> datetime:
     if not value:
         return datetime.min.replace(tzinfo=timezone.utc)
@@ -49,6 +86,11 @@ def _category_from_title(title: str) -> str:
     return "Other"
 
 
+def _is_laptop_deal(title: str) -> bool:
+    t = title.lower()
+    return any(word in t for word in ("laptop", "macbook", "notebook", "chromebook", "ultrabook"))
+
+
 def _merchant_from_title(title: str) -> str:
     match = re.search(r"\s@\s*(.+)$", title)
     return match.group(1).strip() if match else "OzBargain"
@@ -65,6 +107,9 @@ def _row_from_memory_item(item: dict) -> dict:
         "node_id": item.get("node_id") or "",
         "savings": int(item.get("last_savings", 0) or 0),
         "best_savings": int(item.get("best_savings", 0) or 0),
+        "deal_price": int(item.get("deal_price", 0) or 0),
+        "market_price": int(item.get("market_price", 0) or 0),
+        "savings_percent": 0,
         "times_seen": int(item.get("times_seen", 0) or 0),
         "email_count": int(item.get("email_count", 0) or 0),
         "last_emailed_at": emailed_at,
@@ -73,6 +118,7 @@ def _row_from_memory_item(item: dict) -> dict:
         "category": _category_from_title(title),
         "merchant": _merchant_from_title(title),
     }
+    row["savings_percent"] = _savings_percent(row)
     return row
 
 
@@ -120,6 +166,9 @@ def deals_from_monitor_run(deals: list[dict], generated_at: datetime | None = No
             "node_id": str(deal.get("node_id") or ""),
             "savings": int(deal.get("savings", 0) or 0),
             "best_savings": int(deal.get("best_savings") or deal.get("previous_best_savings") or deal.get("savings", 0) or 0),
+            "deal_price": int(deal.get("deal_price", 0) or 0),
+            "market_price": int(deal.get("market_price", 0) or 0),
+            "savings_percent": _savings_percent(deal),
             "times_seen": int(deal.get("times_seen", 0) or 0) + 1,
             "email_count": int(deal.get("email_count", 0) or 0) + 1,
             "last_emailed_at": generated_at,
@@ -135,6 +184,7 @@ def render_html(deals: list[dict], generated_at: datetime) -> str:
     total = sum(d["savings"] for d in deals)
     top = deals[0]["savings"] if deals else 0
     categories = sorted({d["category"] for d in deals})
+    laptop_deals = [deal for deal in deals if _is_laptop_deal(deal["title"])]
     cards = "\n".join(_render_card(deal, i + 1) for i, deal in enumerate(deals))
     chips = "\n".join(
         f'<button class="chip" data-filter="{escape(category)}">{escape(category)}</button>'
@@ -203,6 +253,37 @@ def render_html(deals: list[dict], generated_at: datetime) -> str:
     }}
     button.active {{ background: var(--accent); color: #fff; border-color: var(--accent); }}
     .grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 8px 0 32px; }}
+    .section-block {{
+      margin: 10px 0 26px;
+      padding: 18px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }}
+    .section-head {{
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }}
+    .section-title {{ margin: 0; font-size: 20px; line-height: 1.2; }}
+    .section-meta {{ color: var(--muted); font-size: 13px; }}
+    .section-list {{ display: grid; gap: 10px; }}
+    .section-item {{
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 0;
+      border-top: 1px solid #eef2f7;
+    }}
+    .section-item:first-child {{ border-top: 0; padding-top: 0; }}
+    .section-item-title {{ display: block; color: var(--ink); text-decoration: none; font-weight: 850; line-height: 1.35; }}
+    .section-item-title:hover {{ color: var(--accent-dark); }}
+    .section-item-meta {{ color: var(--muted); font-size: 13px; margin-top: 4px; }}
+    .section-item-save {{ color: var(--good); font-weight: 900; white-space: nowrap; text-align: right; }}
+    .section-item-save span {{ display: block; color: var(--muted); font-size: 12px; font-weight: 800; margin-top: 2px; }}
     .card {{
       display: grid;
       grid-template-columns: 1fr auto;
@@ -221,6 +302,7 @@ def render_html(deals: list[dict], generated_at: datetime) -> str:
     .pill {{ border: 1px solid #e8edf3; background: #f8fafc; border-radius: 999px; padding: 4px 8px; font-size: 12px; color: var(--muted); }}
     .save {{ text-align: right; color: var(--good); font-size: 24px; font-weight: 950; white-space: nowrap; }}
     .save span {{ display: block; margin-top: 2px; color: var(--muted); font-size: 11px; text-transform: uppercase; }}
+    .save .percent {{ color: var(--good); font-size: 13px; text-transform: none; }}
     .empty {{ display: none; padding: 28px 0 48px; color: var(--muted); }}
     footer {{ border-top: 1px solid var(--line); padding: 18px 0 28px; color: var(--muted); font-size: 13px; }}
     @media (max-width: 760px) {{
@@ -306,6 +388,8 @@ def _render_card(deal: dict, rank: int) -> str:
     category = deal["category"]
     merchant = deal["merchant"]
     search = " ".join([title, category, merchant]).lower()
+    pct = _savings_percent_label(deal)
+    pct_html = f'<span class="percent">Save {escape(pct)}</span>' if pct else ""
     return f"""<article class="card" data-category="{escape(category, quote=True)}" data-search="{escape(search, quote=True)}">
   <div>
     <div class="rank">#{rank} · {escape(category)}</div>
@@ -316,7 +400,7 @@ def _render_card(deal: dict, rank: int) -> str:
       <span class="pill">Agent pick</span>
     </div>
   </div>
-  <div class="save">{_money(deal['savings'])}<span>potential</span></div>
+  <div class="save">{_money(deal['savings'])}{pct_html}<span>potential</span></div>
 </article>"""
 
 
@@ -328,6 +412,9 @@ def _deal_payload(deals: list[dict]) -> str:
             "link": deal["link"],
             "savings": int(deal["savings"]),
             "best_savings": int(deal["best_savings"]),
+            "deal_price": int(deal.get("deal_price", 0) or 0),
+            "market_price": int(deal.get("market_price", 0) or 0),
+            "savings_percent": round(_savings_percent(deal), 1),
             "last_emailed_at": deal["last_emailed_at"].isoformat(),
             "last_seen_at": deal.get("last_seen_at", deal["last_emailed_at"]).isoformat(),
             "first_seen_at": deal.get("first_seen_at", deal["last_emailed_at"]).isoformat(),
@@ -337,11 +424,45 @@ def _deal_payload(deals: list[dict]) -> str:
     return json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
 
 
+def _render_named_section(title: str, deals: list[dict]) -> str:
+    if not deals:
+        return '<div class="section-meta">No matching deals.</div>'
+    ordered = sorted(deals, key=lambda d: (d["savings"], d["best_savings"], d["last_emailed_at"]), reverse=True)
+    rows = []
+    for deal in ordered:
+        pct = _savings_percent_label(deal)
+        pct_html = f'<span>Save {escape(pct)}</span>' if pct else ""
+        rows.append(
+            f'<div class="section-item">'
+            f'<div>'
+            f'<a class="section-item-title" href="{escape(deal["link"], quote=True)}" target="_blank" rel="noopener">{escape(deal["title"])}</a>'
+            f'<div class="section-item-meta">{escape(deal["merchant"])} · {escape(deal["category"])}</div>'
+            f'</div>'
+            f'<div class="section-item-save">{_money(deal["savings"])}{pct_html}</div>'
+            f'</div>'
+        )
+    total = sum(d["savings"] for d in ordered)
+    return (
+        f'<div class="section-head"><h3 class="section-title">{escape(title)}</h3>'
+        f'<div class="section-meta">{len(ordered)} deal(s) · {_money(total)} total potential</div></div>'
+        f'<div class="section-list">{"".join(rows)}</div>'
+    )
+
+
+def _render_category_sections(deals: list[dict]) -> str:
+    grouped: dict[str, list[dict]] = {}
+    for deal in deals:
+        grouped.setdefault(deal["category"], []).append(deal)
+    ordered = sorted(grouped.items(), key=lambda item: sum(d["savings"] for d in item[1]), reverse=True)
+    return "".join(_render_named_section(category, group) for category, group in ordered)
+
+
 def render_jekyll_html(deals: list[dict], generated_at: datetime) -> str:
     total = sum(d["savings"] for d in deals)
     top = deals[0]["savings"] if deals else 0
     categories = sorted({d["category"] for d in deals})
     merchants = sorted({d["merchant"] for d in deals})
+    laptop_deals = [deal for deal in deals if _is_laptop_deal(deal["title"])]
     generated = generated_at.astimezone().strftime("%d %b %Y, %I:%M %p")
     category_options = "\n".join(f'<option value="{escape(category, quote=True)}">{escape(category)}</option>' for category in categories)
     merchant_options = "\n".join(f'<option value="{escape(merchant, quote=True)}">{escape(merchant)}</option>' for merchant in merchants)
@@ -366,12 +487,22 @@ title: Today's best quantified deals
     </div>
   </section>
   <section class="top-strip urgent-strip" id="urgent-strip" aria-label="Flash and time-sensitive deals"></section>
+  <section class="section-block" aria-label="Laptop deals">
+    {_render_named_section("Laptop deals", laptop_deals)}
+  </section>
   <section class="preset-bar" aria-label="Saved preference presets">
     <button type="button" class="preset" data-preset="high">High savings</button>
     <button type="button" class="preset" data-preset="tech">Tech deals</button>
     <button type="button" class="preset" data-preset="home">Home deals</button>
     <button type="button" class="preset" data-preset="finance">Finance/cashback</button>
     <button type="button" class="preset" data-preset="watchlist">My watchlist</button>
+  </section>
+  <section class="section-block" aria-label="All category sections">
+    <div class="section-head">
+      <h2 class="section-title">All categories</h2>
+      <div class="section-meta">{len(categories)} categories published</div>
+    </div>
+    {_render_category_sections(deals)}
   </section>
   <section class="category-summary" id="category-summary" aria-label="Category summary"></section>
   <div class="toolbar">
@@ -485,6 +616,23 @@ title: Today's best quantified deals
 
   function money(value) {{
     return '$' + Math.round(value || 0).toLocaleString();
+  }}
+
+  function percentLabel(deal) {{
+    const explicit = Number(deal.savings_percent || 0);
+    if (explicit > 0) return explicit >= 10 ? `${{Math.round(explicit)}}% off` : `${{explicit.toFixed(1)}}% off`;
+    const savings = Number(deal.savings || 0);
+    const market = Number(deal.market_price || 0);
+    const dealPrice = Number(deal.deal_price || 0);
+    let pct = 0;
+    if (savings > 0 && market > 0) pct = (savings / market) * 100;
+    else if (savings > 0 && dealPrice > 0) pct = (savings / (savings + dealPrice)) * 100;
+    if (!pct) {{
+      const match = String(deal.title || '').match(/\\b(\\d{{1,3}}(?:\\.\\d+)?)\\s*%\\s*(?:off|discount|saving|cashback)\\b/i);
+      pct = match ? Number(match[1]) : 0;
+    }}
+    if (!(pct > 0 && pct <= 100)) return '';
+    return pct >= 10 ? `${{Math.round(pct)}}% off` : `${{pct.toFixed(1)}}% off`;
   }}
 
   function escapeHtml(value) {{
@@ -625,6 +773,7 @@ title: Today's best quantified deals
   function cardHtml(deal, index) {{
     const badges = freshnessBadges(deal).map(badge => `<span class="badge">${{escapeHtml(badge)}}</span>`).join('');
     const score = qualityScore(deal);
+    const pct = percentLabel(deal);
     return `<article class="card">
       <div>
         <div class="rank">#${{index + 1}} · ${{escapeHtml(deal.category)}} · Agent Score ${{score}}/100</div>
@@ -639,7 +788,7 @@ title: Today's best quantified deals
         <div class="agent-note">${{escapeHtml(agentInsight(deal))}}</div>
         <button class="details" type="button" data-index="${{index}}">Details</button>
       </div>
-      <div class="save">${{money(deal.savings)}}<span>potential</span></div>
+      <div class="save">${{money(deal.savings)}}${{pct ? `<span class="percent">Save ${{escapeHtml(pct)}}</span>` : ''}}<span>potential</span></div>
     </article>`;
   }}
 
@@ -650,7 +799,7 @@ title: Today's best quantified deals
       <button type="button" class="mini-deal" data-top-index="${{i}}">
         <span>#${{i + 1}} · AI ${{aiConfidence(deal)}}% · ${{escapeHtml(agentAction(deal))}}</span>
         <b>${{escapeHtml(deal.title)}}</b>
-        <em>${{money(deal.savings)}} potential</em>
+        <em>${{money(deal.savings)}} potential${{percentLabel(deal) ? ` · Save ${{percentLabel(deal)}}` : ''}}</em>
       </button>`).join('')}}</div>`;
   }}
 
@@ -661,7 +810,7 @@ title: Today's best quantified deals
       <button type="button" class="mini-deal urgent-deal" data-urgent-index="${{i}}">
         <span>#${{i + 1}} · Urgency ${{urgencyScore(deal)}}% · ${{escapeHtml(timeSensitiveReason(deal))}}</span>
         <b>${{escapeHtml(deal.title)}}</b>
-        <em>${{money(deal.savings)}} potential</em>
+        <em>${{money(deal.savings)}} potential${{percentLabel(deal) ? ` · Save ${{percentLabel(deal)}}` : ''}}</em>
       </button>`).join('')}}</div>`;
   }}
 
@@ -770,8 +919,9 @@ title: Today's best quantified deals
 
   function detailHtml(deal) {{
     const badges = freshnessBadges(deal).map(badge => `<span class="badge">${{escapeHtml(badge)}}</span>`).join('');
+    const pct = percentLabel(deal);
     return `<h2>${{escapeHtml(deal.title)}}</h2>
-      <div class="drawer-save">${{money(deal.savings)}} potential · Agent Score ${{qualityScore(deal)}}/100</div>
+      <div class="drawer-save">${{money(deal.savings)}} potential${{pct ? ` · Save ${{escapeHtml(pct)}}` : ''}} · Agent Score ${{qualityScore(deal)}}/100</div>
       <div class="badges">${{badges}}</div>
       <dl>
         <dt>AI confidence</dt><dd>${{aiConfidence(deal)}}%</dd>
@@ -793,7 +943,8 @@ title: Today's best quantified deals
   }}
 
   function dealSummaryLine(deal, index) {{
-    return `${{index + 1}}. ${{deal.title}} — ${{money(deal.savings)}} potential, AI ${{aiConfidence(deal)}}%, urgency ${{urgencyScore(deal)}}%, action: ${{agentAction(deal)}}.`;
+    const pct = percentLabel(deal);
+    return `${{index + 1}}. ${{deal.title}} — ${{money(deal.savings)}} potential${{pct ? `, save ${{pct}}` : ''}}, AI ${{aiConfidence(deal)}}%, urgency ${{urgencyScore(deal)}}%, action: ${{agentAction(deal)}}.`;
   }}
 
   function chatRowsForPrompt(prompt) {{

@@ -2021,7 +2021,7 @@ def main():
     briefing = build_briefing(top_by_savings)
     log.info(f"Briefing: {briefing['action_count']} actions · ${briefing['total_value']:,}")
 
-    publish_deals_site(top_deals)
+    publish_deals_site(deals)
 
     try:
         creds = get_google_creds()
