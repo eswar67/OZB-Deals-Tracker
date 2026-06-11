@@ -2,17 +2,17 @@
 ---
 
 :root {
-  --radar-bg: #050505;
-  --radar-ink: #fff8e8;
-  --radar-muted: #d5c8a8;
-  --radar-line: #5a4620;
-  --radar-accent: #d6a11f;
-  --radar-accent-dark: #ffd66b;
-  --radar-good: #ffd45a;
-  --radar-card: #12100c;
-  --radar-panel: #0f0d09;
-  --radar-panel-soft: #1e180d;
-  --radar-shadow: rgba(0, 0, 0, 0.32);
+  --radar-bg: #000000;
+  --radar-ink: #f8edcf;
+  --radar-muted: #c7b06a;
+  --radar-line: rgba(212, 175, 55, 0.34);
+  --radar-accent: #d4af37;
+  --radar-accent-dark: #f4d675;
+  --radar-good: #f4d675;
+  --radar-card: #070707;
+  --radar-panel: #050505;
+  --radar-panel-soft: #101010;
+  --radar-shadow: rgba(0, 0, 0, 0.55);
 }
 
 * {
@@ -25,7 +25,7 @@ html {
 
 body {
   margin: 0;
-  background: var(--radar-bg);
+  background: #000;
   color: var(--radar-ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
 }
@@ -46,15 +46,15 @@ a {
 
 .deal-radar .brand-header {
   align-items: center;
-  background: #0d0b07;
-  border: 1px solid rgba(255, 214, 107, 0.34);
+  background: #000;
+  border: 1px solid var(--radar-line);
   border-radius: 8px;
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 18px 48px var(--radar-shadow);
   display: flex;
   gap: 1rem;
   justify-content: space-between;
   margin-bottom: 0.85rem;
-  padding: 1.1rem 1.2rem;
+  padding: 1.35rem 1.45rem;
 }
 
 .deal-radar .brand-kicker {
@@ -65,8 +65,10 @@ a {
 }
 
 .deal-radar h1 {
-  color: var(--radar-ink);
-  font-size: 2rem;
+  color: var(--radar-accent-dark);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.35rem;
+  font-weight: 400;
   line-height: 1.05;
   margin: 0.18rem 0 0;
 }
@@ -81,9 +83,10 @@ a {
 
 .deal-radar .brand-mark {
   align-items: center;
-  background: var(--radar-accent);
+  background: #050505;
+  border: 1px solid var(--radar-accent);
   border-radius: 8px;
-  color: #070604;
+  color: var(--radar-accent-dark);
   display: flex;
   flex: 0 0 4.25rem;
   font-size: 1.1rem;
@@ -94,7 +97,7 @@ a {
 }
 
 .deal-radar .radar-intro {
-  background: #0d0b07;
+  background: #050505;
   border: 1px solid var(--radar-line);
   border-radius: 8px;
   margin: 0 0 0.85rem;
@@ -137,13 +140,13 @@ a {
 }
 
 .deal-radar .category-summary {
-  border-bottom: 1px solid rgba(216, 169, 59, 0.2);
+  border-bottom: 1px solid var(--radar-line);
   padding-bottom: 0.7rem;
 }
 
 .deal-radar .stat {
-  background: #171309;
-  border: 1px solid rgba(255, 214, 107, 0.28);
+  background: #0a0a0a;
+  border: 1px solid var(--radar-line);
   border-radius: 8px;
   padding: 0.7rem 0.8rem;
 }
@@ -177,7 +180,7 @@ a {
 
 .deal-radar input,
 .deal-radar select {
-  background: #090807;
+  background: #000;
   border: 1px solid var(--radar-line);
   border-radius: 8px;
   color: var(--radar-ink);
@@ -189,7 +192,7 @@ a {
 .deal-radar input:focus,
 .deal-radar select:focus,
 .deal-radar button:focus {
-  outline: 2px solid rgba(242, 212, 123, 0.48);
+  outline: 2px solid rgba(244, 214, 117, 0.55);
   outline-offset: 2px;
 }
 
@@ -253,7 +256,7 @@ a {
 .deal-radar .reset {
   background: var(--radar-accent);
   border-color: var(--radar-accent);
-  color: #080806;
+  color: #000;
 }
 
 .deal-radar .filter-toggle {
@@ -263,13 +266,13 @@ a {
 
 .deal-radar .clear-filters {
   background: transparent;
-  border-color: rgba(216, 169, 59, 0.32);
+  border-color: var(--radar-line);
   color: var(--radar-muted);
 }
 
 .deal-radar .chat-panel {
-  background: #0d0b07;
-  border: 1px solid rgba(255, 214, 107, 0.26);
+  background: #050505;
+  border: 1px solid var(--radar-line);
   border-radius: 8px;
   margin: 0.75rem 0;
   padding: 0.85rem;
@@ -298,7 +301,7 @@ a {
 
 .deal-radar .chat-clear {
   background: transparent;
-  border-color: rgba(216, 169, 59, 0.28);
+  border-color: var(--radar-line);
   color: var(--radar-muted);
 }
 
@@ -310,8 +313,8 @@ a {
 }
 
 .deal-radar .chat-suggestions button {
-  background: rgba(13, 12, 9, 0.82);
-  border-color: rgba(216, 169, 59, 0.22);
+  background: #000;
+  border-color: var(--radar-line);
   color: var(--radar-muted);
   font-size: 0.75rem;
   padding: 0.38rem 0.55rem;
@@ -326,7 +329,7 @@ a {
 }
 
 .deal-radar .chat-message {
-  border: 1px solid rgba(216, 169, 59, 0.18);
+  border: 1px solid var(--radar-line);
   border-radius: 8px;
   color: var(--radar-ink);
   font-size: 0.82rem;
@@ -336,13 +339,13 @@ a {
 }
 
 .deal-radar .chat-message.user {
-  background: rgba(216, 169, 59, 0.12);
+  background: rgba(212, 175, 55, 0.12);
   justify-self: end;
   max-width: 82%;
 }
 
 .deal-radar .chat-message.assistant {
-  background: rgba(10, 9, 7, 0.9);
+  background: #000;
   color: var(--radar-muted);
   max-width: 92%;
 }
@@ -356,8 +359,8 @@ a {
 
 .deal-radar .preset,
 .deal-radar .cat-chip {
-  background: rgba(27, 23, 16, 0.86);
-  border-color: rgba(216, 169, 59, 0.26);
+  background: #050505;
+  border-color: var(--radar-line);
   color: var(--radar-muted);
   font-size: 0.76rem;
   padding: 0.42rem 0.56rem;
@@ -365,7 +368,7 @@ a {
 
 .deal-radar .preset:hover,
 .deal-radar .cat-chip:hover {
-  color: #080806;
+  color: #000;
 }
 
 .deal-radar .cat-chip span {
@@ -378,8 +381,8 @@ a {
 }
 
 .deal-radar .urgent-strip {
-  background: #0d0b07;
-  border: 1px solid rgba(255, 214, 107, 0.28);
+  background: #050505;
+  border: 1px solid var(--radar-line);
   border-radius: 8px;
   margin-top: 0.75rem;
   padding: 0.7rem;
@@ -419,8 +422,8 @@ a {
 
 .deal-radar .mini-deal {
   align-content: start;
-  background: #15110a;
-  border-color: rgba(255, 214, 107, 0.26);
+  background: #000;
+  border-color: var(--radar-line);
   display: grid;
   flex: 0 0 300px;
   gap: 0.42rem;
@@ -432,7 +435,7 @@ a {
 }
 
 .deal-radar .urgent-deal {
-  border-color: rgba(242, 212, 123, 0.42);
+  border-color: rgba(244, 214, 117, 0.56);
 }
 
 .deal-radar .link-button {
@@ -526,7 +529,7 @@ a {
 }
 
 .deal-radar .badge {
-  border: 1px solid rgba(216, 169, 59, 0.34);
+  border: 1px solid var(--radar-line);
   border-radius: 999px;
   color: var(--radar-accent-dark);
   font-size: 0.68rem;
@@ -535,7 +538,7 @@ a {
 }
 
 .deal-radar .pill {
-  background: #0f0d09;
+  background: #000;
   border: 1px solid var(--radar-line);
   border-radius: 999px;
   color: var(--radar-muted);
@@ -593,7 +596,7 @@ a {
 }
 
 .deal-radar .detail-drawer {
-  background: #0e0c09;
+  background: #050505;
   border: 1px solid var(--radar-line);
   border-radius: 8px;
   bottom: 1rem;
@@ -645,6 +648,16 @@ a {
 .deal-radar .drawer-link {
   display: inline-block;
   margin-top: 0.9rem;
+}
+
+.deal-radar .fineprint,
+.deal-radar .agent-note,
+.deal-radar .meta,
+.deal-radar .mini-deal span,
+.deal-radar .mini-deal em,
+.deal-radar .chat-subtitle,
+.deal-radar .strip-subtitle {
+  color: var(--radar-muted);
 }
 
 @media (max-width: 760px) {
