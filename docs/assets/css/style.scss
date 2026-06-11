@@ -488,8 +488,10 @@ section {
   display: block;
   margin-top: 0.1rem;
   color: var(--radar-muted);
-  font-size: 0.68rem;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-transform: none;
 }
 
 .deal-radar .save .percent {

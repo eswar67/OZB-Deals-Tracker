@@ -534,6 +534,20 @@ title: Today's best quantified deals
     return '';
   }}
 
+  function rrpLabel(deal) {{
+    const market = Number(deal.market_price || 0);
+    return market > 0 ? `RRP ${{money(market)}}` : '';
+  }}
+
+  function valueLine(deal) {{
+    const parts = ['potential'];
+    const pct = percentLabel(deal);
+    const rrp = rrpLabel(deal);
+    if (pct) parts.push(pct);
+    if (rrp) parts.push(rrp);
+    return parts.join(' · ');
+  }}
+
   function escapeHtml(value) {{
     return String(value || '').replace(/[&<>"']/g, char => ({{
       '&': '&amp;',
@@ -672,7 +686,6 @@ title: Today's best quantified deals
   function cardHtml(deal, index) {{
     const badges = freshnessBadges(deal).map(badge => `<span class="badge">${{escapeHtml(badge)}}</span>`).join('');
     const score = qualityScore(deal);
-    const pct = percentLabel(deal);
     return `<article class="card">
       <div>
         <div class="rank">#${{index + 1}} · ${{escapeHtml(deal.category)}} · Agent Score ${{score}}/100</div>
@@ -687,7 +700,7 @@ title: Today's best quantified deals
         <div class="agent-note">${{escapeHtml(agentInsight(deal))}}</div>
         <button class="details" type="button" data-index="${{index}}">Details</button>
       </div>
-      <div class="save">${{money(deal.savings)}}${{pct ? `<span class="percent">Save ${{escapeHtml(pct)}}</span>` : ''}}<span>potential</span></div>
+      <div class="save">${{money(deal.savings)}}<span>${{escapeHtml(valueLine(deal))}}</span></div>
     </article>`;
   }}
 
@@ -698,7 +711,7 @@ title: Today's best quantified deals
       <button type="button" class="mini-deal" data-top-index="${{i}}">
         <span>#${{i + 1}} · AI ${{aiConfidence(deal)}}% · ${{escapeHtml(agentAction(deal))}}</span>
         <b>${{escapeHtml(deal.title)}}</b>
-        <em>${{money(deal.savings)}} potential${{percentLabel(deal) ? ` · Save ${{percentLabel(deal)}}` : ''}}</em>
+        <em>${{money(deal.savings)}} ${{escapeHtml(valueLine(deal))}}</em>
       </button>`).join('')}}</div>`;
   }}
 
@@ -709,7 +722,7 @@ title: Today's best quantified deals
       <button type="button" class="mini-deal urgent-deal" data-urgent-index="${{i}}">
         <span>#${{i + 1}} · Urgency ${{urgencyScore(deal)}}% · ${{escapeHtml(timeSensitiveReason(deal))}}</span>
         <b>${{escapeHtml(deal.title)}}</b>
-        <em>${{money(deal.savings)}} potential${{percentLabel(deal) ? ` · Save ${{percentLabel(deal)}}` : ''}}</em>
+        <em>${{money(deal.savings)}} ${{escapeHtml(valueLine(deal))}}</em>
       </button>`).join('')}}</div>`;
   }}
 
@@ -818,9 +831,8 @@ title: Today's best quantified deals
 
   function detailHtml(deal) {{
     const badges = freshnessBadges(deal).map(badge => `<span class="badge">${{escapeHtml(badge)}}</span>`).join('');
-    const pct = percentLabel(deal);
     return `<h2>${{escapeHtml(deal.title)}}</h2>
-      <div class="drawer-save">${{money(deal.savings)}} potential${{pct ? ` · Save ${{escapeHtml(pct)}}` : ''}} · Agent Score ${{qualityScore(deal)}}/100</div>
+      <div class="drawer-save">${{money(deal.savings)}} ${{escapeHtml(valueLine(deal))}} · Agent Score ${{qualityScore(deal)}}/100</div>
       <div class="badges">${{badges}}</div>
       <dl>
         <dt>AI confidence</dt><dd>${{aiConfidence(deal)}}%</dd>
@@ -842,8 +854,7 @@ title: Today's best quantified deals
   }}
 
   function dealSummaryLine(deal, index) {{
-    const pct = percentLabel(deal);
-    return `${{index + 1}}. ${{deal.title}} — ${{money(deal.savings)}} potential${{pct ? `, save ${{pct}}` : ''}}, AI ${{aiConfidence(deal)}}%, urgency ${{urgencyScore(deal)}}%, action: ${{agentAction(deal)}}.`;
+    return `${{index + 1}}. ${{deal.title}} — ${{money(deal.savings)}} ${{valueLine(deal)}}, AI ${{aiConfidence(deal)}}%, urgency ${{urgencyScore(deal)}}%, action: ${{agentAction(deal)}}.`;
   }}
 
   function chatRowsForPrompt(prompt) {{
