@@ -9,6 +9,15 @@ on:
     # AEDT:  2:00 PM = 03:00 UTC, 7:15 PM = 08:15 UTC
     - cron: '*/15 3-10 * * *'
   workflow_dispatch:   # allow manual trigger from GitHub UI
+    inputs:
+      send_email:
+        description: "Send Gmail alert during this manual run"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 permissions:
   contents: write
@@ -148,6 +157,7 @@ jobs:
           ENABLE_QUALITY_SCORING: "false"
           ENABLE_PRE_SEND_REVIEW: "false"
           ENABLE_SITE_AUTO_PUBLISH: "true"
+          SEND_EMAIL: ${{ github.event_name == 'schedule' || inputs.send_email == 'true' }}
         run: python ozbargain_monitor.py
 
       - name: Mark scheduled slot sent

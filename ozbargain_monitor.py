@@ -165,6 +165,7 @@ ENABLE_MARKET_PRICE_LOOKUP = os.getenv("ENABLE_MARKET_PRICE_LOOKUP", "false").lo
 LIVE_GIFT_VALUE_LOOKUP     = os.getenv("LIVE_GIFT_VALUE_LOOKUP", "false").lower() in ("1", "true", "yes", "on")
 ENABLE_QUALITY_SCORING     = os.getenv("ENABLE_QUALITY_SCORING", "false").lower() in ("1", "true", "yes", "on")
 ENABLE_PRE_SEND_REVIEW     = os.getenv("ENABLE_PRE_SEND_REVIEW", "false").lower() in ("1", "true", "yes", "on")
+SEND_EMAIL                 = os.getenv("SEND_EMAIL", "true").lower() in ("1", "true", "yes", "on")
 MAX_PRODUCT_SCORE_DEALS    = int(os.getenv("MAX_PRODUCT_SCORE_DEALS", "40"))
 MAX_FINANCIAL_VALUE_DEALS  = int(os.getenv("MAX_FINANCIAL_VALUE_DEALS", "20"))
 MAX_FINANCIAL_SCORE_DEALS  = int(os.getenv("MAX_FINANCIAL_SCORE_DEALS", "20"))
@@ -2022,6 +2023,12 @@ def main():
     log.info(f"Briefing: {briefing['action_count']} actions · ${briefing['total_value']:,}")
 
     publish_deals_site(deals)
+
+    if not SEND_EMAIL:
+        log.info("SEND_EMAIL=false — site published and Gmail send skipped.")
+        record_run(deals, [], MIN_SAVINGS)
+        log.info("=== Done ===")
+        return
 
     try:
         creds = get_google_creds()
