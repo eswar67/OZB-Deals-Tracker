@@ -385,7 +385,7 @@ def _render_card(deal: dict, rank: int) -> str:
       <span class="pill">Agent pick</span>
     </div>
   </div>
-  <div class="save">{_money(deal['savings'])}<span>Approx saving</span></div>
+  <div class="save">{_money(deal['savings'])}<span>Potential saving</span></div>
 </article>"""
 
 
@@ -573,7 +573,7 @@ title: Today's best quantified deals
   }}
 
   function valueLine(deal) {{
-    const parts = ['Approx saving'];
+    const parts = ['Potential saving'];
     const rrp = rrpLabel(deal);
     if (rrp) parts.push(rrp);
     if (!rrp && Number(deal.best_savings || 0) > Number(deal.savings || 0)) parts.push(`Best seen ${{money(deal.best_savings)}}`);
