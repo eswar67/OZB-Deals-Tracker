@@ -126,7 +126,7 @@ a {
 
 .deal-radar .stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.55rem;
   margin: 0.8rem 0 0;
 }
@@ -378,6 +378,52 @@ a {
 
 .deal-radar .top-strip {
   margin: 0.85rem 0 0.75rem;
+}
+
+.deal-radar .deal-section {
+  background: #050505;
+  border: 1px solid var(--radar-line);
+  border-radius: 8px;
+  margin: 0.8rem 0;
+  padding: 0.85rem;
+}
+
+.deal-radar .section-head,
+.deal-radar .all-active-section summary {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.deal-radar .section-title,
+.deal-radar .all-active-section summary span {
+  color: var(--radar-accent-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.deal-radar .section-subtitle {
+  color: var(--radar-muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  margin-top: 0.2rem;
+}
+
+.deal-radar .section-count,
+.deal-radar .all-active-section summary strong {
+  color: var(--radar-good);
+  font-size: 1rem;
+}
+
+.deal-radar .all-active-section summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.deal-radar .all-active-section summary::-webkit-details-marker {
+  display: none;
 }
 
 .deal-radar .urgent-strip {
@@ -722,7 +768,9 @@ a {
   }
 
   .deal-radar .summary-head,
-  .deal-radar .strip-head {
+  .deal-radar .strip-head,
+  .deal-radar .section-head,
+  .deal-radar .all-active-section summary {
     display: block;
   }
 

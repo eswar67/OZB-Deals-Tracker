@@ -64,9 +64,24 @@ def annotate_deals(deals: list[dict]) -> list[dict]:
         deal["memory_key"] = key
         deal["first_seen_at"] = prior.get("first_seen_at", "")
         deal["times_seen"] = int(prior.get("times_seen", 0) or 0)
+        deal["email_count"] = int(prior.get("email_count", 0) or 0)
+        deal["last_emailed_at"] = prior.get("last_emailed_at", "")
         deal["previous_best_savings"] = prior_best
         deal["is_new_deal"] = not bool(prior)
-        deal["is_best_seen"] = current > 0 and current >= prior_best
+        deal["is_best_seen"] = current > 0 and current > prior_best
+        deal["is_delta_deal"] = (
+            deal["is_new_deal"]
+            or deal["email_count"] == 0
+            or deal["is_best_seen"]
+        )
+        if deal["is_new_deal"]:
+            deal["delta_reason"] = "new"
+        elif deal["email_count"] == 0:
+            deal["delta_reason"] = "first_email"
+        elif deal["is_best_seen"]:
+            deal["delta_reason"] = "saving_improved"
+        else:
+            deal["delta_reason"] = ""
     return deals
 
 
@@ -131,6 +146,8 @@ def record_run(all_deals: Iterable[dict], emailed_deals: Iterable[dict], min_sav
         item["last_seen_at"] = run_at
         item["last_title"] = deal.get("title", "")
         item["last_savings"] = current
+        item["deal_price"] = int(deal.get("deal_price", 0) or 0)
+        item["market_price"] = int(deal.get("market_price", 0) or 0)
         item["times_seen"] = int(item.get("times_seen", 0) or 0) + 1
         if current > int(item.get("best_savings", 0) or 0):
             item["best_savings"] = current

@@ -39,8 +39,40 @@ class DealMemoryTests(unittest.TestCase):
                 self.assertEqual(audit["reason_counts"]["below_savings_threshold"], 1)
                 self.assertEqual(deals[0]["times_seen"], 1)
                 self.assertFalse(deals[0]["is_new_deal"])
+                self.assertFalse(deals[0]["is_delta_deal"])
+                self.assertEqual(deals[0]["email_count"], 1)
                 self.assertTrue((out / "deal_memory.json").exists())
                 self.assertTrue((out / "latest_missed_deal_audit.json").exists())
+
+    def test_delta_recognition_only_realerts_on_improved_savings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            with patch.object(deal_memory, "OUTPUT_DIR", out), \
+                 patch.object(deal_memory, "MEMORY_FILE", out / "deal_memory.json"), \
+                 patch.object(deal_memory, "AUDIT_FILE", out / "missed_deal_audit.jsonl"), \
+                 patch.object(deal_memory, "LATEST_AUDIT_FILE", out / "latest_missed_deal_audit.json"):
+
+                deal = {
+                    "node_id": "10",
+                    "title": "Phone Deal Save $300 @ Example",
+                    "link": "https://www.ozbargain.com.au/node/10",
+                    "savings": 300,
+                }
+
+                deal_memory.annotate_deals([deal])
+                self.assertTrue(deal["is_delta_deal"])
+                self.assertEqual(deal["delta_reason"], "new")
+
+                deal_memory.record_run([deal], [deal], min_savings=200)
+                repeat = dict(deal)
+                deal_memory.annotate_deals([repeat])
+                self.assertFalse(repeat["is_delta_deal"])
+                self.assertEqual(repeat["delta_reason"], "")
+
+                improved = dict(deal, savings=450)
+                deal_memory.annotate_deals([improved])
+                self.assertTrue(improved["is_delta_deal"])
+                self.assertEqual(improved["delta_reason"], "saving_improved")
 
 
 if __name__ == "__main__":

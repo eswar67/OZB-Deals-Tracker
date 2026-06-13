@@ -252,6 +252,18 @@ def publish_deals_site(deals: list[dict]) -> None:
         log.warning("Deals site auto-publish failed: %s", exc)
 
 
+def is_delta_deal(deal: dict) -> bool:
+    savings = int(deal.get("savings", 0) or 0)
+    previous_best = int(deal.get("previous_best_savings", 0) or 0)
+    email_count = int(deal.get("email_count", 0) or 0)
+    return bool(
+        deal.get("is_delta_deal")
+        or deal.get("is_new_deal")
+        or email_count == 0
+        or (savings > 0 and savings > previous_best)
+    )
+
+
 def _deal_priority(deal: dict) -> tuple:
     """Cheap ranking signal used before spending Claude tokens."""
     return (
@@ -1986,29 +1998,34 @@ def main():
     # 8. Savings-first inclusion. Optional quality scoring is off by default.
     deals = score_deals(deals)
 
-    top_deals = sorted(
+    active_top_deals = sorted(
         (d for d in deals if d.get("savings", 0) >= MIN_SAVINGS),
         key=lambda d: d.get("savings", 0),
         reverse=True,
     )
-    log.info(f"{len(top_deals)} deal(s) have quantified savings ≥ ${MIN_SAVINGS}")
+    log.info(f"{len(active_top_deals)} active deal(s) have quantified savings ≥ ${MIN_SAVINGS}")
 
     # 9. Flash deal flagging
-    for d in top_deals:
+    for d in active_top_deals:
         d["is_flash"] = is_flash_deal(d, flash_hours=6.0, flash_min_score=8)
 
-    flash = [d for d in top_deals if d.get("is_flash")]
+    flash = [d for d in active_top_deals if d.get("is_flash")]
     if flash:
         log.info(f"⚡ {len(flash)} flash deal(s) detected")
 
     # 10. Preference matching + relevance tagging
-    top_deals = match_all(top_deals)
-    for d in top_deals:
+    active_top_deals = match_all(active_top_deals)
+    for d in active_top_deals:
         tags = d.get("relevance_tags", [])
         d["is_priority_watchlist"] = any("Watchlist" in tag for tag in tags)
 
+    top_deals = [d for d in active_top_deals if is_delta_deal(d)]
+    log.info(f"{len(top_deals)} delta deal(s) are new, first-email, or improved")
+
+    publish_deals_site(active_top_deals)
+
     if not top_deals:
-        log.info("No deals with quantified savings above threshold — no email sent.")
+        log.info("No new or improved delta deals above threshold — no email sent.")
         record_run(deals, [], MIN_SAVINGS)
         return
 
@@ -2021,8 +2038,6 @@ def main():
     top_by_savings = top_deals[:5]
     briefing = build_briefing(top_by_savings)
     log.info(f"Briefing: {briefing['action_count']} actions · ${briefing['total_value']:,}")
-
-    publish_deals_site(deals)
 
     if not SEND_EMAIL:
         log.info("SEND_EMAIL=false — site published and Gmail send skipped.")

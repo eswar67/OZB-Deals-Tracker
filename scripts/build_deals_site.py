@@ -127,6 +127,8 @@ def _row_from_memory_item(item: dict) -> dict:
         "savings_percent": 0,
         "times_seen": int(item.get("times_seen", 0) or 0),
         "email_count": int(item.get("email_count", 0) or 0),
+        "is_today_delta": False,
+        "delta_reason": "",
         "last_emailed_at": emailed_at,
         "last_seen_at": last_seen_at,
         "first_seen_at": first_seen_at,
@@ -189,6 +191,8 @@ def deals_from_monitor_run(deals: list[dict], generated_at: datetime | None = No
             "savings_percent": 0,
             "times_seen": int(deal.get("times_seen", 0) or 0) + 1,
             "email_count": int(deal.get("email_count", 0) or 0) + 1,
+            "is_today_delta": bool(deal.get("is_delta_deal") or deal.get("is_new_deal") or deal.get("delta_reason")),
+            "delta_reason": deal.get("delta_reason") or ("new" if deal.get("is_new_deal") else ""),
             "last_emailed_at": generated_at,
             "category": _category_from_title(deal.get("title", "")),
             "merchant": deal.get("merchant_name") or _merchant_from_title(deal.get("title", "")),
@@ -400,6 +404,8 @@ def _deal_payload(deals: list[dict]) -> str:
             "deal_price": int(deal.get("deal_price", 0) or 0),
             "market_price": int(deal.get("market_price", 0) or 0),
             "savings_percent": round(_savings_percent(deal), 1),
+            "is_today_delta": bool(deal.get("is_today_delta")),
+            "delta_reason": deal.get("delta_reason", ""),
             "last_emailed_at": deal["last_emailed_at"].isoformat(),
             "last_seen_at": deal.get("last_seen_at", deal["last_emailed_at"]).isoformat(),
             "first_seen_at": deal.get("first_seen_at", deal["last_emailed_at"]).isoformat(),
@@ -412,6 +418,8 @@ def _deal_payload(deals: list[dict]) -> str:
 def render_jekyll_html(deals: list[dict], generated_at: datetime) -> str:
     total = sum(d["savings"] for d in deals)
     top = deals[0]["savings"] if deals else 0
+    delta_deals = [d for d in deals if d.get("is_today_delta")]
+    delta_total = sum(d["savings"] for d in delta_deals)
     categories = sorted({d["category"] for d in deals})
     merchants = sorted({d["merchant"] for d in deals})
     generated = generated_at.astimezone(SYDNEY_TZ).strftime("%d %b %Y, %I:%M %p %Z")
@@ -436,12 +444,14 @@ title: Today's best quantified deals
     <div class="summary-head">
       <div>
         <div class="stamp">Latest run: {escape(generated)}</div>
-        <p>Every remembered deal, ranked by potential value. Use quick views or open filters when you want to narrow the list.</p>
+        <p>Today focuses on newly detected or improved deals. Expand all active deals when you want the full current market view.</p>
       </div>
     </div>
     <div class="stats">
-      <div class="stat"><div class="label">Matching Deals</div><div class="value" id="stat-count">{len(deals)}</div></div>
-      <div class="stat"><div class="label">Potential Value</div><div class="value" id="stat-total">{_money(total)}</div></div>
+      <div class="stat"><div class="label">Today's Delta</div><div class="value" id="stat-delta">{len(delta_deals)}</div></div>
+      <div class="stat"><div class="label">Delta Value</div><div class="value" id="stat-delta-total">{_money(delta_total)}</div></div>
+      <div class="stat"><div class="label">Active Deals</div><div class="value" id="stat-count">{len(deals)}</div></div>
+      <div class="stat"><div class="label">Active Value</div><div class="value" id="stat-total">{_money(total)}</div></div>
       <div class="stat"><div class="label">Top Saving</div><div class="value" id="stat-top">{_money(top)}</div></div>
     </div>
   </section>
@@ -519,10 +529,27 @@ title: Today's best quantified deals
       <button type="submit">Ask</button>
     </form>
   </section>
-  <section class="top-strip" id="top-strip" aria-label="Top 10 deals"></section>
-  <section class="grid" id="deals">
+  <section class="top-strip" id="top-strip" aria-label="Top 10 delta deals"></section>
+  <section class="deal-section today-section">
+    <div class="section-head">
+      <div>
+        <div class="section-title">Today's delta deals</div>
+        <div class="section-subtitle">New, first-time, or improved deals from this run.</div>
+      </div>
+      <div class="section-count" id="today-count">{len(delta_deals)}</div>
+    </div>
+    <section class="grid" id="today-deals"></section>
+    <div class="empty" id="today-empty">No new or improved deals match the current filters.</div>
   </section>
-  <div class="empty" id="empty">No matching deals.</div>
+  <details class="deal-section all-active-section" id="all-active-details">
+    <summary>
+      <span>All active deals</span>
+      <strong id="all-count">{len(deals)}</strong>
+    </summary>
+    <div class="section-subtitle">Full current active list, still sorted by savings and controlled by the filters above.</div>
+    <section class="grid" id="deals"></section>
+    <div class="empty" id="empty">No active deals match the current filters.</div>
+  </details>
   <aside class="detail-drawer" id="detail-drawer" hidden aria-live="polite">
     <button class="drawer-close" id="drawer-close" type="button" aria-label="Close deal details">Close</button>
     <div id="drawer-content"></div>
@@ -545,6 +572,7 @@ title: Today's best quantified deals
     resetButtons: Array.from(document.querySelectorAll('#reset-filters, #clear-filters')),
     toggle: document.querySelector('#filter-toggle'),
     panel: document.querySelector('#filter-panel'),
+    todayGrid: document.querySelector('#today-deals'),
     grid: document.querySelector('#deals'),
     urgentStrip: document.querySelector('#urgent-strip'),
     topStrip: document.querySelector('#top-strip'),
@@ -553,6 +581,11 @@ title: Today's best quantified deals
     drawerClose: document.querySelector('#drawer-close'),
     drawerContent: document.querySelector('#drawer-content'),
     empty: document.querySelector('#empty'),
+    todayEmpty: document.querySelector('#today-empty'),
+    todayCount: document.querySelector('#today-count'),
+    allCount: document.querySelector('#all-count'),
+    statDelta: document.querySelector('#stat-delta'),
+    statDeltaTotal: document.querySelector('#stat-delta-total'),
     statCount: document.querySelector('#stat-count'),
     statTotal: document.querySelector('#stat-total'),
     statTop: document.querySelector('#stat-top'),
@@ -562,6 +595,8 @@ title: Today's best quantified deals
     chatClear: document.querySelector('#chat-clear'),
   }};
   let currentRows = [];
+  let currentTodayRows = [];
+  let currentFocusRows = [];
 
   function money(value) {{
     return '$' + Math.round(value || 0).toLocaleString();
@@ -676,10 +711,18 @@ title: Today's best quantified deals
     if (isExpired(deal)) badges.push('Expired/OOS');
     if (firstSeenDays <= 1) badges.push('Fresh lead');
     if (deal.best_savings && deal.savings >= deal.best_savings) badges.push('Best detected');
+    if (deal.is_today_delta) badges.push(deltaLabel(deal));
     if (seenDays >= 7) badges.push('Stale');
     if (aiConfidence(deal) >= 80) badges.push('High confidence');
     if (urgencyScore(deal) >= 75) badges.push('Action window');
     return badges.length ? badges : ['Agent reviewed'];
+  }}
+
+  function deltaLabel(deal) {{
+    if (deal.delta_reason === 'saving_improved') return 'Improved today';
+    if (deal.delta_reason === 'first_email') return 'First email';
+    if (deal.delta_reason === 'new') return 'New today';
+    return 'Today';
   }}
 
   function timeSensitiveReason(deal) {{
@@ -715,7 +758,7 @@ title: Today's best quantified deals
     return copy;
   }}
 
-  function cardHtml(deal, index) {{
+  function cardHtml(deal, index, scope = 'all') {{
     const badges = freshnessBadges(deal).map(badge => `<span class="badge">${{escapeHtml(badge)}}</span>`).join('');
     const score = qualityScore(deal);
     return `<article class="card">
@@ -730,7 +773,7 @@ title: Today's best quantified deals
           <span class="pill">${{escapeHtml(agentAction(deal))}}</span>
         </div>
         <div class="agent-note">${{escapeHtml(agentInsight(deal))}}</div>
-        <button class="details" type="button" data-index="${{index}}">Details</button>
+        <button class="details" type="button" data-scope="${{scope}}" data-index="${{index}}">Details</button>
       </div>
       <div class="save">${{money(deal.savings)}}<span>${{escapeHtml(valueLine(deal))}}</span></div>
     </article>`;
@@ -811,12 +854,23 @@ title: Today's best quantified deals
       return matchesSearch(deal, query);
     }}));
 
+    const todayRows = rows.filter(deal => deal.is_today_delta);
+    const focusRows = todayRows.length ? todayRows : rows;
+
     currentRows = rows;
-    els.grid.innerHTML = rows.map(cardHtml).join('');
-    els.urgentStrip.innerHTML = urgentStripHtml(rows);
-    els.topStrip.innerHTML = topStripHtml(rows);
+    currentTodayRows = todayRows;
+    currentFocusRows = focusRows;
+    els.todayGrid.innerHTML = todayRows.map((deal, index) => cardHtml(deal, index, 'today')).join('');
+    els.grid.innerHTML = rows.map((deal, index) => cardHtml(deal, index, 'all')).join('');
+    els.urgentStrip.innerHTML = urgentStripHtml(focusRows);
+    els.topStrip.innerHTML = topStripHtml(focusRows);
     renderCategorySummary(rows);
+    els.todayEmpty.style.display = todayRows.length ? 'none' : 'block';
     els.empty.style.display = rows.length ? 'none' : 'block';
+    els.todayCount.textContent = todayRows.length.toLocaleString();
+    els.allCount.textContent = rows.length.toLocaleString();
+    els.statDelta.textContent = todayRows.length.toLocaleString();
+    els.statDeltaTotal.textContent = money(todayRows.reduce((sum, deal) => sum + deal.savings, 0));
     els.statCount.textContent = rows.length.toLocaleString();
     els.statTotal.textContent = money(rows.reduce((sum, deal) => sum + deal.savings, 0));
     els.statTop.textContent = money(rows[0]?.savings || 0);
@@ -1023,7 +1077,7 @@ title: Today's best quantified deals
   els.urgentStrip.addEventListener('click', event => {{
     const button = event.target.closest('.mini-deal');
     if (!button) return;
-    const urgent = [...currentRows].filter(isTimeSensitive).sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a)));
+    const urgent = [...currentFocusRows].filter(isTimeSensitive).sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a)));
     openDetails(urgent[Number(button.dataset.urgentIndex)]);
   }});
   els.grid.addEventListener('click', event => {{
@@ -1031,10 +1085,15 @@ title: Today's best quantified deals
     if (!button) return;
     openDetails(currentRows[Number(button.dataset.index)]);
   }});
+  els.todayGrid.addEventListener('click', event => {{
+    const button = event.target.closest('.details');
+    if (!button) return;
+    openDetails(currentTodayRows[Number(button.dataset.index)]);
+  }});
   els.topStrip.addEventListener('click', event => {{
     const button = event.target.closest('.mini-deal');
     if (!button) return;
-    const top = [...currentRows].sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a)));
+    const top = [...currentFocusRows].sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a)));
     openDetails(top[Number(button.dataset.topIndex)]);
   }});
   els.chatForm.addEventListener('submit', event => {{

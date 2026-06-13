@@ -92,6 +92,10 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn("assistantReply", html)
             self.assertIn("data-chat-prompt", html)
             self.assertIn("AI confidence", html)
+            self.assertIn("Today's Delta", html)
+            self.assertIn("today-deals", html)
+            self.assertIn("All active deals", html)
+            self.assertIn("all-active-details", html)
 
     def test_build_uses_all_memory_deals_for_filtering(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -130,6 +134,8 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn("Old Laptop", html)
             self.assertIn("Samsung TV", html)
             self.assertIn("Savings high to low", html)
+            self.assertIn("Today's delta deals", html)
+            self.assertIn("No new or improved deals match the current filters.", html)
             self.assertNotIn('"times_seen"', html)
             self.assertNotIn('"email_count"', html)
             self.assertNotIn('"node_id"', html)
@@ -144,6 +150,8 @@ class DealsSiteTests(unittest.TestCase):
                     "node_id": "962268",
                     "merchant_name": "JB Hi-Fi",
                     "savings": 9954,
+                    "is_delta_deal": True,
+                    "delta_reason": "new",
                 }
             ], output)
 
@@ -151,6 +159,8 @@ class DealsSiteTests(unittest.TestCase):
             self.assertEqual(count, 1)
             self.assertIn("Samsung 115 TV", html)
             self.assertIn("$9,954", html)
+            self.assertIn('"is_today_delta": true', html)
+            self.assertIn("New today", html)
 
     def test_monitor_publish_uses_current_run_deals(self):
         deals = [{

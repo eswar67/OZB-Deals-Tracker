@@ -23,11 +23,23 @@ class DefaultMainPipelineTests(unittest.TestCase):
             "merchant_name": "example.com",
         }
 
+        def annotate_delta(deals):
+            for deal in deals:
+                deal.update({
+                    "is_delta_deal": True,
+                    "is_new_deal": True,
+                    "email_count": 0,
+                    "previous_best_savings": 0,
+                    "delta_reason": "new",
+                })
+            return deals
+
         with patch.object(monitor, "fetch_all_deals", return_value=[sample_deal]), \
              patch.object(monitor, "fetch_financial_deals", side_effect=AssertionError("legacy financial feed called")), \
              patch.object(monitor, "fetch_travel_deals", side_effect=AssertionError("legacy travel feed called")), \
              patch.object(monitor, "fetch_lifestyle_deals", side_effect=AssertionError("legacy lifestyle feed called")), \
              patch.object(monitor.anthropic, "Anthropic", side_effect=AssertionError("Anthropic should be disabled by default")), \
+             patch.object(monitor, "annotate_deals", side_effect=annotate_delta), \
              patch.object(monitor, "get_google_creds", return_value=object()), \
              patch.object(monitor, "publish_deals_site") as publish_site, \
              patch.object(monitor, "record_run") as record_run, \
