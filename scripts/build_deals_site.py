@@ -438,6 +438,41 @@ def _deal_payload(deals: list[dict]) -> str:
     return json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
 
 
+def _load_agent_config() -> dict:
+    """Config for the Deal Assistant agent: points valuations, goal maps,
+    and an optional LLM proxy endpoint (set agent_llm_endpoint in user-prefs.json
+    to enable a real generative brain via a serverless proxy)."""
+    try:
+        prefs = json.loads((ROOT / "user-prefs.json").read_text())
+    except Exception:
+        prefs = {}
+    points_raw = prefs.get("points_value_per_point_aud", {}) or {}
+    points = {k: v for k, v in points_raw.items() if isinstance(v, (int, float))}
+    points.setdefault("default", 0.01)
+    # Program aliases → canonical key used in `points`
+    aliases = {
+        "qantas": "qantas", "qff": "qantas", "qantas points": "qantas",
+        "velocity": "velocity", "virgin": "velocity", "velocity points": "velocity",
+        "amex": "amex_mrp", "membership rewards": "amex_mrp", "mr": "amex_mrp", "amex mr": "amex_mrp",
+        "lifemiles": "lifemiles", "avianca": "lifemiles",
+        "asia miles": "asia_miles", "cathay": "asia_miles",
+        "krisflyer": "krisflyer", "singapore airlines": "krisflyer", "kris flyer": "krisflyer",
+    }
+    goals = {
+        "travel": ["flight", "hotel", "airline", "cruise", "lounge", "travel", "luggage", "accommodation"],
+        "points": ["qantas", "velocity", "points", "frequent flyer", "transfer bonus", "amex", "membership rewards", "status"],
+        "tech": ["tv", "laptop", "macbook", "iphone", "ipad", "monitor", "headphones", "ssd", "gaming pc", "console"],
+        "home": ["vacuum", "dyson", "fridge", "appliance", "coffee", "espresso", "air fryer", "mattress", "furniture", "robot"],
+        "finance": ["cashback", "credit card", "loan", "insurance", "refinance", "offset", "home loan", "savings account"],
+    }
+    return {
+        "points": points,
+        "point_aliases": aliases,
+        "goals": goals,
+        "llm_endpoint": prefs.get("agent_llm_endpoint", "") or "",
+    }
+
+
 def _load_latest_audit() -> dict:
     """Best-effort load of the most recent missed-deal audit (written by deal_memory)."""
     try:
@@ -496,6 +531,7 @@ def render_jekyll_html(deals: list[dict], generated_at: datetime) -> str:
     category_options = "\n".join(f'<option value="{escape(category, quote=True)}">{escape(category)}</option>' for category in categories)
     merchant_options = "\n".join(f'<option value="{escape(merchant, quote=True)}">{escape(merchant)}</option>' for merchant in merchants)
     deal_json = _deal_payload(deals)
+    agent_config_json = json.dumps(_load_agent_config(), ensure_ascii=False).replace("</", "<\\/")
     near_miss_html = _render_near_miss(_load_latest_audit())
 
     head = f"""---
@@ -648,10 +684,11 @@ title: Today's best quantified deals
         <button class="chat-dock-close" id="chat-dock-close" type="button" aria-label="Close assistant">&times;</button>
       </div>
       <div class="chat-suggestions" aria-label="Suggested questions">
-        <button type="button" data-chat-prompt="What are the best deals right now?">Best now</button>
-        <button type="button" data-chat-prompt="Show urgent deals">Urgent</button>
-        <button type="button" data-chat-prompt="Which deals have cashback or voucher risk?">Cashback risk</button>
-        <button type="button" data-chat-prompt="Find TV and electronics deals">Electronics</button>
+        <button type="button" data-chat-prompt="Best tech deals under $1000">Tech under $1k</button>
+        <button type="button" data-chat-prompt="How much is 250k Amex points worth?">Value 250k Amex</button>
+        <button type="button" data-chat-prompt="Which deals are cheaper elsewhere?">Hype check</button>
+        <button type="button" data-chat-prompt="Show cashback stacking deals">Cashback stack</button>
+        <button type="button" data-chat-prompt="How many finance deals are there?">Aggregate</button>
       </div>
       <div class="chat-log" id="chat-log" aria-live="polite"></div>
       <form class="chat-form" id="chat-form">
@@ -664,6 +701,7 @@ title: Today's best quantified deals
 
 </div>
 <script id="deal-data" type="application/json">{deal_json}</script>
+<script id="agent-config" type="application/json">{agent_config_json}</script>
 """
 
     script = SITE_SCRIPT
@@ -1084,119 +1122,433 @@ SITE_SCRIPT = r"""<script>
     els.drawer.hidden = false;
   }
 
-  function dealSummaryLine(deal, index) {
-    return `${index + 1}. ${deal.title} — ${money(deal.savings)} ${valueLine(deal)}, AI ${aiConfidence(deal)}%, urgency ${urgencyScore(deal)}%, action: ${agentAction(deal)}.`;
-  }
+  // ════════════════════════════════════════════════════════════════
+  //  DEAL ASSISTANT — agentic engine
+  //  Intent + slot extraction → tool registry → planner → rich answer.
+  //  Optional generative brain via a serverless proxy (agent-config).
+  // ════════════════════════════════════════════════════════════════
+  const AGENT_CFG = (() => {
+    try { return JSON.parse(document.querySelector('#agent-config').textContent); }
+    catch (e) { return {}; }
+  })();
+  const POINTS = AGENT_CFG.points || { default: 0.01 };
+  const POINT_ALIASES = AGENT_CFG.point_aliases || {};
+  const GOALS = AGENT_CFG.goals || {};
+  const LLM_ENDPOINT = AGENT_CFG.llm_endpoint || '';
 
-  const chatStopWords = new Set([
-    'a', 'an', 'and', 'any', 'are', 'around', 'ask', 'best', 'better', 'can', 'current', 'deal', 'deals',
-    'find', 'for', 'from', 'give', 'good', 'have', 'help', 'i', 'in', 'is', 'latest', 'list', 'me',
-    'now', 'of', 'offer', 'offers', 'on', 'or', 'please', 'present', 'relevant', 'result', 'results',
-    'right', 'search', 'show', 'some', 'the', 'these', 'this', 'to', 'top', 'what', 'which', 'with',
-  ]);
+  const convo = { lastRows: [], lastDeal: null, turns: [] };
 
-  const categoryAliases = [
+  function num(s) { return Number(String(s == null ? '' : s).replace(/[^0-9.]/g, '')) || 0; }
+  function fmtMoney(v) { return '$' + Math.round(v || 0).toLocaleString(); }
+  function activePool() { return deals.filter(d => !isExpired(d)); }
+  function uniqueMerchants() { return [...new Set(deals.map(d => String(d.merchant || '').toLowerCase()).filter(Boolean))]; }
+
+  const CATEGORY_ALIASES = [
     ['Computing', /\b(laptop|macbook|computer|computing|pc|gaming pc|ssd|monitor|keyboard|mouse|nas|router|ubiquiti)\b/],
-    ['Electronics', /\b(tv|oled|qled|samsung|iphone|ipad|tablet|airpods|headphones|camera|phone|electronics)\b/],
-    ['Home', /\b(home|vacuum|dyson|robot|kitchen|fridge|mower|cooktop|appliance|furniture|mattress)\b/],
-    ['Finance', /\b(finance|cashback|credit card|qantas|velocity|points|loan|insurance|refinance|bank)\b/],
+    ['Electronics', /\b(tv|oled|qled|samsung|iphone|ipad|tablet|airpods|headphones|earbuds|camera|phone|soundbar|electronics)\b/],
+    ['Home', /\b(home|vacuum|dyson|robot|kitchen|fridge|mower|cooktop|appliance|furniture|mattress|coffee|espresso|air ?fryer)\b/],
+    ['Finance', /\b(finance|cashback|credit card|qantas|velocity|points|loan|insurance|refinance|bank|offset)\b/],
     ['Automotive', /\b(car|suv|vehicle|automotive|tyres|charger|ev|dash cam|battery|vw|skoda|byd|chery)\b/],
     ['Gaming', /\b(gaming|xbox|playstation|nintendo|switch|steam|lego)\b/],
-    ['Travel', /\b(travel|flight|hotel|airline|luggage)\b/],
+    ['Travel', /\b(travel|flight|hotel|airline|luggage|cruise|lounge)\b/],
   ];
 
-  function tokenizePrompt(prompt) {
-    const tokens = String(prompt || '').toLowerCase().match(/[a-z0-9]+(?:\.[a-z0-9]+)?/g) || [];
-    return [...new Set(tokens.filter(token => token.length >= 2 && !chatStopWords.has(token)))];
+  const STOP = new Set(['a','an','and','any','are','around','ask','best','better','can','current','deal','deals','find','for','from','give','good','have','help','i','in','is','latest','list','me','now','of','offer','offers','on','or','please','present','relevant','result','results','right','search','show','some','the','these','this','to','top','what','which','with','about','me','my','you','your']);
+
+  function tokenize(text) {
+    const tokens = String(text || '').toLowerCase().match(/[a-z0-9]+(?:\.[a-z0-9]+)?/g) || [];
+    return [...new Set(tokens.filter(t => t.length >= 2 && !STOP.has(t)))];
   }
 
-  function inferredCategories(text) {
-    return categoryAliases
-      .filter(([, pattern]) => pattern.test(text))
-      .map(([category]) => category);
+  // ── Slot / entity extraction ───────────────────────────────────
+  function extractSlots(text) {
+    const s = {};
+    let m;
+    if ((m = text.match(/between\s*\$?\s*([\d,]+)\s*(?:and|-|to)\s*\$?\s*([\d,]+)/))) { s.priceMin = num(m[1]); s.priceMax = num(m[2]); }
+    if ((m = text.match(/(?:under|below|less than|cheaper than|max|up to)\s*\$?\s*([\d,]+)/))) s.priceMax = num(m[1]);
+    if ((m = text.match(/(?:over|above|more than|min|at least)\s*\$?\s*([\d,]+)/))) s.priceMin = num(m[1]);
+    if ((m = text.match(/sav(?:e|ing|ings)\s*(?:of|over|above|at least|more than)?\s*\$?\s*([\d,]+)/))) s.savingsMin = num(m[1]);
+    if ((m = text.match(/\btop\s*(\d{1,2})\b/)) || (m = text.match(/\b(\d{1,2})\s*(?:deals|results|options)\b/))) s.limit = Math.min(20, num(m[1]));
+
+    // categories
+    s.categories = CATEGORY_ALIASES.filter(([, re]) => re.test(text)).map(([c]) => c);
+    // merchants present in data
+    s.merchants = uniqueMerchants().filter(mn => mn && text.includes(mn));
+    // metric
+    if (/\burgenc|urgent|flash|ending|expir/.test(text)) s.metric = 'urgency';
+    else if (/\bconfidence|reliab|trust/.test(text)) s.metric = 'confidence';
+    else if (/\bscore|overall|best value\b/.test(text)) s.metric = 'score';
+    else if (/\bsaving|discount|save\b/.test(text)) s.metric = 'savings';
+    // points
+    s.points = extractPoints(text);
+    return s;
   }
 
-  function relevanceScore(deal, tokens) {
-    if (!tokens.length) return 0;
-    const title = String(deal.title || '').toLowerCase();
-    const merchant = String(deal.merchant || '').toLowerCase();
-    const category = String(deal.category || '').toLowerCase();
-    const haystack = `${title} ${merchant} ${category}`;
-    let score = 0;
-    for (const token of tokens) {
-      if (title.includes(token)) score += 6;
-      else if (merchant.includes(token)) score += 5;
-      else if (category.includes(token)) score += 4;
-      else if (haystack.includes(token)) score += 2;
-      else if (token.length > 4 && haystack.includes(token.slice(0, -1))) score += 1;
+  function extractPoints(text) {
+    // e.g. "250k amex points", "250,000 MR", "100k velocity", "value of 80000 qantas points"
+    const progKeys = Object.keys(POINT_ALIASES).sort((a, b) => b.length - a.length);
+    let program = null;
+    for (const key of progKeys) { if (text.includes(key)) { program = POINT_ALIASES[key]; break; } }
+    const m = text.match(/([\d][\d,]*\.?\d*)\s*(k|thousand|m|million)?\s*(?:×|x)?\s*(?:point|pt|mr|mile|miles)?/);
+    let amount = 0;
+    if (m) {
+      amount = num(m[1]);
+      const unit = (m[2] || '').toLowerCase();
+      if (unit === 'k' || unit === 'thousand') amount *= 1000;
+      if (unit === 'm' || unit === 'million') amount *= 1000000;
     }
-    if (tokens.length > 1 && tokens.every(token => haystack.includes(token))) score += 5;
-    return score;
+    if (!program && !/\b(point|pts|miles|mr|reward)\b/.test(text)) return null;
+    return { program: program || 'default', amount };
   }
 
-  function chatRowsForPrompt(prompt) {
-    const text = prompt.toLowerCase();
-    let rows = rankDeals(deals).filter(deal => !isExpired(deal));
-    const categories = inferredCategories(text);
-    const tokens = tokenizePrompt(text).filter(token => !['urgent', 'flash', 'time', 'risk', 'terms', 'verify', 'caution', 'confidence', 'ai', 'pick', 'shortlist'].includes(token));
-    if (/\burgent|flash|time|ending|limited|today\b/.test(text)) rows = rows.filter(isTimeSensitive);
-    if (/\bcashback|voucher|gift card|points|loan|finance|insurance|rebate\b/.test(text)) {
-      rows = rows.filter(deal => /\b(cashback|voucher|gift card|points|loan|finance|insurance|rebate|qantas|velocity)\b/i.test(deal.title + ' ' + deal.category));
-    }
-    if (/\brisk|terms|verify|caution\b/.test(text)) {
-      rows = rows.filter(deal => riskSignal(deal) !== 'Low friction');
-    }
-    if (/\bconfidence|ai pick|agent pick|shortlist\b/.test(text)) rows = rows.filter(deal => aiConfidence(deal) >= 75);
-    if (categories.length) {
-      const wanted = new Set(categories);
-      rows = rows.filter(deal => wanted.has(deal.category) || categories.some(category => dealText(deal).includes(category.toLowerCase())));
-    }
-    if (tokens.length) {
-      const scored = rows
-        .map(deal => [deal, relevanceScore(deal, tokens)])
-        .filter(([, score]) => score > 0)
-        .sort((a, b) => (b[1] - a[1]) || (b[0].savings - a[0].savings) || (qualityScore(b[0]) - qualityScore(a[0])));
-      rows = scored.map(([deal]) => deal);
-    }
-    if (/\burgency|urgent|flash|time\b/.test(text)) return rows.sort((a, b) => (urgencyScore(b) - urgencyScore(a)) || (b.savings - a.savings));
-    if (/\bconfidence|ai\b/.test(text)) return rows.sort((a, b) => (aiConfidence(b) - aiConfidence(a)) || (b.savings - a.savings));
-    return rows.sort((a, b) => (b.savings - a.savings) || (qualityScore(b) - qualityScore(a)));
+  // ── Intent classification ──────────────────────────────────────
+  function classify(text, slots) {
+    if (/\b(hi|hello|hey|yo|sup)\b/.test(text) && text.length < 12) return 'greeting';
+    if (/\b(help|what can you do|capabilities|commands)\b/.test(text)) return 'help';
+    if (slots.points && (/\b(worth|value|how much|valuation|convert)\b/.test(text) || /\bpoints?\b/.test(text))) return 'points_value';
+    if (/\b(compare|versus|vs\.?|difference between|which is better)\b/.test(text)) return 'compare';
+    if (/\b(how many|count|total|sum|average|avg|most|biggest|largest|highest|breakdown by)\b/.test(text)) return 'aggregate';
+    if (/\bis\b.*\blowest\b|lowest (?:price )?(?:seen|tracked|ever|right now|now)|all-?time low|price history|good time to buy/.test(text)) return 'history';
+    if (/\b(cheapest|least expensive|smallest price)\b/.test(text) || (/\blowest price\b/.test(text) && !/\bis\b/.test(text))) return 'cheapest';
+    if (/\b(overpriced|hype|actually cheaper|worth it|real deal|trap|cheaper elsewhere)\b/.test(text)) return 'hype';
+    if (/\b(cashback|stack|stacking|effective price|net price|true price|shopback|cashrewards)\b/.test(text)) return 'cashback';
+    if (/\b(explain|why|tell me about|details on|break ?down|analyse|analyze)\b/.test(text)) return 'explain';
+    if (/\b(goal|trip|holiday|setup|build|upgrade my|for my)\b/.test(text)) return 'goal';
+    if (/\b(first|second|third|that one|those|them|it|the top|number \d)\b/.test(text) && convo.lastRows.length) return 'followup';
+    return 'search';
   }
 
-  function assistantReply(prompt) {
-    const text = prompt.toLowerCase();
-    const rows = chatRowsForPrompt(prompt).filter(deal => !isExpired(deal)).slice(0, 5);
-    if (/\bhello|hi|help|what can you do\b/.test(text)) {
-      return 'I can rank current deals by savings, urgency, AI confidence, merchant, category, cashback or voucher risk, and explain why a deal is worth checking.';
+  // ── Reference resolution for follow-ups ────────────────────────
+  function resolveReferences(text) {
+    const rows = convo.lastRows;
+    if (!rows.length) return [];
+    const ord = { first: 0, '1st': 0, one: 0, second: 1, '2nd': 1, two: 1, third: 2, '3rd': 2, three: 2, fourth: 3, fifth: 4 };
+    const picks = [];
+    for (const [word, idx] of Object.entries(ord)) {
+      if (new RegExp('\\b' + word + '\\b').test(text) && rows[idx]) picks.push(rows[idx]);
     }
-    if (/\bexplain|why|top deal|first deal\b/.test(text)) {
-      const deal = rows[0] || currentRows[0] || deals[0];
-      if (!deal) return 'I do not have any deal data loaded yet.';
-      return `${deal.title} looks like ${agentAction(deal).toLowerCase()}: ${money(deal.savings)} potential value, ${aiConfidence(deal)}% AI confidence, ${urgencyScore(deal)}% urgency. Agent read: ${agentInsight(deal)}.`;
-    }
-    if (!rows.length) return 'I could not find matching active deals for that question. Try a category, merchant, product type, or ask for urgent/high-confidence deals.';
-    const intro = /\brisk|terms|verify|caution\b/.test(text)
-      ? 'These are the deals I would verify carefully:'
-      : /\burgent|flash|time|ending|limited|today\b/.test(text)
-        ? 'These are the most time-sensitive deals I found:'
-        : 'Here are the strongest matching deals:';
-    return `${intro}\n${rows.map(dealSummaryLine).join('\n')}`;
+    const numMatch = text.match(/\bnumber\s*(\d{1,2})\b/);
+    if (numMatch && rows[num(numMatch[1]) - 1]) picks.push(rows[num(numMatch[1]) - 1]);
+    if (/\b(those|them|these|all of them)\b/.test(text) && !picks.length) return rows.slice(0, 5);
+    if (/\b(it|that one|that deal)\b/.test(text) && !picks.length && convo.lastDeal) return [convo.lastDeal];
+    return picks;
   }
 
-  function addChatMessage(role, text) {
+  // ── Tools over the deal data ───────────────────────────────────
+  function toolFilter(rows, slots, text) {
+    let out = rows.slice();
+    if (slots.priceMax) out = out.filter(d => d.deal_price > 0 && d.deal_price <= slots.priceMax);
+    if (slots.priceMin) out = out.filter(d => d.deal_price >= slots.priceMin);
+    if (slots.savingsMin) out = out.filter(d => d.savings >= slots.savingsMin);
+    if (slots.categories && slots.categories.length) {
+      const set = new Set(slots.categories);
+      out = out.filter(d => set.has(d.category) || slots.categories.some(c => dealText(d).includes(c.toLowerCase())));
+    }
+    if (slots.merchants && slots.merchants.length) out = out.filter(d => slots.merchants.some(mn => String(d.merchant || '').toLowerCase().includes(mn)));
+    const kw = tokenize(text).filter(t => !['deal', 'deals', 'cheap', 'cheapest', 'best', 'find', 'show', 'good', 'under', 'over', 'between', 'top', 'price', 'prices'].includes(t));
+    if (kw.length) {
+      const scored = out.map(d => [d, kw.reduce((sc, t) => sc + (dealText(d).includes(t) ? 1 : 0), 0)]).filter(([, sc]) => sc > 0);
+      if (scored.length) { scored.sort((a, b) => b[1] - a[1] || b[0].savings - a[0].savings); out = scored.map(([d]) => d); }
+    }
+    return out;
+  }
+
+  function toolRank(rows, metric) {
+    const r = rows.slice();
+    if (metric === 'urgency') r.sort((a, b) => urgencyScore(b) - urgencyScore(a) || b.savings - a.savings);
+    else if (metric === 'confidence') r.sort((a, b) => aiConfidence(b) - aiConfidence(a) || b.savings - a.savings);
+    else if (metric === 'score') r.sort((a, b) => qualityScore(b) - qualityScore(a) || b.savings - a.savings);
+    else r.sort((a, b) => b.savings - a.savings || qualityScore(b) - qualityScore(a));
+    return r;
+  }
+
+  function pointsValue(program, amount) {
+    const cpp = POINTS[program] != null ? POINTS[program] : POINTS.default;
+    return { cpp, value: Math.round(amount * cpp) };
+  }
+
+  function effectivePrice(deal) {
+    const layers = [];
+    layers.push({ label: 'Deal price', value: deal.deal_price > 0 ? fmtMoney(deal.deal_price) : '—' });
+    layers.push({ label: 'Potential saving', value: fmtMoney(deal.savings), good: true });
+    if (deal.cashback_platform) layers.push({ label: 'Cashback', value: deal.cashback_platform + ' (check live rate)', note: true });
+    if (deal.price_beat_count > 0) layers.push({ label: 'Price-beat', value: deal.price_beat_count + ' store' + (deal.price_beat_count > 1 ? 's' : '') });
+    if (deal.lowest_price > 0) layers.push({ label: 'Lowest tracked', value: fmtMoney(deal.lowest_price) + (deal.is_lowest_price ? ' (now lowest)' : ''), good: deal.is_lowest_price });
+    if (deal.market_cheaper && Number(deal.market_saving) < 0) layers.push({ label: 'Market check', value: '~' + fmtMoney(Math.abs(deal.market_saving)) + ' cheaper elsewhere', warn: true });
+    return layers;
+  }
+
+  // ── Rich rendering ─────────────────────────────────────────────
+  function chipHtml(deal) {
+    const tags = [];
+    if (deal.cashback_platform) tags.push('Cashback');
+    if (deal.is_lowest_price) tags.push('Lowest price');
+    if (isTimeSensitive(deal)) tags.push('Time-sensitive');
+    if (deal.market_cheaper && Number(deal.market_saving) < 0) tags.push('⚠ Verify price');
+    const tagHtml = tags.map(t => `<span class="ac-tag">${escapeHtml(t)}</span>`).join('');
+    return `<a class="ac-deal" href="${escapeHtml(deal.link)}" target="_blank" rel="noopener">
+      <div class="ac-deal-main">
+        <div class="ac-deal-title">${escapeHtml(deal.title)}</div>
+        <div class="ac-deal-meta">${escapeHtml(deal.merchant)} · ${escapeHtml(deal.category)} · AI ${aiConfidence(deal)}% · Urgency ${urgencyScore(deal)}%</div>
+        ${tagHtml ? `<div class="ac-tags">${tagHtml}</div>` : ''}
+      </div>
+      <div class="ac-deal-save">${fmtMoney(deal.savings)}</div>
+    </a>`;
+  }
+
+  function dealListHtml(rows, limit) {
+    return `<div class="ac-deals">${rows.slice(0, limit || 5).map(chipHtml).join('')}</div>`;
+  }
+
+  function breakdownHtml(deal) {
+    const rows = effectivePrice(deal).map(l =>
+      `<div class="ac-brk-row${l.warn ? ' warn' : ''}${l.good ? ' good' : ''}"><span>${escapeHtml(l.label)}</span><span>${escapeHtml(l.value)}</span></div>`
+    ).join('');
+    return `<div class="ac-breakdown">${rows}</div>`;
+  }
+
+  function comparisonHtml(a, b) {
+    const row = (label, va, vb, betterA, betterB) =>
+      `<tr><th>${escapeHtml(label)}</th><td class="${betterA ? 'win' : ''}">${escapeHtml(va)}</td><td class="${betterB ? 'win' : ''}">${escapeHtml(vb)}</td></tr>`;
+    return `<table class="ac-compare">
+      <thead><tr><th></th><th>${escapeHtml(a.title.slice(0, 40))}</th><th>${escapeHtml(b.title.slice(0, 40))}</th></tr></thead>
+      <tbody>
+        ${row('Saving', fmtMoney(a.savings), fmtMoney(b.savings), a.savings >= b.savings, b.savings > a.savings)}
+        ${row('Price', a.deal_price ? fmtMoney(a.deal_price) : '—', b.deal_price ? fmtMoney(b.deal_price) : '—', a.deal_price && a.deal_price <= (b.deal_price || 1e9), b.deal_price && b.deal_price < (a.deal_price || 1e9))}
+        ${row('AI confidence', aiConfidence(a) + '%', aiConfidence(b) + '%', aiConfidence(a) >= aiConfidence(b), aiConfidence(b) > aiConfidence(a))}
+        ${row('Urgency', urgencyScore(a) + '%', urgencyScore(b) + '%', urgencyScore(a) >= urgencyScore(b), urgencyScore(b) > urgencyScore(a))}
+        ${row('Agent score', qualityScore(a) + '/100', qualityScore(b) + '/100', qualityScore(a) >= qualityScore(b), qualityScore(b) > qualityScore(a))}
+        ${row('Cashback', a.cashback_platform ? 'Yes' : 'No', b.cashback_platform ? 'Yes' : 'No', !!a.cashback_platform, !!b.cashback_platform)}
+      </tbody>
+    </table>`;
+  }
+
+  // ── Intent handlers → { text, html, rows } ─────────────────────
+  function handleGreeting() {
+    return { text: "Hi Eswar — I'm your deal analyst. Ask me things like “best tech deals under $1000”, “compare the top two”, “how much is 250k Amex points worth”, “what's the effective price of the Dyson”, or “how many finance deals are there”." };
+  }
+
+  function handleHelp() {
+    return { text: "I can: rank and filter deals (price, saving, category, merchant, urgency, confidence); compute points valuations using your redemption rates; show effective price with cashback and price-beat stacking; flag deals where the market is actually cheaper; check lowest-tracked price; compare two deals side by side; aggregate (counts, totals, averages, biggest); and handle follow-ups like “compare those” or “the cheapest of them”." };
+  }
+
+  function handlePoints(text, slots) {
+    const p = slots.points;
+    if (!p || !p.amount) return { text: "Tell me the amount and program — e.g. “how much is 250k Velocity worth” or “value of 100,000 Amex MR points”." };
+    const { cpp, value } = pointsValue(p.program, p.amount);
+    const label = p.program === 'default' ? 'points' : p.program.replace('_', ' ');
+    const related = activePool().filter(d => /\b(point|qantas|velocity|amex|mr|miles|frequent flyer|transfer bonus)\b/i.test(d.title)).slice(0, 3);
+    convo.lastRows = related;
+    return {
+      text: `${p.amount.toLocaleString()} ${label} ≈ ${fmtMoney(value)} at ${(cpp).toFixed(4)} $/pt (your redemption value).` + (related.length ? ' Related points deals live now:' : ''),
+      html: related.length ? dealListHtml(related, 3) : '',
+    };
+  }
+
+  function handleAggregate(text, slots) {
+    const hasFilter = !!(slots.priceMax || slots.priceMin || slots.savingsMin || (slots.categories && slots.categories.length) || (slots.merchants && slots.merchants.length));
+    let rows = toolFilter(activePool(), slots, text);
+    if (!rows.length && !hasFilter) rows = activePool();
+    const totalSav = rows.reduce((s, d) => s + d.savings, 0);
+    const avg = rows.length ? Math.round(totalSav / rows.length) : 0;
+    const biggest = rows.slice().sort((a, b) => b.savings - a.savings)[0];
+    if (/\bhow many|count\b/.test(text)) {
+      const byCat = {};
+      for (const d of rows) byCat[d.category] = (byCat[d.category] || 0) + 1;
+      const breakdown = Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c}: ${n}`).join(' · ');
+      return { text: `${rows.length} matching active deals.` + (breakdown ? ` By category — ${breakdown}.` : '') };
+    }
+    if (/\baverage|avg\b/.test(text)) return { text: `Average saving across ${rows.length} matching deals is ${fmtMoney(avg)} (total ${fmtMoney(totalSav)}).` };
+    if (/\b(biggest|largest|highest|most)\b/.test(text) && biggest) {
+      convo.lastDeal = biggest; convo.lastRows = [biggest];
+      return { text: `Biggest saving is ${fmtMoney(biggest.savings)}:`, html: chipHtml(biggest) };
+    }
+    return { text: `${rows.length} matching deals worth ${fmtMoney(totalSav)} in total savings (avg ${fmtMoney(avg)}).` };
+  }
+
+  function handleCheapest(text, slots) {
+    let rows = toolFilter(activePool(), slots, text).filter(d => d.deal_price > 0);
+    rows.sort((a, b) => a.deal_price - b.deal_price);
+    if (!rows.length) return { text: "I couldn't find priced deals matching that. Try a category or product." };
+    convo.lastRows = rows.slice(0, 5); convo.lastDeal = rows[0];
+    return { text: `Cheapest matching ${rows.length > 1 ? 'options' : 'option'} by price:`, html: dealListHtml(rows, slots.limit || 5) };
+  }
+
+  function handleHistory(text, slots) {
+    let rows = toolFilter(activePool(), slots, text);
+    const named = rows.length === 1 || (rows.length && /\b(of the|for the|the|is the)\b/.test(text)) ? rows[0] : null;
+    const target = resolveReferences(text)[0] || named || convo.lastDeal || rows[0];
+    if (!target) return { text: "Point me at a deal first — e.g. search for it, then ask if it's the lowest." };
+    convo.lastDeal = target;
+    if (target.lowest_price > 0) {
+      const verdict = target.is_lowest_price ? "this is the lowest price I've tracked — a genuinely good window." : `not the lowest — I've tracked it as low as ${fmtMoney(target.lowest_price)}.`;
+      return { text: `${target.title}: ${verdict}`, html: breakdownHtml(target) };
+    }
+    return { text: `${target.title}: I don't have enough price history yet to call a low. Current saving ${fmtMoney(target.savings)}.`, html: breakdownHtml(target) };
+  }
+
+  function handleHype(text, slots) {
+    const traps = activePool().filter(d => d.market_cheaper && Number(d.market_saving) < 0);
+    if (traps.length) {
+      traps.sort((a, b) => a.market_saving - b.market_saving);
+      convo.lastRows = traps;
+      return { text: `${traps.length} deal${traps.length > 1 ? 's' : ''} where the market is actually cheaper than the OzBargain price — verify before buying:`, html: dealListHtml(traps, 5) };
+    }
+    return { text: "No live hype traps right now — none of the priced deals are beaten by current market price in my data. (Enable market-price lookup in the monitor to strengthen this check.)" };
+  }
+
+  function handleCashback(text, slots) {
+    let target = resolveReferences(text)[0] || convo.lastDeal;
+    if (!target) {
+      // try to locate a specifically-named product (e.g. "effective price of the dyson")
+      const named = toolFilter(activePool(), slots, text);
+      if (named.length === 1 || (named.length && /\b(of the|for the|the)\b/.test(text))) target = named[0];
+    }
+    if (target) { convo.lastDeal = target; return { text: `Effective-price breakdown for ${target.title}:`, html: breakdownHtml(target) }; }
+    let rows = toolFilter(activePool(), slots, text).filter(d => d.cashback_platform);
+    if (!rows.length) rows = activePool().filter(d => d.cashback_platform);
+    rows.sort((a, b) => b.savings - a.savings);
+    convo.lastRows = rows;
+    if (!rows.length) return { text: "No deals currently flag a cashback platform. I can still show effective price for any specific deal — name one." };
+    return { text: `Deals with a cashback layer available (stack on top of the listed saving — check the live rate):`, html: dealListHtml(rows, 5) };
+  }
+
+  function handleExplain(text, slots) {
+    const target = resolveReferences(text)[0] || toolFilter(activePool(), slots, text)[0] || convo.lastDeal;
+    if (!target) return { text: "Which deal? Search for it first, or name the product." };
+    convo.lastDeal = target;
+    return {
+      text: `${target.title} — ${valueSignal(target).toLowerCase()}: ${agentAction(target).toLowerCase()}. ${aiConfidence(target)}% confidence, ${urgencyScore(target)}% urgency. ${agentInsight(target)}.`,
+      html: breakdownHtml(target),
+    };
+  }
+
+  function handleCompare(text, slots) {
+    let picks = resolveReferences(text);
+    if (picks.length < 2) {
+      const pool = toolFilter(activePool(), slots, text);
+      picks = (convo.lastRows.length >= 2 ? convo.lastRows : pool).slice(0, 2);
+    }
+    if (picks.length < 2) return { text: "Give me two things to compare — e.g. “compare the top two” after a search, or name two products." };
+    convo.lastRows = picks;
+    const [a, b] = picks;
+    const winner = qualityScore(a) >= qualityScore(b) ? a : b;
+    return { text: `Comparing the two — on balance ${winner === a ? 'the first' : 'the second'} looks stronger:`, html: comparisonHtml(a, b) };
+  }
+
+  function handleGoal(text, slots) {
+    let goalKey = null;
+    for (const [g, kws] of Object.entries(GOALS)) { if (text.includes(g) || kws.some(k => text.includes(k))) { goalKey = g; break; } }
+    const kws = goalKey ? GOALS[goalKey] : tokenize(text);
+    let rows = activePool().filter(d => kws.some(k => dealText(d).includes(k)));
+    rows = toolRank(rows, slots.metric || 'score');
+    convo.lastRows = rows;
+    if (!rows.length) return { text: `No live deals match that goal right now. I'll keep watching — try a broader term or a category.` };
+    return { text: `Deals that fit${goalKey ? ' your ' + goalKey + ' goal' : ''}, best first:`, html: dealListHtml(rows, slots.limit || 5) };
+  }
+
+  function handleSearch(text, slots) {
+    let rows = toolFilter(activePool(), slots, text);
+    rows = toolRank(rows, slots.metric);
+    convo.lastRows = rows;
+    if (!rows.length) return { text: "No active deals match that. Try a category, merchant, product, a price like “under $500”, or ask for urgent/high-confidence deals." };
+    const lead = slots.metric === 'urgency' ? 'Most time-sensitive matches:'
+      : slots.metric === 'confidence' ? 'Highest-confidence matches:'
+      : slots.priceMax || slots.priceMin ? 'Matches in that price range:'
+      : 'Strongest matches:';
+    return { text: lead, html: dealListHtml(rows, slots.limit || 5) };
+  }
+
+  // ── Local planner ──────────────────────────────────────────────
+  function localRespond(prompt) {
+    const text = prompt.toLowerCase().trim();
+    const slots = extractSlots(text);
+    let intent = classify(text, slots);
+    if (intent === 'followup') {
+      if (/\bcompare\b/.test(text)) intent = 'compare';
+      else if (/\bcheapest\b/.test(text)) intent = 'cheapest';
+      else if (/\bcashback|effective|net price\b/.test(text)) intent = 'cashback';
+      else intent = 'explain';
+    }
+    const H = {
+      greeting: handleGreeting, help: handleHelp, points_value: handlePoints,
+      aggregate: handleAggregate, cheapest: handleCheapest, history: handleHistory,
+      hype: handleHype, cashback: handleCashback, explain: handleExplain,
+      compare: handleCompare, goal: handleGoal, search: handleSearch,
+    };
+    const fn = H[intent] || handleSearch;
+    const res = fn(text, slots) || { text: "I'm not sure how to help with that yet — try rephrasing." };
+    convo.turns.push({ q: prompt, intent });
+    return res;
+  }
+
+  // ── Optional generative brain (serverless proxy) ───────────────
+  async function llmRespond(prompt) {
+    const compact = activePool().slice(0, 60).map(d => ({
+      title: d.title, merchant: d.merchant, category: d.category, savings: d.savings,
+      deal_price: d.deal_price, market_price: d.market_price, link: d.link,
+      cashback: !!d.cashback_platform, lowest_price: d.lowest_price, is_lowest: d.is_lowest_price,
+      urgency: urgencyScore(d), confidence: aiConfidence(d),
+    }));
+    const resp = await fetch(LLM_ENDPOINT, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: prompt, deals: compact, points: POINTS, history: convo.turns.slice(-6) }),
+    });
+    if (!resp.ok) throw new Error('proxy ' + resp.status);
+    const data = await resp.json();
+    return { text: data.reply || data.text || '(no reply)', html: data.html || '' };
+  }
+
+  // ── Rendering ──────────────────────────────────────────────────
+  function addChatMessage(role, payload) {
     const message = document.createElement('div');
     message.className = `chat-message ${role}`;
-    message.textContent = text;
+    if (typeof payload === 'string') payload = { text: payload };
+    if (payload.text) {
+      const p = document.createElement('div');
+      p.className = 'ac-text';
+      p.textContent = payload.text;
+      message.append(p);
+    }
+    if (payload.html) {
+      const wrap = document.createElement('div');
+      wrap.className = 'ac-rich';
+      wrap.innerHTML = payload.html;
+      message.append(wrap);
+    }
     els.chatLog.append(message);
     els.chatLog.scrollTop = els.chatLog.scrollHeight;
   }
 
-  function askAssistant(prompt) {
-    const question = prompt.trim();
+  function setThinking(on) {
+    let t = els.chatLog.querySelector('.chat-thinking');
+    if (on && !t) {
+      t = document.createElement('div');
+      t.className = 'chat-message assistant chat-thinking';
+      t.innerHTML = '<span class="ac-dot"></span><span class="ac-dot"></span><span class="ac-dot"></span>';
+      els.chatLog.append(t);
+      els.chatLog.scrollTop = els.chatLog.scrollHeight;
+    } else if (!on && t) { t.remove(); }
+  }
+
+  async function askAssistant(prompt) {
+    const question = String(prompt || '').trim();
     if (!question) return;
     addChatMessage('user', question);
-    addChatMessage('assistant', assistantReply(question));
     els.chatInput.value = '';
+    if (LLM_ENDPOINT) {
+      setThinking(true);
+      try {
+        const res = await llmRespond(question);
+        setThinking(false);
+        addChatMessage('assistant', res);
+        return;
+      } catch (e) {
+        setThinking(false);
+        // graceful fallback to the local agent
+      }
+    }
+    addChatMessage('assistant', localRespond(question));
   }
 
   els.toggle.addEventListener('click', () => {

@@ -89,7 +89,9 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn("Built with Claude AI Code and OpenAI Codex", html)
             self.assertIn("Deal Assistant", html)
             self.assertIn("chat-panel", html)
-            self.assertIn("assistantReply", html)
+            self.assertIn("localRespond", html)  # agent engine
+            self.assertIn("agent-config", html)
+            self.assertIn("pointsValue", html)
             self.assertIn("data-chat-prompt", html)
             self.assertIn("AI confidence", html)
             self.assertIn("Today's delta", html)
