@@ -122,6 +122,15 @@ jobs:
           python-version: '3.11'
           cache: pip
 
+      - name: Restore deal memory
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true' && steps.site_slot.outputs.handled != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: outputs
+          key: ozbargain-deal-memory-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            ozbargain-deal-memory-${{ github.ref_name }}-
+
       - name: Install dependencies
         if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true' && steps.site_slot.outputs.handled != 'true'
         run: pip install -r requirements.txt
@@ -165,6 +174,13 @@ jobs:
         run: |
           mkdir -p .schedule-cache-marker
           echo "${{ steps.schedule_gate.outputs.slot_key }}" > .schedule-cache-marker/slot.txt
+
+      - name: Save deal memory
+        if: steps.schedule_gate.outputs.should_run == 'true' && steps.schedule_cache.outputs.cache-hit != 'true' && steps.site_slot.outputs.handled != 'true' && success()
+        uses: actions/cache/save@v4
+        with:
+          path: outputs
+          key: ozbargain-deal-memory-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Save schedule slot marker
         if: steps.schedule_gate.outputs.should_run == 'true' && github.event_name == 'schedule' && steps.schedule_cache.outputs.cache-hit != 'true' && (steps.site_slot.outputs.handled == 'true' || success())

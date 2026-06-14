@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime, timezone
+from html import unescape
 from pathlib import Path
 from typing import Iterable
+from zoneinfo import ZoneInfo
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +24,9 @@ OUTPUT_DIR = ROOT / "outputs"
 MEMORY_FILE = OUTPUT_DIR / "deal_memory.json"
 AUDIT_FILE = OUTPUT_DIR / "missed_deal_audit.jsonl"
 LATEST_AUDIT_FILE = OUTPUT_DIR / "latest_missed_deal_audit.json"
+SITE_FILE = ROOT / "docs" / "index.html"
+DEFAULT_MEMORY_FILE = MEMORY_FILE
+SYDNEY_TZ = ZoneInfo("Australia/Sydney")
 
 
 def _now_iso() -> str:
@@ -37,9 +43,73 @@ def _deal_key(deal: dict) -> str:
     return f"title:{deal.get('title', '').strip().lower()}"
 
 
+def _node_id_from_link(link: str) -> str:
+    match = re.search(r"/node/(\d+)", str(link or ""))
+    return match.group(1) if match else ""
+
+
+def _is_recent_first_seen(value: str) -> bool:
+    try:
+        seen_at = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if seen_at.tzinfo is None:
+        seen_at = seen_at.replace(tzinfo=timezone.utc)
+    sydney_seen = seen_at.astimezone(SYDNEY_TZ).date()
+    sydney_today = datetime.now(SYDNEY_TZ).date()
+    return (sydney_today - sydney_seen).days <= 1
+
+
+def _bootstrap_memory_from_site() -> dict:
+    if MEMORY_FILE != DEFAULT_MEMORY_FILE or not SITE_FILE.exists():
+        return {"version": 1, "deals": {}}
+
+    text = SITE_FILE.read_text(errors="ignore")
+    match = re.search(
+        r'<script id="deal-data" type="application/json">(.*?)</script>',
+        text,
+        re.DOTALL,
+    )
+    if not match:
+        return {"version": 1, "deals": {}}
+
+    try:
+        deals = json.loads(unescape(match.group(1)))
+    except Exception as exc:
+        log.warning("Could not bootstrap deal memory from %s: %s", SITE_FILE, exc)
+        return {"version": 1, "deals": {}}
+
+    store = {}
+    for deal in deals:
+        node_id = deal.get("node_id") or _node_id_from_link(deal.get("link", ""))
+        item = {
+            "first_seen_at": deal.get("first_seen_at") or deal.get("last_seen_at") or _now_iso(),
+            "first_title": deal.get("title", ""),
+            "link": deal.get("link", ""),
+            "node_id": node_id,
+            "times_seen": 1,
+            "email_count": 1,
+            "best_savings": int(deal.get("best_savings", 0) or deal.get("savings", 0) or 0),
+            "last_seen_at": deal.get("last_seen_at") or _now_iso(),
+            "last_title": deal.get("title", ""),
+            "last_savings": int(deal.get("savings", 0) or 0),
+            "deal_price": int(deal.get("deal_price", 0) or 0),
+            "market_price": int(deal.get("market_price", 0) or 0),
+            "last_emailed_at": deal.get("last_emailed_at") or deal.get("last_seen_at") or "",
+        }
+        if item["best_savings"]:
+            item["best_seen_at"] = item["last_seen_at"]
+        key = _deal_key({"node_id": node_id, "link": deal.get("link", ""), "title": deal.get("title", "")})
+        store[key] = item
+
+    if store:
+        log.info("Bootstrapped deal memory from published site with %s deal(s)", len(store))
+    return {"version": 1, "deals": store}
+
+
 def _load_memory() -> dict:
     if not MEMORY_FILE.exists():
-        return {"version": 1, "deals": {}}
+        return _bootstrap_memory_from_site()
     try:
         return json.loads(MEMORY_FILE.read_text())
     except Exception as exc:
@@ -92,14 +162,15 @@ def annotate_deals(deals: list[dict]) -> list[dict]:
         )
         deal["is_new_deal"] = not bool(prior)
         deal["is_best_seen"] = current > 0 and current > prior_best
+        is_recent_first_email = deal["email_count"] == 0 and _is_recent_first_seen(deal["first_seen_at"])
         deal["is_delta_deal"] = (
             deal["is_new_deal"]
-            or deal["email_count"] == 0
+            or is_recent_first_email
             or deal["is_best_seen"]
         )
         if deal["is_new_deal"]:
             deal["delta_reason"] = "new"
-        elif deal["email_count"] == 0:
+        elif is_recent_first_email:
             deal["delta_reason"] = "first_email"
         elif deal["is_best_seen"]:
             deal["delta_reason"] = "saving_improved"

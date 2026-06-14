@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -73,6 +74,57 @@ class DealMemoryTests(unittest.TestCase):
                 deal_memory.annotate_deals([improved])
                 self.assertTrue(improved["is_delta_deal"])
                 self.assertEqual(improved["delta_reason"], "saving_improved")
+
+    def test_first_email_delta_only_for_recently_seen_deals(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            memory_file = out / "deal_memory.json"
+            old_seen = (datetime.now(timezone.utc) - timedelta(days=5)).isoformat(timespec="seconds")
+            recent_seen = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat(timespec="seconds")
+            memory_file.write_text(
+                """
+{
+  "version": 1,
+  "deals": {
+    "node:old": {
+      "first_seen_at": "%s",
+      "best_savings": 300,
+      "email_count": 0
+    },
+    "node:recent": {
+      "first_seen_at": "%s",
+      "best_savings": 300,
+      "email_count": 0
+    }
+  }
+}
+""" % (old_seen, recent_seen)
+            )
+
+            with patch.object(deal_memory, "OUTPUT_DIR", out), \
+                 patch.object(deal_memory, "MEMORY_FILE", memory_file), \
+                 patch.object(deal_memory, "AUDIT_FILE", out / "missed_deal_audit.jsonl"), \
+                 patch.object(deal_memory, "LATEST_AUDIT_FILE", out / "latest_missed_deal_audit.json"):
+
+                old_deal = {
+                    "node_id": "old",
+                    "title": "Old Never Emailed Deal Save $300 @ Example",
+                    "link": "https://www.ozbargain.com.au/node/old",
+                    "savings": 300,
+                }
+                recent_deal = {
+                    "node_id": "recent",
+                    "title": "Recent Never Emailed Deal Save $300 @ Example",
+                    "link": "https://www.ozbargain.com.au/node/recent",
+                    "savings": 300,
+                }
+
+                deal_memory.annotate_deals([old_deal, recent_deal])
+
+                self.assertFalse(old_deal["is_delta_deal"])
+                self.assertEqual(old_deal["delta_reason"], "")
+                self.assertTrue(recent_deal["is_delta_deal"])
+                self.assertEqual(recent_deal["delta_reason"], "first_email")
 
 
 if __name__ == "__main__":
