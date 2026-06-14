@@ -96,30 +96,6 @@
       ],
       "times_seen": 4
     },
-    "node:959020": {
-      "best_savings": 3000,
-      "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "deal_price": 3000,
-      "email_count": 1,
-      "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "first_title": "$3000 Cashback on BYD Sealion 5, Sealion 6, Sealion 8 & Shark 6 Premium @ BYD",
-      "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
-      "last_savings": 3000,
-      "last_seen_at": "2026-06-14T12:46:27+00:00",
-      "last_title": "$3000 Cashback on BYD Sealion 5, Sealion 6, Sealion 8 & Shark 6 Premium @ BYD",
-      "link": "https://www.ozbargain.com.au/node/959020",
-      "market_price": 0,
-      "node_id": "959020",
-      "price_history": [
-        {
-          "at": "2026-06-14T12:46:27+00:00",
-          "deal_price": 3000,
-          "market_price": 0,
-          "savings": 3000
-        }
-      ],
-      "times_seen": 4
-    },
     "node:959048": {
       "best_savings": 500,
       "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
@@ -212,30 +188,6 @@
           "deal_price": 319,
           "market_price": 1599,
           "savings": 1280
-        }
-      ],
-      "times_seen": 4
-    },
-    "node:959395": {
-      "best_savings": 4000,
-      "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "deal_price": 2000,
-      "email_count": 1,
-      "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "first_title": "$2,000-$4,000 Cashback on Home Loan Refinance (Minimum Loan $250,000, LVR < 80%) @ IMB Bank",
-      "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
-      "last_savings": 4000,
-      "last_seen_at": "2026-06-14T12:46:27+00:00",
-      "last_title": "$2,000-$4,000 Cashback on Home Loan Refinance (Minimum Loan $250,000, LVR < 80%) @ IMB Bank",
-      "link": "https://www.ozbargain.com.au/node/959395",
-      "market_price": 0,
-      "node_id": "959395",
-      "price_history": [
-        {
-          "at": "2026-06-14T12:46:27+00:00",
-          "deal_price": 2000,
-          "market_price": 0,
-          "savings": 4000
         }
       ],
       "times_seen": 4
@@ -408,30 +360,6 @@
       ],
       "times_seen": 4
     },
-    "node:960180": {
-      "best_savings": 6000,
-      "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "deal_price": 61990,
-      "email_count": 1,
-      "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "first_title": "VW Tayron SUV PHEV eHybrid 150TSI Elegance 6-Speed DSG MY26 from $61,990 Driveaway (Save $6,000+) @ VW",
-      "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
-      "last_savings": 6000,
-      "last_seen_at": "2026-06-14T12:46:27+00:00",
-      "last_title": "VW Tayron SUV PHEV eHybrid 150TSI Elegance 6-Speed DSG MY26 from $61,990 Driveaway (Save $6,000+) @ VW",
-      "link": "https://www.ozbargain.com.au/node/960180",
-      "market_price": 0,
-      "node_id": "960180",
-      "price_history": [
-        {
-          "at": "2026-06-14T12:46:27+00:00",
-          "deal_price": 61990,
-          "market_price": 0,
-          "savings": 6000
-        }
-      ],
-      "times_seen": 4
-    },
     "node:960183": {
       "best_savings": 287,
       "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
@@ -481,14 +409,14 @@
       "times_seen": 4
     },
     "node:960260": {
-      "best_savings": 1540,
+      "best_savings": 1200,
       "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
       "deal_price": 2099,
       "email_count": 1,
       "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
       "first_title": "Husqvarna Automower 415X Robotic Mower $2099 (Save $1540 / 43% off) + $55 Delivery ($0 VIC C&C) @ Hampton Mowerpower",
       "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
-      "last_savings": 1540,
+      "last_savings": 1200,
       "last_seen_at": "2026-06-14T12:46:27+00:00",
       "last_title": "Husqvarna Automower 415X Robotic Mower $2099 (Save $1540 / 43% off) + $55 Delivery ($0 VIC C&C) @ Hampton Mowerpower",
       "link": "https://www.ozbargain.com.au/node/960260",
@@ -649,14 +577,14 @@
       "times_seen": 4
     },
     "node:960996": {
-      "best_savings": 1400,
+      "best_savings": 1100,
       "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
       "deal_price": 599,
       "email_count": 1,
       "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
       "first_title": "Anker Solix F1200 (PowerHouse 757) 1229wh/1500w $599 (Was $1,999, 70% off) @ Anker Solix AU",
       "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
-      "last_savings": 1400,
+      "last_savings": 1100,
       "last_seen_at": "2026-06-14T12:46:27+00:00",
       "last_title": "Anker Solix F1200 (PowerHouse 757) 1229wh/1500w $599 (Was $1,999, 70% off) @ Anker Solix AU",
       "link": "https://www.ozbargain.com.au/node/960996",
@@ -788,30 +716,6 @@
           "deal_price": 1049,
           "market_price": 2099,
           "savings": 1050
-        }
-      ],
-      "times_seen": 4
-    },
-    "node:961198": {
-      "best_savings": 2000,
-      "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "deal_price": 2000,
-      "email_count": 1,
-      "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "first_title": "$2000 Cashback on Home Loans Refinance (Customer Retention Offer) @ ANZ",
-      "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
-      "last_savings": 2000,
-      "last_seen_at": "2026-06-14T12:46:27+00:00",
-      "last_title": "$2000 Cashback on Home Loans Refinance (Customer Retention Offer) @ ANZ",
-      "link": "https://www.ozbargain.com.au/node/961198",
-      "market_price": 0,
-      "node_id": "961198",
-      "price_history": [
-        {
-          "at": "2026-06-14T12:46:27+00:00",
-          "deal_price": 2000,
-          "market_price": 0,
-          "savings": 2000
         }
       ],
       "times_seen": 4
@@ -1056,30 +960,6 @@
       ],
       "times_seen": 4
     },
-    "node:961961": {
-      "best_savings": 4000,
-      "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "deal_price": 49990,
-      "email_count": 1,
-      "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "first_title": "MY25 \u0160koda Kodiaq Mid Size SUV from $49,990 to $69,990 Driveaway + Bonus $4000 Fuel Voucher @ \u0160koda Dealers",
-      "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
-      "last_savings": 4000,
-      "last_seen_at": "2026-06-14T12:46:27+00:00",
-      "last_title": "MY25 \u0160koda Kodiaq Mid Size SUV from $49,990 to $69,990 Driveaway + Bonus $4000 Fuel Voucher @ \u0160koda Dealers",
-      "link": "https://www.ozbargain.com.au/node/961961",
-      "market_price": 0,
-      "node_id": "961961",
-      "price_history": [
-        {
-          "at": "2026-06-14T12:46:27+00:00",
-          "deal_price": 49990,
-          "market_price": 0,
-          "savings": 4000
-        }
-      ],
-      "times_seen": 4
-    },
     "node:961980": {
       "best_savings": 1049,
       "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
@@ -1273,14 +1153,14 @@
       "times_seen": 4
     },
     "node:962268": {
-      "best_savings": 9954,
+      "best_savings": 9000,
       "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
       "deal_price": 14929,
       "email_count": 1,
       "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
       "first_title": "Samsung 115\" QN90F Mini LED $14,929 Delivered (RRP $24,883) @ JB Hi Fi",
       "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
-      "last_savings": 9954,
+      "last_savings": 9000,
       "last_seen_at": "2026-06-14T12:46:27+00:00",
       "last_title": "Samsung 115\" QN90F Mini LED $14,929 Delivered (RRP $24,883) @ JB Hi Fi",
       "link": "https://www.ozbargain.com.au/node/962268",
@@ -1316,54 +1196,6 @@
           "deal_price": 160,
           "market_price": 395,
           "savings": 235
-        }
-      ],
-      "times_seen": 4
-    },
-    "node:962375": {
-      "best_savings": 2565,
-      "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "deal_price": 6000,
-      "email_count": 1,
-      "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "first_title": "AmEx Qantas Business Rewards Card: 190,000 Qantas Points via Referral, $6,000 Spend in 3 Months, $450 Ann Fee @ American Express",
-      "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
-      "last_savings": 2565,
-      "last_seen_at": "2026-06-14T12:46:27+00:00",
-      "last_title": "AmEx Qantas Business Rewards Card: 190,000 Qantas Points via Referral, $6,000 Spend in 3 Months, $450 Ann Fee @ American Express",
-      "link": "https://www.ozbargain.com.au/node/962375",
-      "market_price": 0,
-      "node_id": "962375",
-      "price_history": [
-        {
-          "at": "2026-06-14T12:46:27+00:00",
-          "deal_price": 6000,
-          "market_price": 0,
-          "savings": 2565
-        }
-      ],
-      "times_seen": 4
-    },
-    "node:962436": {
-      "best_savings": 2000,
-      "best_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "deal_price": 2000,
-      "email_count": 1,
-      "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
-      "first_title": "$2000 off: Chery Tiggo 4 Hybrid Urban from $27,990 Driveaway, Ultimate $30,990 @ Chery",
-      "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
-      "last_savings": 2000,
-      "last_seen_at": "2026-06-14T12:46:27+00:00",
-      "last_title": "$2000 off: Chery Tiggo 4 Hybrid Urban from $27,990 Driveaway, Ultimate $30,990 @ Chery",
-      "link": "https://www.ozbargain.com.au/node/962436",
-      "market_price": 0,
-      "node_id": "962436",
-      "price_history": [
-        {
-          "at": "2026-06-14T12:46:27+00:00",
-          "deal_price": 2000,
-          "market_price": 0,
-          "savings": 2000
         }
       ],
       "times_seen": 4
