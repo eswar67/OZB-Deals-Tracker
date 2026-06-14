@@ -92,7 +92,7 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn("assistantReply", html)
             self.assertIn("data-chat-prompt", html)
             self.assertIn("AI confidence", html)
-            self.assertIn("Today's Delta", html)
+            self.assertIn("Today's delta", html)
             self.assertIn("today-deals", html)
             self.assertIn("All active deals", html)
             self.assertIn("all-active-details", html)
@@ -136,7 +136,7 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn("Savings high to low", html)
             self.assertIn("Today's delta deals", html)
             self.assertIn("No new or improved deals match the current filters.", html)
-            self.assertNotIn('"times_seen"', html)
+            self.assertIn('"times_seen"', html)  # now exposed for price-history/seen count
             self.assertNotIn('"email_count"', html)
             self.assertNotIn('"node_id"', html)
 

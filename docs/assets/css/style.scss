@@ -591,3 +591,131 @@ a:hover { color: var(--gold-light); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ════ SAVINGS LEDGER (effective-price breakdown) ═════════ */
+.deal-radar .ledger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+}
+.deal-radar .ledger-item {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.22rem 0.55rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-raised);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.deal-radar .ledger-base {
+  color: var(--fresh);
+  border-color: rgba(111, 212, 154, 0.28);
+  background: var(--fresh-bg);
+}
+.deal-radar .ledger-cash {
+  color: var(--info);
+  border-color: rgba(123, 176, 242, 0.28);
+  background: var(--info-bg);
+}
+.deal-radar .ledger-beat {
+  color: var(--gold-light);
+  border-color: rgba(232, 184, 75, 0.28);
+  background: rgba(232, 184, 75, 0.08);
+}
+.deal-radar .ledger-low { color: var(--ink-soft); }
+.deal-radar .ledger-low.is-lowest {
+  color: var(--fresh);
+  border-color: rgba(111, 212, 154, 0.4);
+  background: var(--fresh-bg);
+}
+
+/* ════ HYPE-vs-VALUE WARNING ══════════════════════════════ */
+.deal-radar .deal-warn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--urgent);
+  background: var(--urgent-bg);
+  border: 1px solid rgba(255, 122, 69, 0.28);
+  border-radius: var(--r-sm);
+}
+.deal-radar .deal-warn::before {
+  content: '⚠';
+  font-size: 0.85rem;
+  flex: 0 0 auto;
+}
+
+/* ════ NEAR MISSES (missed-deal audit surface) ════════════ */
+.deal-radar .near-miss-section summary span {
+  font-family: var(--f-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ink-bright);
+  text-transform: none;
+  letter-spacing: 0.005em;
+}
+.deal-radar .near-miss-section summary strong {
+  margin-left: 0;
+  background: var(--bg-raised);
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+.deal-radar .near-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.6rem;
+}
+.deal-radar .near-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--bg-card);
+  border: 1px solid var(--line-soft);
+  border-left: 2px solid var(--ink-faint);
+  border-radius: var(--r-sm);
+  text-decoration: none;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+.deal-radar .near-row:hover {
+  border-color: var(--line-gold);
+  border-left-color: var(--gold-mid);
+  background: var(--bg-hover);
+  transform: translateX(2px);
+}
+.deal-radar .near-title {
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 500;
+  line-height: 1.35;
+  min-width: 0;
+}
+.deal-radar .near-meta {
+  color: var(--ink-muted);
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+.deal-radar .near-save {
+  color: var(--ink-soft);
+  font-family: var(--f-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .deal-radar .near-row {
+    grid-template-columns: 1fr auto;
+  }
+  .deal-radar .near-meta { display: none; }
+}

@@ -61,12 +61,35 @@ def annotate_deals(deals: list[dict]) -> list[dict]:
         prior_best = int(prior.get("best_savings", 0) or 0)
         current = int(deal.get("savings", 0) or 0)
 
+        history = prior.get("price_history", []) or []
+        observed_prices = [
+            int(h.get("deal_price", 0) or 0)
+            for h in history
+            if int(h.get("deal_price", 0) or 0) > 0
+        ]
+        current_price = int(deal.get("deal_price", 0) or 0)
+        if current_price > 0:
+            observed_prices.append(current_price)
+        lowest_price = min(observed_prices) if observed_prices else 0
+        lowest_at = ""
+        if lowest_price > 0:
+            for h in history:
+                if int(h.get("deal_price", 0) or 0) == lowest_price:
+                    lowest_at = h.get("at", "")
+                    break
+
         deal["memory_key"] = key
         deal["first_seen_at"] = prior.get("first_seen_at", "")
         deal["times_seen"] = int(prior.get("times_seen", 0) or 0)
         deal["email_count"] = int(prior.get("email_count", 0) or 0)
         deal["last_emailed_at"] = prior.get("last_emailed_at", "")
         deal["previous_best_savings"] = prior_best
+        deal["price_history"] = history
+        deal["lowest_price_seen"] = lowest_price
+        deal["lowest_price_at"] = lowest_at
+        deal["is_lowest_price"] = bool(
+            current_price > 0 and (lowest_price == 0 or current_price <= lowest_price)
+        )
         deal["is_new_deal"] = not bool(prior)
         deal["is_best_seen"] = current > 0 and current > prior_best
         deal["is_delta_deal"] = (
@@ -152,6 +175,30 @@ def record_run(all_deals: Iterable[dict], emailed_deals: Iterable[dict], min_sav
         if current > int(item.get("best_savings", 0) or 0):
             item["best_savings"] = current
             item["best_seen_at"] = run_at
+
+        # Append a price observation so we can show lowest-seen / price history.
+        # Keep the log compact (cap to the most recent 60 observations).
+        deal_price_now = int(deal.get("deal_price", 0) or 0)
+        market_price_now = int(deal.get("market_price", 0) or 0)
+        history = item.setdefault("price_history", [])
+        last_obs = history[-1] if history else {}
+        changed = (
+            not history
+            or int(last_obs.get("deal_price", -1)) != deal_price_now
+            or int(last_obs.get("savings", -1)) != current
+        )
+        if deal_price_now > 0 or current > 0:
+            if changed:
+                history.append({
+                    "at": run_at,
+                    "deal_price": deal_price_now,
+                    "market_price": market_price_now,
+                    "savings": current,
+                })
+            else:
+                last_obs["at"] = run_at  # refresh timestamp without duplicating
+            if len(history) > 60:
+                del history[:-60]
         if key in sent_keys:
             item["last_emailed_at"] = run_at
             item["email_count"] = int(item.get("email_count", 0) or 0) + 1
