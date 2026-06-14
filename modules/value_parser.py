@@ -90,6 +90,48 @@ def _match_combined_trade_in_discount(t: str):
     return total, f"Combined discount stack: {detail} = ${total:,} potential saving"
 
 
+def _has_conditional_ceiling(text: str, start: int, end: int) -> bool:
+    """True if a matched $ value is a premium-dependent / unrestated ceiling
+    rather than a fixed saving.
+
+    Two phantom patterns are caught:
+      1. Premium/weekly dependence near the value — e.g. "$2,025 depending on
+         your weekly premium", "gift card worth 6 weeks of premium". The figure
+         is only reachable on the top weekly-premium tier.
+      2. "up to $X" where $X is NOT restated elsewhere as a fixed tier
+         (single / family / couple / individual). A bare "up to $X" is a ceiling.
+
+    Fixed stated tiers like "$300 (Single) / $600 (Family)" or "up to $600 ...
+    $600 Family or $300 Single" are NOT flagged — the value is a concrete,
+    reachable amount.
+    """
+    around = text[max(0, start - 50):min(len(text), end + 45)].lower()
+    # 1. Premium / weekly-rate dependence near the value → always a ceiling.
+    if re.search(
+        r"per\s+week|/\s*wk|/\s*week|\ba\s+week\b|\bweekly\b|"
+        r"\bweeks?\s+(?:free|of\s+(?:premium|cover|membership))|"
+        r"\bweeks?\s+of\b|\bpremium\b|depending\s+on|based\s+on\s+your",
+        around,
+    ):
+        return True
+    # 2. "up to $X" ceiling — phantom unless X is restated as a fixed tier.
+    before = text[max(0, start - 30):start].lower()
+    if re.search(r"\b(?:up\s*to|as\s+much\s+as|as\s+high\s+as|worth\s+up\s+to)\s*\$?\s*$", before):
+        num = re.sub(r"[^\d]", "", text[start:end])
+        if num:
+            # Does the same dollar amount appear next to a fixed-tier word?
+            amount = f"{int(num):,}"
+            tier_word = r"(?:single|singles|family|families|couple|individual)"
+            tier_re = re.compile(
+                r"\$\s*" + re.escape(amount) + r"\b[^.$\n]{0,18}\b" + tier_word
+                + r"|\b" + tier_word + r"\b[^.$\n]{0,18}\$\s*" + re.escape(amount),
+                re.IGNORECASE,
+            )
+            if not tier_re.search(text):
+                return True
+    return False
+
+
 def _match_best_combined_value(t: str):
     """
     Deal descriptions/comments often contain the final community-derived answer:
@@ -106,6 +148,8 @@ def _match_best_combined_value(t: str):
     for pat in patterns:
         m = re.search(pat, t, re.IGNORECASE)
         if m:
+            if _has_conditional_ceiling(t, m.start(1), m.end(1)):
+                continue
             value = _price(m.group(1))
             if value > 0:
                 return value, f"AI-derived combined saving/value stated in deal text or comments: ${value:,}"
@@ -321,10 +365,19 @@ def _match_reward_value(t: str):
     )
     if not m:
         return None
-    values = _all_prices(m.group(0))
-    if not values:
+    segment = m.group(0)
+    seg_start = m.start(0)
+    # Reject premium/weekly-tiered or "up to" ceilings — these aren't fixed rewards.
+    fixed_prices = []
+    for pm in re.finditer(r"\$\s*([\d,]+)", segment):
+        if _has_conditional_ceiling(t, seg_start + pm.start(1), seg_start + pm.end(1)):
+            continue
+        val = _price(pm.group(1))
+        if val > 0:
+            fixed_prices.append(val)
+    if not fixed_prices:
         return None
-    value = max(values)
+    value = max(fixed_prices)
     if value > 0:
         return value, f"${value:,} reward value stated in title"
     return None
