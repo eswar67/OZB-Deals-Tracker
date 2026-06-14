@@ -153,6 +153,7 @@ class DealsSiteTests(unittest.TestCase):
                     "merchant_name": "JB Hi-Fi",
                     "savings": 9954,
                     "is_delta_deal": True,
+                    "is_new_deal": True,
                     "delta_reason": "new",
                 }
             ], output)

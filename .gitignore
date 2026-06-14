@@ -10,7 +10,8 @@ credentials.json
 
 # Logs & outputs
 *.log
-outputs/
+outputs/*
+!outputs/deal_memory.json
 
 # Audit / debug
 audit.jsonl

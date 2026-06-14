@@ -47,7 +47,7 @@ from modules.prefs          import match_all
 from modules.email_builder  import build_email_html
 from modules.value_parser   import parse_all as parse_deal_values
 from modules.briefing       import build_briefing
-from modules.deal_memory    import annotate_deals, record_run
+from modules.deal_memory    import annotate_deals, record_run, MEMORY_FILE
 
 # ── Config ────────────────────────────────────────────────────────────────────
 _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
@@ -250,6 +250,33 @@ def publish_deals_site(deals: list[dict]) -> None:
         log.info("Deals site published to origin/main")
     except Exception as exc:
         log.warning("Deals site auto-publish failed: %s", exc)
+
+
+def persist_memory_state() -> None:
+    """Commit the updated deal memory so delta detection survives across runs.
+
+    On CI each run starts from a clean checkout. If the memory file is not
+    committed, every run loads empty memory, marks every deal as new, and
+    'Today's Delta' ends up showing all active deals. Persisting the memory
+    file fixes that by giving the next run yesterday's state to diff against.
+    """
+    if not ENABLE_SITE_AUTO_PUBLISH:
+        return
+    try:
+        if not MEMORY_FILE.exists():
+            log.info("No deal memory file to persist yet")
+            return
+        subprocess.run(["git", "add", "-f", str(MEMORY_FILE)], check=True)
+        diff = subprocess.run(["git", "diff", "--cached", "--quiet"])
+        if diff.returncode == 0:
+            log.info("Deal memory unchanged; nothing to persist")
+            return
+        stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        subprocess.run(["git", "commit", "-m", f"Persist deal memory {stamp}"], check=True)
+        subprocess.run(["git", "push", "origin", "main"], check=True)
+        log.info("Deal memory persisted to origin/main")
+    except Exception as exc:
+        log.warning("Deal memory persist failed: %s", exc)
 
 
 def is_delta_deal(deal: dict) -> bool:
@@ -2027,6 +2054,7 @@ def main():
     if not top_deals:
         log.info("No new or improved delta deals above threshold — no email sent.")
         record_run(deals, [], MIN_SAVINGS)
+        persist_memory_state()
         return
 
     if ENABLE_PRE_SEND_REVIEW:
@@ -2042,6 +2070,7 @@ def main():
     if not SEND_EMAIL:
         log.info("SEND_EMAIL=false — site published and Gmail send skipped.")
         record_run(deals, [], MIN_SAVINGS)
+        persist_memory_state()
         log.info("=== Done ===")
         return
 
@@ -2057,6 +2086,7 @@ def main():
         briefing=briefing,
     )
     record_run(deals, top_deals, MIN_SAVINGS)
+    persist_memory_state()
 
     log.info("=== Done ===")
 
