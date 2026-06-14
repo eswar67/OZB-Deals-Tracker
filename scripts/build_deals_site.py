@@ -522,9 +522,11 @@ def _render_near_miss(audit: dict) -> str:
 
 def render_jekyll_html(deals: list[dict], generated_at: datetime) -> str:
     total = sum(d["savings"] for d in deals)
-    top = deals[0]["savings"] if deals else 0
+    top = max((d["savings"] for d in deals), default=0)
     delta_deals = [d for d in deals if d.get("is_today_delta")]
     delta_total = sum(d["savings"] for d in delta_deals)
+    delta_top = max((d["savings"] for d in delta_deals), default=0)
+    active_avg = round(total / len(deals)) if deals else 0
     categories = sorted({d["category"] for d in deals})
     merchants = sorted({d["merchant"] for d in deals})
     generated = generated_at.astimezone(SYDNEY_TZ).strftime("%d %b %Y, %I:%M %p %Z")
@@ -552,27 +554,19 @@ title: Today's best quantified deals
     <div class="stamp">Latest run: {escape(generated)}</div>
   </header>
 
-  <section class="metric-band" aria-label="Run summary">
+  <section class="metric-band" aria-label="Today's deals summary">
     <div class="metric metric-hero">
-      <div class="metric-label">Top saving</div>
-      <div class="metric-value" id="stat-top">{_money(top)}</div>
+      <div class="metric-label">Top deal today</div>
+      <div class="metric-value" id="stat-today-top">{_money(delta_top)}</div>
     </div>
     <div class="metric-divider" aria-hidden="true"></div>
     <div class="metric">
-      <div class="metric-label">Today's delta</div>
+      <div class="metric-label">Today's deals</div>
       <div class="metric-value" id="stat-delta">{len(delta_deals)}</div>
     </div>
     <div class="metric">
-      <div class="metric-label">Delta value</div>
+      <div class="metric-label">Today's value</div>
       <div class="metric-value" id="stat-delta-total">{_money(delta_total)}</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Active deals</div>
-      <div class="metric-value" id="stat-count">{len(deals)}</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Active value</div>
-      <div class="metric-value" id="stat-total">{_money(total)}</div>
     </div>
   </section>
 
@@ -654,6 +648,25 @@ title: Today's best quantified deals
         <span>All active deals</span>
         <strong id="all-count">{len(deals)}</strong>
       </summary>
+      <section class="metric-band active-band" aria-label="Active deals statistics">
+        <div class="metric metric-hero">
+          <div class="metric-label">Top active saving</div>
+          <div class="metric-value" id="stat-top">{_money(top)}</div>
+        </div>
+        <div class="metric-divider" aria-hidden="true"></div>
+        <div class="metric">
+          <div class="metric-label">Active deals</div>
+          <div class="metric-value" id="stat-count">{len(deals)}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Active value</div>
+          <div class="metric-value" id="stat-total">{_money(total)}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Avg saving</div>
+          <div class="metric-value" id="stat-active-avg">{_money(active_avg)}</div>
+        </div>
+      </section>
       <div class="section-subtitle">Full current active list, still sorted by savings and controlled by the filters above.</div>
       <section class="grid" id="deals"></section>
       <div class="empty" id="empty">No active deals match the current filters.</div>
@@ -740,6 +753,8 @@ SITE_SCRIPT = r"""<script>
     statCount: document.querySelector('#stat-count'),
     statTotal: document.querySelector('#stat-total'),
     statTop: document.querySelector('#stat-top'),
+    statTodayTop: document.querySelector('#stat-today-top'),
+    statActiveAvg: document.querySelector('#stat-active-avg'),
     chatLog: document.querySelector('#chat-log'),
     chatForm: document.querySelector('#chat-form'),
     chatInput: document.querySelector('#chat-input'),
@@ -1042,11 +1057,17 @@ SITE_SCRIPT = r"""<script>
     els.empty.style.display = rows.length ? 'none' : 'block';
     els.todayCount.textContent = todayRows.length.toLocaleString();
     els.allCount.textContent = rows.length.toLocaleString();
+    const todaySavings = todayRows.reduce((sum, deal) => sum + deal.savings, 0);
+    const activeSavings = rows.reduce((sum, deal) => sum + deal.savings, 0);
+    // Top section — today's deals only
     els.statDelta.textContent = todayRows.length.toLocaleString();
-    els.statDeltaTotal.textContent = money(todayRows.reduce((sum, deal) => sum + deal.savings, 0));
+    els.statDeltaTotal.textContent = money(todaySavings);
+    els.statTodayTop.textContent = money(todayRows.length ? Math.max(...todayRows.map(deal => deal.savings)) : 0);
+    // Active section — all active deals
     els.statCount.textContent = rows.length.toLocaleString();
-    els.statTotal.textContent = money(rows.reduce((sum, deal) => sum + deal.savings, 0));
-    els.statTop.textContent = money(rows[0]?.savings || 0);
+    els.statTotal.textContent = money(activeSavings);
+    els.statTop.textContent = money(rows.length ? Math.max(...rows.map(deal => deal.savings)) : 0);
+    els.statActiveAvg.textContent = money(rows.length ? Math.round(activeSavings / rows.length) : 0);
     encodeState();
   }
 
