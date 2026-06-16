@@ -11,7 +11,7 @@ Pipeline:
   → price_intel.analyse()       # cashback/price-beat; optional market lookup
   → score_deals()               # savings threshold; optional quality score
   → prefs.match_all()           # relevance tagging against user-prefs.json
-  → top_deals filter            # savings≥MIN_SAVINGS ($200 default)
+  -> top_deals filter            # savings>=MIN_SAVINGS ($100 default)
   → flash deal flagging
   → review_and_fix_deals()      # optional Claude Sonnet pre-send quality pass
   → email_builder.build()       # rich HTML deal card email
@@ -108,7 +108,7 @@ HOME_APPLIANCE_FEEDS = [
     "https://www.ozbargain.com.au/cat/home-garden/feed",
 ]
 
-# Additional category feeds — previously untracked, all $200+ filtered
+# Additional category feeds — previously untracked, all $100+ filtered
 COMPUTING_FEEDS = [
     "https://www.ozbargain.com.au/cat/computing/feed",
 ]
@@ -157,7 +157,7 @@ MIN_COMMENTS   = int(os.getenv("MIN_COMMENTS", "10"))
 MIN_CLICKS     = int(os.getenv("MIN_CLICKS",   "200"))
 MAX_AGE_HOURS  = 999999  # No age limit — fetch all available deals
 MIN_SCORE      = int(os.getenv("MIN_SCORE",    "6"))
-MIN_SAVINGS    = int(os.getenv("MIN_SAVINGS",  "200"))
+MIN_SAVINGS    = int(os.getenv("MIN_SAVINGS",  "100"))
 OZB_MAX_PAGES  = int(os.getenv("OZB_MAX_PAGES", "200"))
 OZB_HTML_WORKERS = max(1, int(os.getenv("OZB_HTML_WORKERS", "6")))
 

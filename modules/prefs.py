@@ -20,10 +20,7 @@ log = logging.getLogger(__name__)
 PREFS_FILE = Path(__file__).parent.parent / "user-prefs.json"
 
 _DEFAULT_PREFS = {
-    "preferred_categories": [
-        "Electronics", "Computing", "Home & Garden", "Travel",
-        "Gaming", "Phones", "Appliances"
-    ],
+    "preferred_categories": [],
     "keyword_watchlist": [
         "iPad", "MacBook", "Dyson", "Roomba", "Sony", "Samsung",
         "standing desk", "Nintendo Switch", "AirPods", "Bose"
@@ -31,11 +28,7 @@ _DEFAULT_PREFS = {
     "excluded_brands": [],
     "excluded_merchants": [],
     "min_savings_per_category": {
-        "Electronics": 200,
-        "Computing":   200,
-        "Travel":      200,
-        "Supermarket":  80,
-        "default":     200
+        "default": 100
     },
     "preferred_cashback_platform": "ShopBack"
 }

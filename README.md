@@ -10,7 +10,7 @@ The email output is designed as a concise daily briefing rather than a raw scrap
 
 The public website mirrors the daily deal set and gives users a clean, filterable interface to explore remembered deals by search, category, merchant, savings, and other criteria.
 
-Scheduling is handled primarily through GitHub Actions, with local Mac automation kept as a backup path only if GitHub Actions fails. The intended daily runs include 2:00 PM and 7:15 PM AEST. The system also publishes the refreshed website through GitHub Pages so the email can link to a live, shareable deal dashboard:
+Scheduling is handled primarily through GitHub Actions, with local Mac automation kept as a backup path only if GitHub Actions fails. The intended daily run is once per day at 6:00 PM Australia/Sydney time. The system also publishes the refreshed website through GitHub Pages so the email can link to a live, shareable deal dashboard:
 
 https://eswar67.github.io/OZB-Deals-Tracker/
 

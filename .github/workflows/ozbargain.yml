@@ -3,11 +3,11 @@ name: OzBargain Monitor
 on:
   schedule:
     # GitHub cron is UTC-only and scheduled events can be delayed or dropped.
-    # Wake frequently across both AEST/AEDT afternoon/evening windows; the
-    # Sydney-time gate + cache below sends each slot only once per day.
-    # AEST:  2:00 PM = 04:00 UTC, 7:15 PM = 09:15 UTC
-    # AEDT:  2:00 PM = 03:00 UTC, 7:15 PM = 08:15 UTC
-    - cron: '*/15 3-10 * * *'
+    # Wake frequently around the 6:00 PM Australia/Sydney run; the Sydney-time
+    # gate + cache below sends only the first due run each day.
+    # AEST:  6:00 PM = 08:00 UTC
+    # AEDT:  6:00 PM = 07:00 UTC
+    - cron: '*/15 7-9 * * *'
   workflow_dispatch:   # allow manual trigger from GitHub UI
     inputs:
       send_email:
@@ -51,21 +51,18 @@ jobs:
           echo "Sydney minutes since midnight: $sydney_minutes"
 
           # GitHub can delay or skip individual scheduled events. Because this
-          # workflow wakes repeatedly, run the first due slot that has not been
-          # marked sent by the cache. Late GitHub delivery still catches up.
-          if (( sydney_minutes >= 14 * 60 && sydney_minutes < 19 * 60 + 15 )); then
-            echo "slot_key=${sydney_date}-afternoon" >> "$GITHUB_OUTPUT"
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-          elif (( sydney_minutes >= 19 * 60 + 15 )); then
-            echo "slot_key=${sydney_date}-evening" >> "$GITHUB_OUTPUT"
+          # workflow wakes repeatedly, run once after 6:00 PM Sydney time and
+          # let the cache block any later duplicate wake-ups for the same day.
+          if (( sydney_minutes >= 18 * 60 )); then
+            echo "slot_key=${sydney_date}-daily-1800" >> "$GITHUB_OUTPUT"
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           else
             echo "should_run=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Skip outside Sydney 2:00 PM / 7:15 PM
+      - name: Skip outside Sydney 6:00 PM
         if: steps.schedule_gate.outputs.should_run != 'true'
-        run: echo "Skipping because this UTC cron entry is outside the 2:00 PM / 7:15 PM Australia/Sydney windows."
+        run: echo "Skipping because this UTC cron entry is outside the 6:00 PM Australia/Sydney window."
 
       - name: Restore schedule slot marker
         id: schedule_cache
@@ -94,8 +91,7 @@ jobs:
           from zoneinfo import ZoneInfo
 
           sydney_now = datetime.now(ZoneInfo("Australia/Sydney"))
-          current_minutes = sydney_now.hour * 60 + sydney_now.minute
-          current_slot = "afternoon" if current_minutes < 19 * 60 + 15 else "evening"
+          current_slot = "daily-1800"
 
           text = Path("docs/index.html").read_text(errors="ignore") if Path("docs/index.html").exists() else ""
           match = re.search(r"Latest run:\s*(\d{2}\s+\w{3}\s+\d{4},\s+\d{1,2}:\d{2}\s+[AP]M)", text)
@@ -105,8 +101,7 @@ jobs:
 
           latest = datetime.strptime(match.group(1), "%d %b %Y, %I:%M %p").replace(tzinfo=ZoneInfo("Australia/Sydney"))
           latest_minutes = latest.hour * 60 + latest.minute
-          latest_slot = "afternoon" if 14 * 60 <= latest_minutes < 19 * 60 + 15 else "evening"
-          handled = latest.date() == sydney_now.date() and latest_slot == current_slot
+          handled = latest.date() == sydney_now.date() and latest_minutes >= 18 * 60
           print(f"handled={'true' if handled else 'false'}")
           print(f"latest_site_run={latest.isoformat()}")
           print(f"current_slot={current_slot}")
@@ -160,7 +155,7 @@ jobs:
           SEATS_AERO_API_KEY: ${{ secrets.SEATS_AERO_API_KEY }}
           TOKEN_FILE:         token.json
           CREDENTIALS_FILE:   credentials.json
-          MIN_SAVINGS:        "200"
+          MIN_SAVINGS:        "100"
           OZB_MAX_PAGES:      "200"
           ENABLE_MARKET_PRICE_LOOKUP: "false"
           ENABLE_QUALITY_SCORING: "false"

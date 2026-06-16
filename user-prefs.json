@@ -1,19 +1,7 @@
 {
   "_comment": "Edit this file to personalise OzBargain deal alerts. Only contains preferences and tunable constants \u2014 no assumed personal financial data.",
   "owner": "Eswar",
-  "preferred_categories": [
-    "Travel",
-    "Credit Cards",
-    "Banking",
-    "Electronics",
-    "Computing",
-    "Home & Garden",
-    "Gaming",
-    "Phones",
-    "Appliances",
-    "Supermarket",
-    "Gift Cards"
-  ],
+  "preferred_categories": [],
   "keyword_watchlist": [
     "iPad",
     "MacBook",
@@ -62,11 +50,7 @@
   "excluded_brands": [],
   "excluded_merchants": [],
   "min_savings_per_category": {
-    "Electronics": 200,
-    "Computing": 200,
-    "Travel": 150,
-    "Supermarket": 80,
-    "default": 200
+    "default": 100
   },
   "preferred_cashback_platform": "ShopBack",
   "flash_deal_hours": 6,
