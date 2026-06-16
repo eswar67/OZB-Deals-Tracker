@@ -165,6 +165,88 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn('"is_today_delta": true', html)
             self.assertIn("New today", html)
 
+    def test_category_taxonomy_reduces_other_bucket(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            memory = Path(tmp) / "memory.json"
+            memory.write_text(json.dumps({
+                "deals": {
+                    "outdoor": {
+                        "last_title": "Columbia Men's Puffect III Insulated Jacket $100 (RRP $319.99) @ Columbia",
+                        "link": "https://www.ozbargain.com.au/node/10",
+                        "last_savings": 219,
+                        "best_savings": 219,
+                        "last_seen_at": "2026-06-06T09:00:00+00:00",
+                        "last_emailed_at": "2026-06-06T09:00:00+00:00",
+                    },
+                    "appliance": {
+                        "last_title": "10% off Ausclimate Dehumidifiers 45L Smart $449.10 (RRP $699) @ Ausclimate",
+                        "link": "https://www.ozbargain.com.au/node/11",
+                        "last_savings": 250,
+                        "best_savings": 250,
+                        "last_seen_at": "2026-06-06T09:00:00+00:00",
+                        "last_emailed_at": "2026-06-06T09:00:00+00:00",
+                    },
+                    "health": {
+                        "last_title": "Philips Sonicare 9900 Electric Toothbrush $329 (RRP $549) @ Amazon AU",
+                        "link": "https://www.ozbargain.com.au/node/12",
+                        "last_savings": 220,
+                        "best_savings": 220,
+                        "last_seen_at": "2026-06-06T09:00:00+00:00",
+                        "last_emailed_at": "2026-06-06T09:00:00+00:00",
+                    },
+                    "watch": {
+                        "last_title": "[Seconds] Grip Auto Tourismo Watch $160 (RRP $395) @ Grip Auto Outlet",
+                        "link": "https://www.ozbargain.com.au/node/13",
+                        "last_savings": 235,
+                        "best_savings": 235,
+                        "last_seen_at": "2026-06-06T09:00:00+00:00",
+                        "last_emailed_at": "2026-06-06T09:00:00+00:00",
+                    },
+                    "phone": {
+                        "last_title": "Motorola Moto G56 5G 8GB RAM/256GB Storage $197 @ BIG W",
+                        "link": "https://www.ozbargain.com.au/node/14",
+                        "last_savings": 200,
+                        "best_savings": 200,
+                        "last_seen_at": "2026-06-06T09:00:00+00:00",
+                        "last_emailed_at": "2026-06-06T09:00:00+00:00",
+                    },
+                }
+            }))
+
+            deals, _ = load_all_memory_deals(memory)
+            categories = {deal["title"]: deal["category"] for deal in deals}
+
+            self.assertEqual(categories["Columbia Men's Puffect III Insulated Jacket $100 (RRP $319.99) @ Columbia"], "Outdoor")
+            self.assertEqual(categories["10% off Ausclimate Dehumidifiers 45L Smart $449.10 (RRP $699) @ Ausclimate"], "Home Appliances")
+            self.assertEqual(categories["Philips Sonicare 9900 Electric Toothbrush $329 (RRP $549) @ Amazon AU"], "Health")
+            self.assertEqual(categories["[Seconds] Grip Auto Tourismo Watch $160 (RRP $395) @ Grip Auto Outlet"], "Fashion")
+            self.assertEqual(categories["Motorola Moto G56 5G 8GB RAM/256GB Storage $197 @ BIG W"], "Mobile")
+
+    def test_assistant_uses_category_synonyms_and_no_match_guard(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            memory = Path(tmp) / "memory.json"
+            output = Path(tmp) / "index.html"
+            memory.write_text(json.dumps({
+                "deals": {
+                    "outdoor": {
+                        "last_title": "Columbia Men's Puffect III Insulated Jacket $100 (RRP $319.99) @ Columbia",
+                        "link": "https://www.ozbargain.com.au/node/10",
+                        "last_savings": 219,
+                        "best_savings": 219,
+                        "last_seen_at": "2026-06-06T09:00:00+00:00",
+                        "last_emailed_at": "2026-06-06T09:00:00+00:00",
+                    },
+                }
+            }))
+
+            _, path = build(memory, output)
+            html = path.read_text()
+
+            self.assertIn('"category": "Outdoor"', html)
+            self.assertIn('"search_terms": "Columbia', html)
+            self.assertIn("hiking camping", html)
+            self.assertIn("if (!scored.length) return [];", html)
+
     def test_monitor_publish_uses_current_run_deals(self):
         deals = [{
             "title": "Fresh Deal Save $500 @ Store",

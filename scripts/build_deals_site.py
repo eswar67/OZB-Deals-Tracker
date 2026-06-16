@@ -87,19 +87,74 @@ def _parse_dt(value: str) -> datetime:
         return datetime.min.replace(tzinfo=timezone.utc)
 
 
-def _category_from_title(title: str) -> str:
-    t = title.lower()
-    rules = [
-        ("Finance", ("home loan", "credit card", "qantas points", "velocity", "insurance", "cashback")),
-        ("Computing", ("laptop", "macbook", "ssd", "gaming pc", "keyboard", "mouse", "nas", "monitor")),
-        ("Electronics", ("tv", "oled", "qled", "samsung", "iphone", "ipad", "airpods", "headphones")),
-        ("Home", ("vacuum", "dyson", "robot", "kitchen", "fridge", "washing", "doorbell")),
-        ("Gaming", ("switch", "playstation", "xbox", "nintendo", "steam", "game")),
-        ("Automotive", ("car", "suv", "dash cam", "battery", "vehicle")),
-        ("Travel", ("flight", "hotel", "travel")),
-    ]
-    for category, words in rules:
-        if any(word in t for word in words):
+OZB_CATEGORY_MAP = {
+    "automotive": "Automotive",
+    "computing": "Computing",
+    "electrical & electronics": "Electronics",
+    "electronics": "Electronics",
+    "entertainment": "Entertainment",
+    "financial": "Finance",
+    "gaming": "Gaming",
+    "groceries": "Groceries",
+    "health & beauty": "Health",
+    "home & garden": "Home",
+    "internet": "Internet",
+    "mobile": "Mobile",
+    "pets": "Pets",
+    "sport & outdoor": "Outdoor",
+    "travel": "Travel",
+    "toys & kids": "Baby & Kids",
+}
+
+
+CATEGORY_RULES = [
+    ("Travel", ("flight", "airfare", "airline", "hotel", "accommodation", "cruise", "lounge", "luggage", "travel", "qantas", "velocity", "lifemiles", "krisflyer", "asia miles", "emirates", "cathay")),
+    ("Finance", ("credit card", "debit card", "bank", "banking", "home loan", "mortgage", "refinance", "offset account", "savings account", "term deposit", "insurance", "hospital cover", "extras cover", "health cover", "smsf", "super ", "amex", "american express", "westpac", "anz black")),
+    ("Business", ("pty ltd", "ptd. ltd", "limited company", "virtual office", "company setup", "establishment setup", "amazon business", "zeller", "payment terminal", "terminals", "abn required")),
+    ("Gift Cards", ("gift card", "gift cards", "egift card", "egift cards", "edr dollars", "store credit", "voucher", "coupon prizes")),
+    ("Utilities", ("agl", "energy locals", "electricity", "gas bill", "fuel card", "fuel cards", "home select plan")),
+    ("Mobile", ("iphone", "galaxy", "pixel", "motorola", "moto ", "oppo", "xiaomi", "phone", "smartphone", "mobile plan", "sim card", "esim", "prepaid", "optus", "telstra", "5g")),
+    ("Computing", ("laptop", "macbook", "notebook", "chromebook", "desktop", "gaming pc", "graphics card", "gpu", "cpu", "ram", "ssd", "hard drive", "nas", "router", "ubiquiti", "keyboard", "mouse", "monitor", "printer")),
+    ("Electronics", ("tv", "television", "oled", "qled", "mini led", "soundbar", "subwoofer", "speaker", "hifi", "headphones", "earbuds", "airpods", "bose", "sony wh", "sennheiser", "camera", "gopro", "tablet", "ipad", "kindle", "projector", "telescope", "v mount battery", "power station", "anker solix", "uhf radio", "uniden")),
+    ("Gaming", ("playstation", "ps5", "xbox", "nintendo", "switch", "steam", "gaming", "console", "logitech g", "racing wheel", "game pass", "lego")),
+    ("Tools", ("mitre saw", "mechanic", "mechanics tool", "tool set", "spanner", "gearwrench", "makita", "battery charger", "power tools", "bunnings", "sydney tools", "stepladder", "ladder")),
+    ("Smart Home", ("smart lock", "aqara", "ring spotlight", "spotlight cam", "security camera", "doorbell")),
+    ("Home Appliances", ("vacuum", "dyson", "roomba", "robot vacuum", "dehumidifier", "dehumidifiers", "air purifier", "fridge", "freezer", "washing machine", "washer", "dryer", "dishwasher", "karcher", "spot cleaner", "coffee machine", "coffee grinder", "nespresso", "espresso", "air fryer", "cooktop", "cooktops", "multi cooker", "instant pot", "casserole pot", "stock pot", "fry pan", "steel pan", "microwave")),
+    ("Home", ("furniture", "coffee table", "mattress", "bed", "sofa", "standing desk", "chair", "solar", "garden", "lawn mower", "mower", "automower", "pressure washer")),
+    ("Outdoor", ("hiking", "camping", "tent", "cabana", "beach cabana", "sleeping bag", "backpack", "puffer jacket", "insulated jacket", "rain jacket", "columbia", "north face", "patagonia", "macpac", "kayak", "bike", "bicycle", "cycling", "fitness", "treadmill")),
+    ("Automotive", ("driveaway", "suv", "ute", "vehicle", "ev charger", "dash cam", "tyres", "car battery", "byd", "tesla", "vw ", "volkswagen", "skoda", "chery", "sealion", "tayron")),
+    ("Health", ("toothbrush", "sonicare", "oral-b", "shaver", "chemist", "pharmacy", "vitamin", "supplement", "skincare", "sunscreen", "massage", "cpap", "hospital", "oura ring")),
+    ("Baby & Kids", ("uppababy", "pram", "stroller", "car seat", "child seat", "baby", "toddler", "kids", "toy", "toys")),
+    ("Fashion", ("watch", "watches", "footwear", "shoe", "shoes", "sneaker", "sneakers", "adidas", "allbirds", "saucony", "the iconic", "athlete's foot", "jacket", "jackets", "menswear", "shirts", "boots", "clothing", "apparel", "pants", "dress", "sunglasses")),
+    ("Groceries", ("grocery", "groceries", "woolworths", "coles", "aldi", "costco", "wine", "wines", "cabernet", "sauvignon", "shiraz", "beer", "coffee beans", "chocolate", "nappies")),
+    ("Entertainment", ("movie", "cinema", "streaming", "subscription", "audible", "spotify", "netflix", "disney+", "book", "star wars", "electronic helmet")),
+    ("Pets", ("pet", "dog", "cat", "kibble", "petstock", "petbarn")),
+    ("Internet", ("nbn", "broadband", "internet plan", "mobile broadband")),
+    ("Shopping", ("referee", "referrer", "first purchase", "next purchase")),
+]
+
+
+CATEGORY_SEARCH_TERMS = {
+    category: " ".join(words)
+    for category, words in CATEGORY_RULES
+}
+
+
+def _contains_term(text: str, term: str) -> bool:
+    if term.endswith(" "):
+        return term in text
+    return re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", text) is not None
+
+
+def _category_from_signals(title: str, raw_categories: list[str] | None = None, merchant: str = "") -> str:
+    for raw in raw_categories or []:
+        mapped = OZB_CATEGORY_MAP.get(str(raw).strip().lower())
+        if mapped:
+            return mapped
+
+    text = f"{title} {merchant}".lower()
+    for category, terms in CATEGORY_RULES:
+        if any(_contains_term(text, term) for term in terms):
             return category
     return "Other"
 
@@ -111,6 +166,7 @@ def _merchant_from_title(title: str) -> str:
 
 def _row_from_memory_item(item: dict) -> dict:
     title = item.get("last_title") or item.get("first_title") or "Untitled deal"
+    merchant = _merchant_from_title(title)
     emailed_at = _parse_dt(item.get("last_emailed_at", ""))
     last_seen_at = _parse_dt(item.get("last_seen_at", ""))
     first_seen_at = _parse_dt(item.get("first_seen_at", ""))
@@ -132,8 +188,8 @@ def _row_from_memory_item(item: dict) -> dict:
         "last_emailed_at": emailed_at,
         "last_seen_at": last_seen_at,
         "first_seen_at": first_seen_at,
-        "category": _category_from_title(title),
-        "merchant": _merchant_from_title(title),
+        "category": _category_from_signals(title, item.get("categories") or [], merchant),
+        "merchant": merchant,
     }
     row["lowest_price_seen"] = int(item.get("lowest_price_seen", 0) or 0)
     history = item.get("price_history", []) or []
@@ -188,6 +244,7 @@ def deals_from_monitor_run(deals: list[dict], generated_at: datetime | None = No
     rows = []
     for deal in deals:
         title = deal.get("title") or "Untitled deal"
+        merchant = deal.get("merchant_name") or _merchant_from_title(title)
         market_price = int(deal.get("market_price", 0) or 0) or _title_market_price(title)
         deal_price = int(deal.get("deal_price", 0) or 0) or _title_deal_price(title)
         row = {
@@ -204,8 +261,8 @@ def deals_from_monitor_run(deals: list[dict], generated_at: datetime | None = No
             "is_today_delta": bool(deal.get("is_new_deal") or deal.get("is_best_seen")),
             "delta_reason": ("new" if deal.get("is_new_deal") else ("saving_improved" if deal.get("is_best_seen") else "")),
             "last_emailed_at": generated_at,
-            "category": _category_from_title(deal.get("title", "")),
-            "merchant": deal.get("merchant_name") or _merchant_from_title(deal.get("title", "")),
+            "category": _category_from_signals(title, deal.get("categories") or [], merchant),
+            "merchant": merchant,
         }
         row["lowest_price_seen"] = int(deal.get("lowest_price_seen", 0) or 0)
         row["is_lowest_price"] = bool(deal.get("is_lowest_price"))
@@ -427,6 +484,14 @@ def _deal_payload(deals: list[dict]) -> str:
             "first_seen_at": deal.get("first_seen_at", deal["last_emailed_at"]).isoformat(),
             "category": deal["category"],
             "merchant": deal["merchant"],
+            "search_terms": " ".join(
+                part for part in [
+                    deal["title"],
+                    deal["merchant"],
+                    deal["category"],
+                    CATEGORY_SEARCH_TERMS.get(deal["category"], ""),
+                ] if part
+            ),
             "times_seen": int(deal.get("times_seen", 0) or 0),
             "lowest_price": int(deal.get("lowest_price_seen", 0) or 0),
             "is_lowest_price": bool(deal.get("is_lowest_price")),
@@ -796,7 +861,11 @@ SITE_SCRIPT = r"""<script>
   }
 
   function dealText(deal) {
-    return [deal.title, deal.merchant, deal.category].join(' ').toLowerCase();
+    return String(deal.search_terms || [deal.title, deal.merchant, deal.category].join(' ')).toLowerCase();
+  }
+
+  function dealTokens(deal) {
+    return new Set(tokenize(dealText(deal)));
   }
 
   function isExpired(deal) {
@@ -1165,13 +1234,29 @@ SITE_SCRIPT = r"""<script>
   function uniqueMerchants() { return [...new Set(deals.map(d => String(d.merchant || '').toLowerCase()).filter(Boolean))]; }
 
   const CATEGORY_ALIASES = [
-    ['Computing', /\b(laptop|macbook|computer|computing|pc|gaming pc|ssd|monitor|keyboard|mouse|nas|router|ubiquiti)\b/],
-    ['Electronics', /\b(tv|oled|qled|samsung|iphone|ipad|tablet|airpods|headphones|earbuds|camera|phone|soundbar|electronics)\b/],
-    ['Home', /\b(home|vacuum|dyson|robot|kitchen|fridge|mower|cooktop|appliance|furniture|mattress|coffee|espresso|air ?fryer)\b/],
-    ['Finance', /\b(finance|cashback|credit card|qantas|velocity|points|loan|insurance|refinance|bank|offset)\b/],
-    ['Automotive', /\b(car|suv|vehicle|automotive|tyres|charger|ev|dash cam|battery|vw|skoda|byd|chery)\b/],
-    ['Gaming', /\b(gaming|xbox|playstation|nintendo|switch|steam|lego)\b/],
-    ['Travel', /\b(travel|flight|hotel|airline|luggage|cruise|lounge)\b/],
+    ['Travel', /\b(travel|flight|airfare|hotel|airline|luggage|cruise|lounge|qantas|velocity|lifemiles|krisflyer|asia miles)\b/],
+    ['Finance', /\b(finance|credit card|debit card|home loan|mortgage|insurance|hospital cover|extras cover|health cover|smsf|super|refinance|bank|offset|savings account|amex|american express)\b/],
+    ['Business', /\b(pty ltd|ptd\. ltd|limited company|virtual office|company setup|establishment setup|amazon business|zeller|payment terminal|terminals|abn required)\b/],
+    ['Gift Cards', /\b(gift card|gift cards|egift card|egift cards|edr dollars|store credit|voucher|coupon)\b/],
+    ['Utilities', /\b(agl|energy locals|electricity|gas bill|fuel card|fuel cards|home select plan)\b/],
+    ['Mobile', /\b(iphone|galaxy|pixel|motorola|moto|oppo|xiaomi|phone|smartphone|mobile|sim|esim|prepaid|optus|telstra|5g)\b/],
+    ['Computing', /\b(laptop|macbook|computer|computing|pc|gaming pc|ssd|monitor|keyboard|mouse|nas|router|ubiquiti|printer)\b/],
+    ['Electronics', /\b(tv|television|oled|qled|mini led|ipad|tablet|airpods|headphones|earbuds|camera|soundbar|subwoofer|speaker|hifi|sennheiser|projector|telescope|v mount battery|power station|anker|uhf radio|uniden)\b/],
+    ['Gaming', /\b(gaming|xbox|playstation|ps5|nintendo|switch|steam|console|racing wheel|logitech g|lego)\b/],
+    ['Tools', /\b(mitre saw|mechanic|mechanics tool|tool set|spanner|gearwrench|makita|battery charger|power tools|bunnings|sydney tools|stepladder|ladder)\b/],
+    ['Smart Home', /\b(smart lock|aqara|ring spotlight|spotlight cam|security camera|doorbell)\b/],
+    ['Home Appliances', /\b(vacuum|dyson|robot vacuum|dehumidifier|dehumidifiers|air purifier|fridge|washing machine|washer|dryer|dishwasher|karcher|spot cleaner|coffee machine|coffee grinder|nespresso|espresso|air fryer|cooktop|cooktops|multi cooker|instant pot|casserole pot|stock pot|fry pan|steel pan)\b/],
+    ['Home', /\b(home|furniture|coffee table|mattress|sofa|standing desk|solar|garden|lawn mower|mower|automower|pressure washer)\b/],
+    ['Outdoor', /\b(outdoor|hiking|camping|tent|cabana|beach cabana|sleeping bag|backpack|puffer|insulated jacket|rain jacket|columbia|north face|patagonia|macpac|bike|cycling|fitness)\b/],
+    ['Automotive', /\b(automotive|driveaway|suv|ute|vehicle|ev charger|dash cam|tyres|car battery|byd|tesla|volkswagen|skoda|chery|sealion|tayron)\b/],
+    ['Health', /\b(health|toothbrush|sonicare|oral-b|shaver|chemist|pharmacy|vitamin|supplement|skincare|sunscreen|cpap|hospital|oura ring)\b/],
+    ['Baby & Kids', /\b(baby|kids|toy|toys|uppababy|pram|stroller|car seat|toddler)\b/],
+    ['Fashion', /\b(fashion|watch|watches|footwear|shoe|shoes|sneaker|sneakers|adidas|allbirds|saucony|the iconic|athlete's foot|jacket|jackets|menswear|shirts|boots|clothing|apparel|sunglasses)\b/],
+    ['Groceries', /\b(grocery|groceries|woolworths|coles|aldi|costco|wine|wines|cabernet|sauvignon|shiraz|beer|coffee beans|chocolate|nappies)\b/],
+    ['Entertainment', /\b(movie|cinema|streaming|subscription|audible|spotify|netflix|disney|book|star wars|electronic helmet)\b/],
+    ['Pets', /\b(pet|dog|cat|kibble|petstock|petbarn)\b/],
+    ['Internet', /\b(nbn|broadband|internet plan|mobile broadband)\b/],
+    ['Shopping', /\b(referee|referrer|first purchase|next purchase)\b/],
   ];
 
   const STOP = new Set(['a','an','and','any','are','around','ask','best','better','can','current','deal','deals','find','for','from','give','good','have','help','i','in','is','latest','list','me','now','of','offer','offers','on','or','please','present','relevant','result','results','right','search','show','some','the','these','this','to','top','what','which','with','about','me','my','you','your']);
@@ -1268,8 +1353,19 @@ SITE_SCRIPT = r"""<script>
     if (slots.merchants && slots.merchants.length) out = out.filter(d => slots.merchants.some(mn => String(d.merchant || '').toLowerCase().includes(mn)));
     const kw = tokenize(text).filter(t => !['deal', 'deals', 'cheap', 'cheapest', 'best', 'find', 'show', 'good', 'under', 'over', 'between', 'top', 'price', 'prices'].includes(t));
     if (kw.length) {
-      const scored = out.map(d => [d, kw.reduce((sc, t) => sc + (dealText(d).includes(t) ? 1 : 0), 0)]).filter(([, sc]) => sc > 0);
-      if (scored.length) { scored.sort((a, b) => b[1] - a[1] || b[0].savings - a[0].savings); out = scored.map(([d]) => d); }
+      const scored = out.map(d => {
+        const textBlob = dealText(d);
+        const tokens = dealTokens(d);
+        const score = kw.reduce((sc, t) => {
+          if (tokens.has(t)) return sc + 4;
+          if (textBlob.includes(t)) return sc + 1;
+          return sc;
+        }, 0);
+        return [d, score];
+      }).filter(([, sc]) => sc > 0);
+      if (!scored.length) return [];
+      scored.sort((a, b) => b[1] - a[1] || b[0].savings - a[0].savings);
+      out = scored.map(([d]) => d);
     }
     return out;
   }
