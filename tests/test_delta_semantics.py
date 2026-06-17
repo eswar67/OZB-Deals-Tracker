@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 import modules.deal_memory as dm
+import ozbargain_monitor as monitor
 from scripts.build_deals_site import deals_from_monitor_run
 
 
@@ -76,6 +77,33 @@ class DeltaSemanticsTests(unittest.TestCase):
         rows2, _ = deals_from_monitor_run(d2)
         self.assertFalse(rows2[0]["is_today_delta"])
         self.assertEqual(rows2[0]["delta_reason"], "")
+
+    def test_restored_manual_rerun_delta_is_rendered(self):
+        deal = self._deal("1", "Samsung TV", 500)
+        deal["is_delta_deal"] = True
+        deal["delta_reason"] = "rerun"
+
+        rows, _ = deals_from_monitor_run([deal])
+
+        self.assertTrue(rows[0]["is_today_delta"])
+        self.assertEqual(rows[0]["delta_reason"], "rerun")
+
+    def test_restore_previous_site_delta_matches_active_deals(self):
+        site = Path(self.tmp.name) / "index.html"
+        site.write_text("""
+        <script id="deal-data" type="application/json">[
+          {"title":"Samsung TV","link":"https://x/node/1","is_today_delta":true,"delta_reason":"new"},
+          {"title":"Old Dyson","link":"https://x/node/2","is_today_delta":false,"delta_reason":""}
+        ]</script>
+        """)
+        deals = [self._deal("1", "Samsung TV", 500), self._deal("3", "Laptop", 400)]
+
+        restored = monitor.restore_previous_site_delta(deals, site)
+
+        self.assertEqual(restored, 1)
+        self.assertTrue(deals[0]["is_delta_deal"])
+        self.assertEqual(deals[0]["delta_reason"], "new")
+        self.assertFalse(deals[1].get("is_delta_deal", False))
 
 
 if __name__ == "__main__":

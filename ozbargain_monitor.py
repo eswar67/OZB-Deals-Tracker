@@ -22,6 +22,7 @@ import os
 import time
 import threading
 import base64
+import json
 import logging
 import xml.etree.ElementTree as ET
 import re
@@ -30,6 +31,7 @@ import subprocess
 from datetime import datetime, timezone, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from html import unescape
 from pathlib import Path
 
 import requests
@@ -173,6 +175,7 @@ LIVE_GIFT_VALUE_LOOKUP     = os.getenv("LIVE_GIFT_VALUE_LOOKUP", "false").lower(
 ENABLE_QUALITY_SCORING     = os.getenv("ENABLE_QUALITY_SCORING", "false").lower() in ("1", "true", "yes", "on")
 ENABLE_PRE_SEND_REVIEW     = os.getenv("ENABLE_PRE_SEND_REVIEW", "false").lower() in ("1", "true", "yes", "on")
 SEND_EMAIL                 = os.getenv("SEND_EMAIL", "true").lower() in ("1", "true", "yes", "on")
+PRESERVE_SITE_DELTA_ON_EMPTY = os.getenv("PRESERVE_SITE_DELTA_ON_EMPTY", "false").lower() in ("1", "true", "yes", "on")
 MAX_PRODUCT_SCORE_DEALS    = int(os.getenv("MAX_PRODUCT_SCORE_DEALS", "40"))
 MAX_FINANCIAL_VALUE_DEALS  = int(os.getenv("MAX_FINANCIAL_VALUE_DEALS", "20"))
 MAX_FINANCIAL_SCORE_DEALS  = int(os.getenv("MAX_FINANCIAL_SCORE_DEALS", "20"))
@@ -296,6 +299,62 @@ def is_delta_deal(deal: dict) -> bool:
         or email_count == 0
         or (savings > 0 and savings > previous_best)
     )
+
+
+def _site_delta_key(deal: dict) -> str:
+    link = str(deal.get("link") or "").strip()
+    if link:
+        return f"link:{link}"
+    node_id = str(deal.get("node_id") or "").strip()
+    if node_id:
+        return f"node:{node_id}"
+    return f"title:{str(deal.get('title') or '').strip().lower()}"
+
+
+def restore_previous_site_delta(deals: list[dict], site_file=Path("docs/index.html")) -> int:
+    """Preserve the last published delta set for manual reruns with no new delta.
+
+    A manual GitHub rerun happens after memory has already recorded the previous
+    run, so unchanged deals no longer look new. Without this fallback, the site
+    can replace "Today's delta" with an empty section and the email has nothing
+    to resend. We only restore rows that are still active in this run.
+    """
+    site_path = Path(site_file)
+    if not site_path.exists():
+        return 0
+
+    text = site_path.read_text(errors="ignore")
+    match = re.search(
+        r'<script id="deal-data" type="application/json">(.*?)</script>',
+        text,
+        re.DOTALL,
+    )
+    if not match:
+        return 0
+
+    try:
+        previous_rows = json.loads(unescape(match.group(1)))
+    except Exception as exc:
+        log.warning("Could not read previous site delta rows: %s", exc)
+        return 0
+
+    previous_delta = {
+        _site_delta_key(row): row
+        for row in previous_rows
+        if row.get("is_today_delta")
+    }
+    if not previous_delta:
+        return 0
+
+    restored = 0
+    for deal in deals:
+        previous = previous_delta.get(_site_delta_key(deal))
+        if not previous:
+            continue
+        deal["is_delta_deal"] = True
+        deal["delta_reason"] = previous.get("delta_reason") or "rerun"
+        restored += 1
+    return restored
 
 
 def _deal_priority(deal: dict) -> tuple:
@@ -2275,6 +2334,11 @@ def main():
         d["is_priority_watchlist"] = any("Watchlist" in tag for tag in tags)
 
     top_deals = [d for d in active_top_deals if is_delta_deal(d)]
+    if not top_deals and PRESERVE_SITE_DELTA_ON_EMPTY:
+        restored = restore_previous_site_delta(active_top_deals)
+        if restored:
+            log.info("Restored %s previous site delta deal(s) for manual rerun", restored)
+            top_deals = [d for d in active_top_deals if is_delta_deal(d)]
     log.info(f"{len(top_deals)} delta deal(s) are new, first-email, or improved")
 
     publish_deals_site(active_top_deals)

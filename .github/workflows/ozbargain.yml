@@ -163,6 +163,7 @@ jobs:
           ENABLE_QUALITY_SCORING: "false"
           ENABLE_PRE_SEND_REVIEW: "false"
           ENABLE_SITE_AUTO_PUBLISH: "true"
+          PRESERVE_SITE_DELTA_ON_EMPTY: ${{ github.event_name == 'workflow_dispatch' }}
           SEND_EMAIL: ${{ github.event_name == 'schedule' || inputs.send_email == 'true' }}
         run: python ozbargain_monitor.py
 
