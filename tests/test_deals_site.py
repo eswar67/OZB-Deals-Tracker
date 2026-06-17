@@ -165,6 +165,29 @@ class DealsSiteTests(unittest.TestCase):
             self.assertIn('"is_today_delta": true', html)
             self.assertIn("New today", html)
 
+    def test_build_from_bargain_radar_deal_labels_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "index.html"
+            count, path = build_from_deals([
+                {
+                    "title": "Dyson V15 Detect $799 (Was $1199) @ Dyson",
+                    "link": "https://bargainradar.com.au/deals/dyson-v15",
+                    "node_id": "br-dyson-v15",
+                    "merchant_name": "Dyson",
+                    "categories": ["Home Appliances"],
+                    "savings": 400,
+                    "source": "bargainradar",
+                    "is_delta_deal": True,
+                    "is_new_deal": True,
+                }
+            ], output)
+
+            html = path.read_text()
+            self.assertEqual(count, 1)
+            self.assertIn("Bargain Radar signal", html)
+            self.assertIn('"source": "bargainradar"', html)
+            self.assertIn("bargainradar", html)
+
     def test_category_taxonomy_reduces_other_bucket(self):
         with tempfile.TemporaryDirectory() as tmp:
             memory = Path(tmp) / "memory.json"

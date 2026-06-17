@@ -190,6 +190,7 @@ def _row_from_memory_item(item: dict) -> dict:
         "first_seen_at": first_seen_at,
         "category": _category_from_signals(title, item.get("categories") or [], merchant),
         "merchant": merchant,
+        "source": item.get("source", "") or ("bargainradar" if "bargainradar.com.au" in str(item.get("link", "")) else "ozbargain"),
     }
     row["lowest_price_seen"] = int(item.get("lowest_price_seen", 0) or 0)
     history = item.get("price_history", []) or []
@@ -263,6 +264,7 @@ def deals_from_monitor_run(deals: list[dict], generated_at: datetime | None = No
             "last_emailed_at": generated_at,
             "category": _category_from_signals(title, deal.get("categories") or [], merchant),
             "merchant": merchant,
+            "source": deal.get("source", "ozbargain"),
         }
         row["lowest_price_seen"] = int(deal.get("lowest_price_seen", 0) or 0)
         row["is_lowest_price"] = bool(deal.get("is_lowest_price"))
@@ -484,11 +486,13 @@ def _deal_payload(deals: list[dict]) -> str:
             "first_seen_at": deal.get("first_seen_at", deal["last_emailed_at"]).isoformat(),
             "category": deal["category"],
             "merchant": deal["merchant"],
+            "source": deal.get("source", "ozbargain"),
             "search_terms": " ".join(
                 part for part in [
                     deal["title"],
                     deal["merchant"],
                     deal["category"],
+                    deal.get("source", "ozbargain"),
                     CATEGORY_SEARCH_TERMS.get(deal["category"], ""),
                 ] if part
             ),
@@ -861,7 +865,7 @@ SITE_SCRIPT = r"""<script>
   }
 
   function dealText(deal) {
-    return String(deal.search_terms || [deal.title, deal.merchant, deal.category].join(' ')).toLowerCase();
+    return String(deal.search_terms || [deal.title, deal.merchant, deal.category, deal.source].join(' ')).toLowerCase();
   }
 
   function dealTokens(deal) {
@@ -1020,7 +1024,7 @@ SITE_SCRIPT = r"""<script>
       <div>
         <div class="rank">#${index + 1} · ${escapeHtml(deal.category)} · Agent Score ${score}/100</div>
         <a class="title" href="${escapeHtml(deal.link)}" target="_blank" rel="noopener">${escapeHtml(deal.title)}</a>
-        <div class="meta">${escapeHtml(deal.merchant)} · OzBargain signal</div>
+        <div class="meta">${escapeHtml(deal.merchant)} · ${deal.source === 'bargainradar' ? 'Bargain Radar signal' : 'OzBargain signal'}</div>
         ${hypeWarning(deal)}
         <div class="badges">${badges}</div>
         <div class="pillrow">
@@ -1406,7 +1410,7 @@ SITE_SCRIPT = r"""<script>
     return `<a class="ac-deal" href="${escapeHtml(deal.link)}" target="_blank" rel="noopener">
       <div class="ac-deal-main">
         <div class="ac-deal-title">${escapeHtml(deal.title)}</div>
-        <div class="ac-deal-meta">${escapeHtml(deal.merchant)} · ${escapeHtml(deal.category)} · AI ${aiConfidence(deal)}% · Urgency ${urgencyScore(deal)}%</div>
+        <div class="ac-deal-meta">${escapeHtml(deal.merchant)} · ${escapeHtml(deal.category)} · ${deal.source === 'bargainradar' ? 'Bargain Radar' : 'OzBargain'} · AI ${aiConfidence(deal)}% · Urgency ${urgencyScore(deal)}%</div>
         ${tagHtml ? `<div class="ac-tags">${tagHtml}</div>` : ''}
       </div>
       <div class="ac-deal-save">${fmtMoney(deal.savings)}</div>

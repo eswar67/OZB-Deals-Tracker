@@ -5,7 +5,7 @@ Fetches popular deals, scores via Claude, alerts via Gmail, logs to Google Sheet
 Runs once daily at 7:00 PM via launchd (com.ozbargain.monitor).
 
 Pipeline:
-  fetch_all_deals()             # HTML crawl; RSS is capped after page 10
+  fetch_all_deals()             # OzBargain HTML crawl; optional Bargain Radar crawl
   → oos_filter()                # drop expired/OOS by title/card signals
   → value_parser.parse_all()    # deterministic savings extraction first
   → price_intel.analyse()       # cashback/price-beat; optional market lookup
@@ -59,6 +59,7 @@ for _k, _v in dotenv_values(_env_path).items():
 
 FEED_URL           = "https://www.ozbargain.com.au/deals/feed"
 DEALS_URL          = "https://www.ozbargain.com.au/deals"
+BARGAIN_RADAR_URL  = "https://bargainradar.com.au/"
 FINANCIAL_FEED_URL = "https://www.ozbargain.com.au/cat/financial/feed"
 TRAVEL_FEED_URL    = "https://www.ozbargain.com.au/cat/travel/feed"
 
@@ -160,6 +161,12 @@ MIN_SCORE      = int(os.getenv("MIN_SCORE",    "6"))
 MIN_SAVINGS    = int(os.getenv("MIN_SAVINGS",  "100"))
 OZB_MAX_PAGES  = int(os.getenv("OZB_MAX_PAGES", "200"))
 OZB_HTML_WORKERS = max(1, int(os.getenv("OZB_HTML_WORKERS", "6")))
+BARGAIN_RADAR_ENABLED = os.getenv("BARGAIN_RADAR_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+BARGAIN_RADAR_URLS = [
+    u.strip()
+    for u in os.getenv("BARGAIN_RADAR_URLS", BARGAIN_RADAR_URL).split(",")
+    if u.strip()
+]
 
 ENABLE_MARKET_PRICE_LOOKUP = os.getenv("ENABLE_MARKET_PRICE_LOOKUP", "false").lower() in ("1", "true", "yes", "on")
 LIVE_GIFT_VALUE_LOOKUP     = os.getenv("LIVE_GIFT_VALUE_LOOKUP", "false").lower() in ("1", "true", "yes", "on")
@@ -385,6 +392,10 @@ def _abs_ozb_url(path: str) -> str:
     return urllib.parse.urljoin("https://www.ozbargain.com.au", path or "")
 
 
+def _abs_bargain_radar_url(path: str) -> str:
+    return urllib.parse.urljoin(BARGAIN_RADAR_URL, path or "")
+
+
 def _parse_html_posted_at(text: str):
     m = re.search(r"\bon\s+(\d{2}/\d{2}/\d{4})\s*-\s*(\d{1,2}:\d{2})", text or "")
     if not m:
@@ -468,6 +479,216 @@ def parse_html_deal_cards(html_text: str) -> list[dict]:
             "source":       "html",
         })
     return deals
+
+
+def _walk_json(value):
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from _walk_json(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _walk_json(child)
+
+
+def _json_text(value) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float)):
+        return str(value)
+    return ""
+
+
+def _is_probable_deal_json(obj: dict) -> bool:
+    title = _json_text(obj.get("title") or obj.get("name") or obj.get("headline"))
+    url = _json_text(obj.get("url") or obj.get("link") or obj.get("permalink") or obj.get("href"))
+    text = " ".join(_json_text(obj.get(k)) for k in ("price", "salePrice", "discount", "saving", "merchant", "store"))
+    if title and url and re.search(r"\$|%|off|save|was|rrp|deal", f"{title} {text}", re.IGNORECASE):
+        return True
+    if title and re.search(r"\$|%|off|save|was|rrp", title, re.IGNORECASE):
+        return True
+    return False
+
+
+def _bargain_radar_item_from_json(obj: dict, fallback_id: int):
+    title = _json_text(obj.get("title") or obj.get("name") or obj.get("headline"))
+    if not title:
+        return None
+
+    link = _json_text(obj.get("url") or obj.get("link") or obj.get("permalink") or obj.get("href"))
+    external_url = _json_text(obj.get("external_url") or obj.get("externalUrl") or obj.get("dealUrl") or obj.get("merchantUrl"))
+    merchant = _json_text(obj.get("merchant") or obj.get("store") or obj.get("retailer") or obj.get("brand"))
+    category = _json_text(obj.get("category") or obj.get("categoryName") or obj.get("type"))
+    description = _json_text(obj.get("description") or obj.get("summary") or obj.get("excerpt"))
+    date_raw = _json_text(obj.get("datePublished") or obj.get("publishedAt") or obj.get("createdAt") or obj.get("updatedAt"))
+
+    pub_dt = datetime.now(timezone.utc)
+    if date_raw:
+        try:
+            pub_dt = datetime.fromisoformat(date_raw.replace("Z", "+00:00")).astimezone(timezone.utc)
+        except ValueError:
+            pass
+
+    source_link = _abs_bargain_radar_url(link) if link else BARGAIN_RADAR_URL
+    node_id = _json_text(obj.get("id") or obj.get("_id") or obj.get("slug")) or f"br-json-{fallback_id}"
+    return {
+        "node_id":      f"br-{node_id}",
+        "title":        title,
+        "link":         source_link,
+        "external_url": external_url,
+        "description":  description,
+        "pubDate":      pub_dt,
+        "votes":        0,
+        "comments":     0,
+        "clicks":       0,
+        "expiry_label": "No expiry date listed",
+        "is_expired":   bool(obj.get("expired") or obj.get("isExpired")),
+        "is_oos":       bool(obj.get("soldOut") or obj.get("outOfStock") or obj.get("isOos")),
+        "categories":   [category] if category else [],
+        "merchant_name": merchant,
+        "source":       "bargainradar",
+    }
+
+
+def _parse_bargain_radar_json_deals(soup) -> list[dict]:
+    import json
+
+    deals = []
+    seen_titles = set()
+    for script in soup.select('script[type="application/ld+json"], script#__NEXT_DATA__, script[data-nscript]'):
+        raw = script.string or script.get_text("", strip=False)
+        if not raw or len(raw) < 20:
+            continue
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            continue
+        for obj in _walk_json(payload):
+            if not _is_probable_deal_json(obj):
+                continue
+            deal = _bargain_radar_item_from_json(obj, len(deals))
+            if not deal:
+                continue
+            key = deal["title"].lower()
+            if key in seen_titles:
+                continue
+            seen_titles.add(key)
+            deals.append(deal)
+    return deals
+
+
+def _best_bargain_radar_title(card) -> str:
+    selectors = [
+        "[data-title]",
+        "h1", "h2", "h3",
+        ".title", ".deal-title", ".card-title", "[class*=title]",
+        "a[href]",
+    ]
+    for selector in selectors:
+        el = card.select_one(selector)
+        if not el:
+            continue
+        text = el.get("data-title") or el.get("aria-label") or el.get_text(" ", strip=True)
+        text = re.sub(r"\s+", " ", text or "").strip()
+        if len(text) >= 8 and re.search(r"\$|%|off|save|was|rrp|cashback", text, re.IGNORECASE):
+            return text
+    return ""
+
+
+def parse_bargain_radar_deals(html_text: str, page_url: str = BARGAIN_RADAR_URL) -> list[dict]:
+    """Parse Bargain Radar into the same deal dict shape used by OzBargain.
+
+    Bargain Radar does not currently expose a documented feed in this project, so
+    this parser accepts several common static-site shapes: JSON-LD/Next payloads
+    and HTML cards with deal-ish links/titles.
+    """
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html_text, "html.parser")
+    deals = _parse_bargain_radar_json_deals(soup)
+    seen = {d["title"].lower() for d in deals}
+
+    card_selectors = [
+        "[data-deal-id]",
+        "article",
+        ".deal",
+        ".deal-card",
+        ".card",
+        "[class*=deal]",
+        "[class*=product]",
+    ]
+    cards = []
+    for selector in card_selectors:
+        cards.extend(soup.select(selector))
+
+    for i, card in enumerate(cards):
+        title = _best_bargain_radar_title(card)
+        if not title:
+            continue
+        key = title.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+
+        link_el = card.select_one('a[href]')
+        link = _abs_bargain_radar_url(link_el.get("href")) if link_el else page_url
+        merchant_el = card.select_one("[data-merchant], .merchant, .store, [class*=merchant], [class*=store]")
+        merchant = ""
+        if merchant_el:
+            merchant = merchant_el.get("data-merchant") or merchant_el.get_text(" ", strip=True)
+        if not merchant:
+            merchant_match = re.search(r"\s@\s*([^|]+)$", title)
+            merchant = merchant_match.group(1).strip() if merchant_match else "Bargain Radar"
+
+        category_el = card.select_one("[data-category], .category, [class*=category]")
+        category = ""
+        if category_el:
+            category = category_el.get("data-category") or category_el.get_text(" ", strip=True)
+
+        body = card.get_text(" ", strip=True)
+        is_bad = bool(re.search(r"\b(expired|sold out|out of stock|oos)\b", body, re.IGNORECASE))
+        deals.append({
+            "node_id":      f"br-html-{i}",
+            "title":        title,
+            "link":         link,
+            "external_url": "",
+            "description":  body[:800],
+            "pubDate":      datetime.now(timezone.utc),
+            "votes":        0,
+            "comments":     0,
+            "clicks":       0,
+            "expiry_label": "Expired" if is_bad else "No expiry date listed",
+            "is_expired":   is_bad,
+            "is_oos":       is_bad,
+            "categories":   [category] if category else [],
+            "merchant_name": merchant,
+            "source":       "bargainradar",
+        })
+    return deals
+
+
+def fetch_bargain_radar_deals() -> list[dict]:
+    if not BARGAIN_RADAR_ENABLED:
+        return []
+
+    all_deals = []
+    seen = set()
+    for url in BARGAIN_RADAR_URLS:
+        try:
+            html_text = fetch_html(url)
+            items = parse_bargain_radar_deals(html_text, page_url=url)
+        except Exception as e:
+            log.warning(f"Bargain Radar fetch failed for {url}: {e}")
+            continue
+        for deal in items:
+            key = (deal.get("link") or deal.get("title", "")).lower()
+            if key and key not in seen:
+                seen.add(key)
+                all_deals.append(deal)
+        log.info(f"Bargain Radar: {len(items)} item(s) parsed from {url}")
+
+    log.info(f"Bargain Radar total: {len(all_deals)} unique deal(s)")
+    return all_deals
 
 
 def fetch_all_deals() -> list[dict]:
@@ -1952,16 +2173,23 @@ def main():
     log.info("=== OzBargain Monitor v2 starting ===")
     log.info(
         "Runtime mode: source=HTML /deals pages, min_savings=$%s, "
-        "market_lookup=%s, quality_scoring=%s, pre_send_review=%s, live_gift_lookup=%s",
+        "bargain_radar=%s, market_lookup=%s, quality_scoring=%s, pre_send_review=%s, live_gift_lookup=%s",
         MIN_SAVINGS,
+        BARGAIN_RADAR_ENABLED,
         ENABLE_MARKET_PRICE_LOOKUP,
         ENABLE_QUALITY_SCORING,
         ENABLE_PRE_SEND_REVIEW,
         LIVE_GIFT_VALUE_LOOKUP,
     )
 
-    # 1. Fetch all available OzBargain deal cards from HTML pagination.
+    # 1. Fetch all available deal cards from OzBargain plus optional extra sources.
     deals = fetch_all_deals()
+    bargain_radar_deals = fetch_bargain_radar_deals()
+    if bargain_radar_deals:
+        existing_links = {d.get("link") for d in deals}
+        new_source_deals = [d for d in bargain_radar_deals if d.get("link") not in existing_links]
+        deals.extend(new_source_deals)
+        log.info(f"Added {len(new_source_deals)} Bargain Radar deal(s) to source pool")
     if not deals:
         log.info("No deals fetched — nothing to do.")
         return

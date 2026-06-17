@@ -1,6 +1,6 @@
 import unittest
 
-from ozbargain_monitor import parse_html_deal_cards, score_deals
+from ozbargain_monitor import parse_bargain_radar_deals, parse_html_deal_cards, score_deals
 
 
 HTML_FIXTURE = """
@@ -85,6 +85,58 @@ class HtmlSavingsPipelineTests(unittest.TestCase):
         self.assertEqual(scored[0]["deal_price"], 399)
         self.assertEqual(scored[0]["market_price"], 699)
         self.assertAlmostEqual(scored[0]["savings_percent"], 42.9)
+
+    def test_parse_bargain_radar_json_deals(self):
+        html = """
+        <html><head>
+          <script type="application/ld+json">
+          {
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            "itemListElement": [
+              {
+                "@type": "Product",
+                "name": "Dyson V15 Detect $799 (Was $1,199) @ Dyson",
+                "url": "/deals/dyson-v15",
+                "brand": "Dyson",
+                "category": "Home Appliances",
+                "description": "Save $400 on Dyson V15"
+              }
+            ]
+          }
+          </script>
+        </head></html>
+        """
+
+        deals = parse_bargain_radar_deals(html)
+
+        self.assertEqual(len(deals), 1)
+        self.assertEqual(deals[0]["title"], "Dyson V15 Detect $799 (Was $1,199) @ Dyson")
+        self.assertEqual(deals[0]["link"], "https://bargainradar.com.au/deals/dyson-v15")
+        self.assertEqual(deals[0]["merchant_name"], "Dyson")
+        self.assertEqual(deals[0]["categories"], ["Home Appliances"])
+        self.assertEqual(deals[0]["source"], "bargainradar")
+
+    def test_parse_bargain_radar_html_cards(self):
+        html = """
+        <article class="deal-card" data-deal-id="abc">
+          <a href="/deal/sony-headphones">
+            <h2 class="deal-title">Sony Headphones $299 (Was $499) @ Sony</h2>
+          </a>
+          <span class="merchant">Sony Australia</span>
+          <span class="category">Electronics</span>
+          <p>Deal is active and ready to buy.</p>
+        </article>
+        """
+
+        deals = parse_bargain_radar_deals(html)
+
+        self.assertEqual(len(deals), 1)
+        self.assertEqual(deals[0]["node_id"], "br-html-0")
+        self.assertEqual(deals[0]["link"], "https://bargainradar.com.au/deal/sony-headphones")
+        self.assertEqual(deals[0]["merchant_name"], "Sony Australia")
+        self.assertEqual(deals[0]["categories"], ["Electronics"])
+        self.assertFalse(deals[0]["is_expired"])
 
 
 if __name__ == "__main__":

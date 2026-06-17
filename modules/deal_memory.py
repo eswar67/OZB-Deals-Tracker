@@ -96,6 +96,7 @@ def _bootstrap_memory_from_site() -> dict:
             "deal_price": int(deal.get("deal_price", 0) or 0),
             "market_price": int(deal.get("market_price", 0) or 0),
             "last_emailed_at": deal.get("last_emailed_at") or deal.get("last_seen_at") or "",
+            "source": deal.get("source", ""),
         }
         if item["best_savings"]:
             item["best_seen_at"] = item["last_seen_at"]
@@ -236,10 +237,12 @@ def record_run(all_deals: Iterable[dict], emailed_deals: Iterable[dict], min_sav
             "times_seen": 0,
             "email_count": 0,
             "best_savings": 0,
+            "source": deal.get("source", ""),
         })
         item["last_seen_at"] = run_at
         item["last_title"] = deal.get("title", "")
         item["last_savings"] = current
+        item["source"] = deal.get("source", item.get("source", ""))
         item["deal_price"] = int(deal.get("deal_price", 0) or 0)
         item["market_price"] = int(deal.get("market_price", 0) or 0)
         item["times_seen"] = int(item.get("times_seen", 0) or 0) + 1

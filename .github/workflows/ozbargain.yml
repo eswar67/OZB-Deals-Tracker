@@ -157,6 +157,8 @@ jobs:
           CREDENTIALS_FILE:   credentials.json
           MIN_SAVINGS:        "100"
           OZB_MAX_PAGES:      "200"
+          BARGAIN_RADAR_ENABLED: "true"
+          BARGAIN_RADAR_URLS: "https://bargainradar.com.au/"
           ENABLE_MARKET_PRICE_LOOKUP: "false"
           ENABLE_QUALITY_SCORING: "false"
           ENABLE_PRE_SEND_REVIEW: "false"

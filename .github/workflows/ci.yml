@@ -31,4 +31,5 @@ jobs:
           ENABLE_PRE_SEND_REVIEW: "false"
           LIVE_GIFT_VALUE_LOOKUP: "false"
           MIN_SAVINGS: "100"
+          BARGAIN_RADAR_ENABLED: "false"
         run: python -m unittest discover -s tests
