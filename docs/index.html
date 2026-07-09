@@ -414,7 +414,7 @@ title: OZB Deal Radar — quantified deal intelligence
           <li>No spam, no address sharing — one sender, BCC only</li>
         </ul>
       </div>
-      <form class="subscribe-form" id="subscribe-form">
+      <form class="subscribe-form" id="subscribe-form" data-endpoint="" data-entry-email="" data-entry-interests="">
         <label class="subscribe-label" for="subscribe-email">Email address</label>
         <input class="subscribe-input" id="subscribe-email" type="email" required placeholder="you@example.com" autocomplete="email">
         <label class="subscribe-label" for="subscribe-interests">Interests <span>(optional — tailors nothing yet, helps future personalisation)</span></label>
@@ -1710,7 +1710,25 @@ title: OZB Deal Radar — quantified deal intelligence
       return lines.join('\n');
     }
 
-    form.addEventListener('submit', (event) => {
+    // One-click mode: when a form backend is configured, subscriptions POST
+    // directly — no email composing, no copy-paste.
+    const endpoint = form.dataset.endpoint || '';
+    const entryEmail = form.dataset.entryEmail || '';
+    const entryInterests = form.dataset.entryInterests || '';
+    const oneClick = Boolean(endpoint && entryEmail);
+    const submitBtn = form.querySelector('.subscribe-button');
+
+    async function directSubmit(addr) {
+      const data = new FormData();
+      data.append(entryEmail, addr);
+      const wants = interests.value.trim();
+      if (entryInterests && wants) data.append(entryInterests, wants);
+      // Google Forms accepts cross-origin POSTs; the response is opaque
+      // (no-cors), so reaching here without a network error means delivered.
+      await fetch(endpoint, { method: 'POST', mode: 'no-cors', body: data });
+    }
+
+    form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const addr = email.value.trim();
       if (!addr || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
@@ -1719,13 +1737,30 @@ title: OZB Deal Radar — quantified deal intelligence
         actions.hidden = true;
         return;
       }
+      note.classList.remove('subscribe-error');
+
+      if (oneClick) {
+        submitBtn.disabled = true;
+        note.textContent = 'Subscribing…';
+        try {
+          await directSubmit(addr);
+          note.textContent = '✓ You\'re on the list — the daily digest starts with the next run. Resubmit any time to update interests.';
+          try { localStorage.setItem('ozb-subscribed', addr); } catch (e) {}
+          submitBtn.disabled = false;
+          return;
+        } catch (e) {
+          submitBtn.disabled = false;
+          // network failure — fall through to the manual options below
+        }
+      }
+
       requestText = buildRequest();
       const su = encodeURIComponent(SUBJECT);
       const body = encodeURIComponent(requestText);
       gmailLink.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + TO + '&su=' + su + '&body=' + body;
       actions.hidden = false;
-      note.classList.remove('subscribe-error');
-      note.textContent = 'Almost done — pick an option above, or email ' + TO + ' directly. You\'ll be added within a day.';
+      note.textContent = (oneClick ? 'Direct signup unreachable — ' : 'Almost done — ')
+        + 'use Gmail above, or email ' + TO + ' directly. You\'ll be added within a day.';
       try { localStorage.setItem('ozb-subscribed', addr); } catch (e) {}
     });
 

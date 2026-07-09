@@ -547,6 +547,30 @@ def _deal_payload(deals: list[dict]) -> str:
     return json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
 
 
+def _load_subscribe_config() -> dict:
+    """One-click subscribe backend (a Google Form).
+
+    Set in user-prefs.json:
+      site_subscribe: {
+        "form_action":     "https://docs.google.com/forms/d/e/<FORM_ID>/formResponse",
+        "email_entry":     "entry.<NUMBER>",       # the form's email question
+        "interests_entry": "entry.<NUMBER>"        # optional interests question
+      }
+    When configured, the site submits subscriptions directly (no email
+    composing). When absent, the UI falls back to Gmail-compose / copy.
+    """
+    try:
+        prefs = json.loads((ROOT / "user-prefs.json").read_text())
+    except Exception:
+        prefs = {}
+    cfg = prefs.get("site_subscribe", {}) or {}
+    return {
+        "form_action": str(cfg.get("form_action", "") or ""),
+        "email_entry": str(cfg.get("email_entry", "") or ""),
+        "interests_entry": str(cfg.get("interests_entry", "") or ""),
+    }
+
+
 def _load_agent_config() -> dict:
     """Config for the Deal Assistant agent: points valuations, goal maps,
     and an optional LLM proxy endpoint (set agent_llm_endpoint in user-prefs.json
@@ -645,6 +669,15 @@ def render_jekyll_html(deals: list[dict], generated_at: datetime) -> str:
     agent_config_json = json.dumps(_load_agent_config(), ensure_ascii=False).replace("</", "<\\/")
     pulse_json = json.dumps(_pulse_series(deals), ensure_ascii=False).replace("</", "<\\/")
     near_miss_html = _render_near_miss(_load_latest_audit())
+    subscribe_cfg = _load_subscribe_config()
+    subscribe_endpoint = escape(subscribe_cfg.get("form_action", ""), quote=True)
+    subscribe_entry_email = escape(subscribe_cfg.get("email_entry", ""), quote=True)
+    subscribe_entry_interests = escape(subscribe_cfg.get("interests_entry", ""), quote=True)
+    subscribe_note = (
+        "One click — no email app needed. Unsubscribe any time by replying to a digest."
+        if subscribe_cfg.get("form_action") and subscribe_cfg.get("email_entry")
+        else "Prepares a pre-filled request — send it via Gmail or copy &amp; paste."
+    )
 
     head = f"""---
 layout: default
@@ -817,7 +850,7 @@ title: OZB Deal Radar — quantified deal intelligence
           <li>No spam, no address sharing — one sender, BCC only</li>
         </ul>
       </div>
-      <form class="subscribe-form" id="subscribe-form">
+      <form class="subscribe-form" id="subscribe-form" data-endpoint="{subscribe_endpoint}" data-entry-email="{subscribe_entry_email}" data-entry-interests="{subscribe_entry_interests}">
         <label class="subscribe-label" for="subscribe-email">Email address</label>
         <input class="subscribe-input" id="subscribe-email" type="email" required placeholder="you@example.com" autocomplete="email">
         <label class="subscribe-label" for="subscribe-interests">Interests <span>(optional — tailors nothing yet, helps future personalisation)</span></label>
@@ -827,7 +860,7 @@ title: OZB Deal Radar — quantified deal intelligence
           <a class="subscribe-action subscribe-action-primary" id="subscribe-gmail" target="_blank" rel="noopener">Open in Gmail</a>
           <button class="subscribe-action" id="subscribe-copy" type="button">Copy request</button>
         </div>
-        <p class="subscribe-note" id="subscribe-note">Prepares a pre-filled request — send it via Gmail or copy &amp; paste.</p>
+        <p class="subscribe-note" id="subscribe-note">{subscribe_note}</p>
       </form>
     </section>
   </div>
@@ -2119,7 +2152,25 @@ SITE_SCRIPT = r"""<script>
       return lines.join('\n');
     }
 
-    form.addEventListener('submit', (event) => {
+    // One-click mode: when a form backend is configured, subscriptions POST
+    // directly — no email composing, no copy-paste.
+    const endpoint = form.dataset.endpoint || '';
+    const entryEmail = form.dataset.entryEmail || '';
+    const entryInterests = form.dataset.entryInterests || '';
+    const oneClick = Boolean(endpoint && entryEmail);
+    const submitBtn = form.querySelector('.subscribe-button');
+
+    async function directSubmit(addr) {
+      const data = new FormData();
+      data.append(entryEmail, addr);
+      const wants = interests.value.trim();
+      if (entryInterests && wants) data.append(entryInterests, wants);
+      // Google Forms accepts cross-origin POSTs; the response is opaque
+      // (no-cors), so reaching here without a network error means delivered.
+      await fetch(endpoint, { method: 'POST', mode: 'no-cors', body: data });
+    }
+
+    form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const addr = email.value.trim();
       if (!addr || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
@@ -2128,13 +2179,30 @@ SITE_SCRIPT = r"""<script>
         actions.hidden = true;
         return;
       }
+      note.classList.remove('subscribe-error');
+
+      if (oneClick) {
+        submitBtn.disabled = true;
+        note.textContent = 'Subscribing…';
+        try {
+          await directSubmit(addr);
+          note.textContent = '✓ You\'re on the list — the daily digest starts with the next run. Resubmit any time to update interests.';
+          try { localStorage.setItem('ozb-subscribed', addr); } catch (e) {}
+          submitBtn.disabled = false;
+          return;
+        } catch (e) {
+          submitBtn.disabled = false;
+          // network failure — fall through to the manual options below
+        }
+      }
+
       requestText = buildRequest();
       const su = encodeURIComponent(SUBJECT);
       const body = encodeURIComponent(requestText);
       gmailLink.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + TO + '&su=' + su + '&body=' + body;
       actions.hidden = false;
-      note.classList.remove('subscribe-error');
-      note.textContent = 'Almost done — pick an option above, or email ' + TO + ' directly. You\'ll be added within a day.';
+      note.textContent = (oneClick ? 'Direct signup unreachable — ' : 'Almost done — ')
+        + 'use Gmail above, or email ' + TO + ' directly. You\'ll be added within a day.';
       try { localStorage.setItem('ozb-subscribed', addr); } catch (e) {}
     });
 

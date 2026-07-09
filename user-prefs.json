@@ -111,5 +111,11 @@
       "Everyday Rewards"
     ]
   },
-  "agent_llm_endpoint": ""
+  "agent_llm_endpoint": "",
+  "site_subscribe": {
+    "_note": "One-click website subscriptions via a Google Form. Create a Form with an email question (+ optional interests question), then paste the formResponse URL and entry IDs here and rebuild. Empty = Gmail-compose fallback.",
+    "form_action": "",
+    "email_entry": "",
+    "interests_entry": ""
+  }
 }
