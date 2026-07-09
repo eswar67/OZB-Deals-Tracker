@@ -113,9 +113,9 @@
   },
   "agent_llm_endpoint": "",
   "site_subscribe": {
-    "_note": "One-click website subscriptions via a Google Form. Create a Form with an email question (+ optional interests question), then paste the formResponse URL and entry IDs here and rebuild. Empty = Gmail-compose fallback.",
-    "form_action": "",
-    "email_entry": "",
-    "interests_entry": ""
+    "_note": "One-click website subscriptions via the 'OZB Digest Subscriptions' Google Form. Empty = Gmail-compose fallback.",
+    "form_action": "https://docs.google.com/forms/d/e/1FAIpQLSeziGOEzr9IpHpZ5-la6JLcYekLga1TZdXOLLvqXnwwYgPZDA/formResponse",
+    "email_entry": "entry.1212413423",
+    "interests_entry": "entry.1755449126"
   }
 }
