@@ -134,12 +134,6 @@ CATEGORY_RULES = [
 ]
 
 
-CATEGORY_SEARCH_TERMS = {
-    category: " ".join(words)
-    for category, words in CATEGORY_RULES
-}
-
-
 def _contains_term(text: str, term: str) -> bool:
     if term.endswith(" "):
         return term in text
@@ -530,13 +524,15 @@ def _deal_payload(deals: list[dict]) -> str:
             "category": deal["category"],
             "merchant": deal["merchant"],
             "source": deal.get("source", "ozbargain"),
+            # Search text = real deal text only. Category keyword lists are for
+            # classification, NOT search — including them made e.g. "iphone"
+            # match every Mobile-category deal.
             "search_terms": " ".join(
                 part for part in [
                     deal["title"],
                     deal["merchant"],
                     deal["category"],
                     deal.get("source", "ozbargain"),
-                    CATEGORY_SEARCH_TERMS.get(deal["category"], ""),
                 ] if part
             ),
             "times_seen": int(deal.get("times_seen", 0) or 0),
@@ -1094,7 +1090,10 @@ SITE_SCRIPT = r"""<script>
 
   function matchesSearch(deal, query) {
     if (!query) return true;
-    return dealText(deal).includes(query);
+    const text = dealText(deal);
+    // Every word in the query must appear — "iphone 15 case" matches deals
+    // containing all three words, in any order.
+    return query.split(/\s+/).every(token => text.includes(token));
   }
 
   function rankDeals(rows) {
