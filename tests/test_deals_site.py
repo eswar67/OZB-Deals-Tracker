@@ -61,7 +61,7 @@ class DealsSiteTests(unittest.TestCase):
             html = path.read_text()
             self.assertEqual(count, 1)
             self.assertIn("layout: default", html)
-            self.assertIn("Today's best quantified deals", html)
+            self.assertIn("Today's delta deals", html)
             self.assertIn("Dyson Vacuum", html)
             self.assertIn("deal-data", html)
             self.assertIn("Minimum saving", html)
@@ -184,7 +184,8 @@ class DealsSiteTests(unittest.TestCase):
 
             html = path.read_text()
             self.assertEqual(count, 1)
-            self.assertIn("Bargain Radar signal", html)
+            # Source label now rendered client-side from the deal payload
+            self.assertIn("Bargain Radar", html)
             self.assertIn('"source": "bargainradar"', html)
             self.assertIn("bargainradar", html)
 
@@ -267,8 +268,12 @@ class DealsSiteTests(unittest.TestCase):
 
             self.assertIn('"category": "Outdoor"', html)
             self.assertIn('"search_terms": "Columbia', html)
-            self.assertIn("hiking camping", html)
-            self.assertIn("if (!scored.length) return [];", html)
+            # Category synonyms live in the assistant's CATEGORY_ALIASES regex,
+            # NOT in per-deal search_terms (that polluted search: "iphone"
+            # matched every Mobile deal). Assert the new split holds.
+            self.assertIn("hiking|camping", html)
+            self.assertNotIn("hiking camping", html)
+            self.assertIn("if (!picked.length) return [];", html)
 
     def test_monitor_publish_uses_current_run_deals(self):
         deals = [{
