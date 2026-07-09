@@ -134,12 +134,6 @@ CATEGORY_RULES = [
 ]
 
 
-CATEGORY_SEARCH_TERMS = {
-    category: " ".join(words)
-    for category, words in CATEGORY_RULES
-}
-
-
 def _contains_term(text: str, term: str) -> bool:
     if term.endswith(" "):
         return term in text
@@ -162,6 +156,47 @@ def _category_from_signals(title: str, raw_categories: list[str] | None = None, 
 def _merchant_from_title(title: str) -> str:
     match = re.search(r"\s@\s*(.+)$", title)
     return match.group(1).strip() if match else "OzBargain"
+
+
+def _compact_history(item: dict) -> list[list]:
+    """Merge price_history with first/best/last-seen anchors into a compact
+    [[epoch_day, savings, deal_price], ...] series for sparklines. Anchors give
+    most deals a 2-3 point trajectory even before price_history fills in."""
+    points: dict[int, list] = {}
+    epoch_min = datetime.min.replace(tzinfo=timezone.utc)
+
+    def add(at: str, savings, price) -> None:
+        dt = _parse_dt(at)
+        if dt == epoch_min:
+            return
+        day = int(dt.timestamp() // 86400)
+        savings = int(_number(savings))
+        price = int(_number(price))
+        prev = points.get(day)
+        if prev is None or savings >= prev[1]:
+            points[day] = [day, savings, price]
+
+    history = item.get("price_history", []) or []
+    deal_price = int(_number(item.get("deal_price", 0)))
+    first_savings = history[0].get("savings") if history else item.get("last_savings", item.get("savings", 0))
+    add(item.get("first_seen_at", ""), first_savings, deal_price)
+    for h in history:
+        add(h.get("at", ""), h.get("savings", 0), h.get("deal_price", 0))
+    add(item.get("best_seen_at", ""), item.get("best_savings", 0), deal_price)
+    add(item.get("last_seen_at", ""), item.get("last_savings", item.get("savings", 0)), deal_price)
+    return sorted(points.values())[-14:]
+
+
+def _pulse_series(deals: list[dict]) -> list[dict]:
+    """Daily totals of tracked savings across all deals — the market pulse chart."""
+    daily: dict[int, dict] = {}
+    for deal in deals:
+        for day, savings, _price in deal.get("history", []) or []:
+            entry = daily.setdefault(day, {"t": 0, "c": 0})
+            entry["t"] += max(0, int(savings))
+            entry["c"] += 1
+    days = sorted(daily)[-21:]
+    return [{"d": day, "t": daily[day]["t"], "c": daily[day]["c"]} for day in days]
 
 
 def _row_from_memory_item(item: dict) -> dict:
@@ -203,6 +238,7 @@ def _row_from_memory_item(item: dict) -> dict:
     row["cashback_platform"] = item.get("cashback_platform", "") or ""
     row["price_beat_count"] = len(item.get("price_beat_stores", []) or [])
     row["savings_percent"] = _savings_percent(row)
+    row["history"] = _compact_history(item)
     return row
 
 
@@ -273,6 +309,7 @@ def deals_from_monitor_run(deals: list[dict], generated_at: datetime | None = No
         row["cashback_platform"] = deal.get("cashback_platform", "") or ""
         row["price_beat_count"] = len(deal.get("price_beat_stores", []) or [])
         row["savings_percent"] = _savings_percent(row)
+        row["history"] = _compact_history(deal)
         rows.append(row)
     rows.sort(key=lambda row: row["savings"], reverse=True)
     return rows, generated_at
@@ -487,13 +524,15 @@ def _deal_payload(deals: list[dict]) -> str:
             "category": deal["category"],
             "merchant": deal["merchant"],
             "source": deal.get("source", "ozbargain"),
+            # Search text = real deal text only. Category keyword lists are for
+            # classification, NOT search — including them made e.g. "iphone"
+            # match every Mobile-category deal.
             "search_terms": " ".join(
                 part for part in [
                     deal["title"],
                     deal["merchant"],
                     deal["category"],
                     deal.get("source", "ozbargain"),
-                    CATEGORY_SEARCH_TERMS.get(deal["category"], ""),
                 ] if part
             ),
             "times_seen": int(deal.get("times_seen", 0) or 0),
@@ -503,6 +542,7 @@ def _deal_payload(deals: list[dict]) -> str:
             "market_saving": int(deal.get("market_saving", 0) or 0),
             "cashback_platform": deal.get("cashback_platform", "") or "",
             "price_beat_count": int(deal.get("price_beat_count", 0) or 0),
+            "history": deal.get("history", []) or [],
         })
     return json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
 
@@ -603,41 +643,65 @@ def render_jekyll_html(deals: list[dict], generated_at: datetime) -> str:
     merchant_options = "\n".join(f'<option value="{escape(merchant, quote=True)}">{escape(merchant)}</option>' for merchant in merchants)
     deal_json = _deal_payload(deals)
     agent_config_json = json.dumps(_load_agent_config(), ensure_ascii=False).replace("</", "<\\/")
+    pulse_json = json.dumps(_pulse_series(deals), ensure_ascii=False).replace("</", "<\\/")
     near_miss_html = _render_near_miss(_load_latest_audit())
 
     head = f"""---
 layout: default
-title: Today's best quantified deals
+title: OZB Deal Radar — quantified deal intelligence
 ---
 <div class="deal-radar">
 
-  <header class="brand-header">
-    <div class="brand-id">
-      <div class="brand-mark">OZB</div>
-      <div class="brand-text">
-        <div class="brand-kicker">AI-powered OzBargain monitor</div>
-        <h1>Deal Radar</h1>
-      </div>
+  <nav class="topbar" aria-label="Site controls">
+    <div class="topbar-brand">
+      <span class="brand-mark" aria-hidden="true">OZB</span>
+      <span class="brand-name">Deal Radar</span>
+      <span class="brand-live"><span class="live-dot" aria-hidden="true"></span>{escape(generated)}</span>
     </div>
-    <p class="brand-lede">Ranked deal intelligence with quantified savings, urgency signals, and live agent scoring for the latest monitor run.</p>
-    <div class="stamp">Latest run: {escape(generated)}</div>
-  </header>
+    <div class="topbar-actions">
+      <a class="icon-button" href="#subscribe" title="Subscribe to daily email alerts">
+        <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M8 15a1.8 1.8 0 0 0 1.8-1.8H6.2A1.8 1.8 0 0 0 8 15zm5.4-3.6v-.9l-1.1-1.1V6.5a4.3 4.3 0 0 0-3.2-4.2v-.5a1.1 1.1 0 1 0-2.2 0v.5a4.3 4.3 0 0 0-3.2 4.2v2.9L2.6 10.5v.9z"/></svg>
+        <span>Alerts</span>
+      </a>
+      <button class="icon-button" id="density-toggle" type="button" aria-pressed="false" title="Toggle compact list view">
+        <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M1 2h14v2.4H1zM1 6.8h14v2.4H1zM1 11.6h14V14H1z"/></svg>
+        <span>Density</span>
+      </button>
+      <button class="icon-button" id="theme-toggle" type="button" aria-pressed="false" title="Toggle light theme">
+        <svg class="ico-moon" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M13.5 9.7A6 6 0 0 1 6.3 2.5 6 6 0 1 0 13.5 9.7z"/></svg>
+        <svg class="ico-sun" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M8 4.5A3.5 3.5 0 1 1 8 11.5 3.5 3.5 0 0 1 8 4.5zM8 0h0l.7 2.1H7.3zM8 16l-.7-2.1h1.4zM0 8l2.1-.7v1.4zM16 8l-2.1.7V7.3zM2.3 2.3l2 .9-1 1zM13.7 13.7l-2-.9 1-1zM13.7 2.3l-.9 2-1-1zM2.3 13.7l.9-2 1 1z"/></svg>
+        <span>Theme</span>
+      </button>
+    </div>
+  </nav>
 
-  <section class="metric-band" aria-label="Today's deals summary">
-    <div class="metric metric-hero">
-      <div class="metric-label">Top deal today</div>
-      <div class="metric-value" id="stat-today-top">{_money(delta_top)}</div>
+  <header class="hero">
+    <div class="hero-copy">
+      <p class="hero-kicker">AI-powered OzBargain monitor</p>
+      <h1 class="hero-title">Deal intelligence,<br>quantified.</h1>
+      <p class="hero-lede">Ranked savings, urgency signals and live agent scoring from the latest monitor run — every deal priced, benchmarked and tracked over time.</p>
     </div>
-    <div class="metric-divider" aria-hidden="true"></div>
-    <div class="metric">
-      <div class="metric-label">Today's deals</div>
-      <div class="metric-value" id="stat-delta">{len(delta_deals)}</div>
+    <div class="hero-panel">
+      <section class="stat-strip" aria-label="Today's deals summary">
+        <div class="stat stat-hero">
+          <div class="stat-label">Top deal today</div>
+          <div class="stat-value" id="stat-today-top" data-countup>{_money(delta_top)}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Today's deals</div>
+          <div class="stat-value" id="stat-delta" data-countup>{len(delta_deals)}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Today's value</div>
+          <div class="stat-value" id="stat-delta-total" data-countup>{_money(delta_total)}</div>
+        </div>
+      </section>
+      <figure class="market-pulse" id="market-pulse" aria-label="Tracked savings per day across recent runs">
+        <figcaption class="pulse-caption">Market pulse <span>tracked savings / day</span></figcaption>
+        <div class="pulse-chart" id="pulse-chart" role="img" aria-label="Area chart of total tracked savings per day"></div>
+      </figure>
     </div>
-    <div class="metric">
-      <div class="metric-label">Today's value</div>
-      <div class="metric-value" id="stat-delta-total">{_money(delta_total)}</div>
-    </div>
-  </section>
+  </header>
 
   <section class="urgent-strip" id="urgent-strip" aria-label="Flash and time-sensitive deals"></section>
 
@@ -741,10 +805,35 @@ title: Today's best quantified deals
       <div class="empty" id="empty">No active deals match the current filters.</div>
     </details>
     {near_miss_html}
+
+    <section class="subscribe-card" id="subscribe" aria-label="Email alerts subscription">
+      <div class="subscribe-copy">
+        <p class="subscribe-kicker">Email alerts</p>
+        <h2 class="subscribe-title">Get the daily deal digest</h2>
+        <p class="subscribe-lede">One email per day at 7&nbsp;PM AEST with every qualified deal — ranked savings, agent scores, urgency and expiry. Delivered privately via BCC. Unsubscribe any time by replying.</p>
+        <ul class="subscribe-points">
+          <li>Ranked savings across 16 OzBargain categories</li>
+          <li>Flash &amp; expiry warnings before deals die</li>
+          <li>No spam, no address sharing — one sender, BCC only</li>
+        </ul>
+      </div>
+      <form class="subscribe-form" id="subscribe-form">
+        <label class="subscribe-label" for="subscribe-email">Email address</label>
+        <input class="subscribe-input" id="subscribe-email" type="email" required placeholder="you@example.com" autocomplete="email">
+        <label class="subscribe-label" for="subscribe-interests">Interests <span>(optional — tailors nothing yet, helps future personalisation)</span></label>
+        <input class="subscribe-input" id="subscribe-interests" type="text" placeholder="e.g. laptops, qantas points, home loans">
+        <button class="subscribe-button" type="submit">Request subscription</button>
+        <p class="subscribe-note" id="subscribe-note">Opens a pre-filled email — hit send and you'll be added to the next digest.</p>
+      </form>
+    </section>
   </div>
 
-  <aside class="detail-drawer" id="detail-drawer" hidden aria-live="polite">
-    <button class="drawer-close" id="drawer-close" type="button" aria-label="Close deal details">Close</button>
+  <div class="drawer-scrim" id="drawer-scrim" hidden></div>
+  <aside class="detail-drawer" id="detail-drawer" hidden aria-live="polite" role="dialog" aria-label="Deal dossier">
+    <button class="drawer-close" id="drawer-close" type="button" aria-label="Close deal details">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M3.1 1.9 8 6.8l4.9-4.9 1.2 1.2L9.2 8l4.9 4.9-1.2 1.2L8 9.2l-4.9 4.9-1.2-1.2L6.8 8 1.9 3.1z"/></svg>
+      Close
+    </button>
     <div id="drawer-content"></div>
   </aside>
 
@@ -784,6 +873,7 @@ title: Today's best quantified deals
 </div>
 <script id="deal-data" type="application/json">{deal_json}</script>
 <script id="agent-config" type="application/json">{agent_config_json}</script>
+<script id="pulse-data" type="application/json">{pulse_json}</script>
 """
 
     script = SITE_SCRIPT
@@ -970,7 +1060,7 @@ SITE_SCRIPT = r"""<script>
     if (firstSeenDays <= 1) badges.push('Fresh lead');
     if (deal.best_savings && deal.savings >= deal.best_savings) badges.push('Best detected');
     if (deal.is_today_delta) badges.push(deltaLabel(deal));
-    if (deal.is_lowest_price) badges.push('Lowest price');
+    if (deal.is_lowest_price) badges.push('All-time low');
     if (seenDays >= 7) badges.push('Stale');
     if (aiConfidence(deal) >= 80) badges.push('High confidence');
     if (urgencyScore(deal) >= 75) badges.push('Action window');
@@ -1000,7 +1090,10 @@ SITE_SCRIPT = r"""<script>
 
   function matchesSearch(deal, query) {
     if (!query) return true;
-    return dealText(deal).includes(query);
+    const text = dealText(deal);
+    // Every word in the query must appear — "iphone 15 case" matches deals
+    // containing all three words, in any order.
+    return query.split(/\s+/).every(token => text.includes(token));
   }
 
   function rankDeals(rows) {
@@ -1017,26 +1110,87 @@ SITE_SCRIPT = r"""<script>
     return copy;
   }
 
+  // ── Price-history sparklines & heat ────────────────────────────
+  function historyPoints(deal) {
+    return (deal.history || []).map(p => ({ day: p[0], savings: p[1], price: p[2] }));
+  }
+
+  function sparkPath(points, w, h, pad) {
+    const xs = points.map(p => p.day);
+    const ys = points.map(p => p.savings);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs);
+    const yMin = Math.min(...ys), yMax = Math.max(...ys);
+    const xr = xMax - xMin || 1, yr = yMax - yMin || 1;
+    return points.map(p => [
+      pad + ((p.day - xMin) / xr) * (w - pad * 2),
+      h - pad - ((p.savings - yMin) / yr) * (h - pad * 2),
+    ]);
+  }
+
+  function sparkSvg(deal) {
+    const pts = historyPoints(deal);
+    if (pts.length < 2) return '';
+    const w = 116, h = 34, pad = 3;
+    const xy = sparkPath(pts, w, h, pad);
+    const line = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
+    const area = `${line}L${xy[xy.length - 1][0].toFixed(1)},${h - 1}L${xy[0][0].toFixed(1)},${h - 1}Z`;
+    const [lx, ly] = xy[xy.length - 1];
+    const trendUp = pts[pts.length - 1].savings >= pts[0].savings;
+    return `<svg class="spark${trendUp ? ' spark-up' : ' spark-down'}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">
+      <path class="spark-area" d="${area}"/>
+      <path class="spark-line" d="${line}"/>
+      <circle class="spark-dot" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.4"/>
+    </svg>`;
+  }
+
+  function heatLevel(deal) {
+    let heat = 0;
+    if (urgencyScore(deal) >= 70) heat += 1;
+    if (daysSince(deal.last_seen_at) <= 1) heat += 1;
+    if (Number(deal.times_seen) >= 3 || deal.savings >= 1000) heat += 1;
+    return Math.min(3, heat);
+  }
+
+  function heatHtml(deal) {
+    const level = heatLevel(deal);
+    if (!level) return '';
+    const label = ['', 'Warm', 'Hot', 'Blazing'][level];
+    const bars = [1, 2, 3].map(i => `<i class="${i <= level ? 'on' : ''}"></i>`).join('');
+    return `<span class="heat heat-${level}" title="${label} — recency and demand signals">${bars}</span>`;
+  }
+
+  let cardsAnimated = false;
+
   function cardHtml(deal, index, scope = 'all') {
-    const badges = freshnessBadges(deal).map(badge => `<span class="badge">${escapeHtml(badge)}</span>`).join('');
+    const badges = freshnessBadges(deal).map(badge => `<span class="badge${badge === 'All-time low' ? ' badge-atl' : ''}${badge === 'Expired/OOS' ? ' badge-dead' : ''}">${escapeHtml(badge)}</span>`).join('');
     const score = qualityScore(deal);
-    return `<article class="card">
-      <div>
-        <div class="rank">#${index + 1} · ${escapeHtml(deal.category)} · Agent Score ${score}/100</div>
+    const spark = sparkSvg(deal);
+    const pct = Number(deal.savings_percent) > 0 ? `<span class="save-pct">${deal.savings_percent >= 10 ? Math.round(deal.savings_percent) : deal.savings_percent}% off</span>` : '';
+    return `<article class="card${deal.is_today_delta ? ' card-delta' : ''}${cardsAnimated ? ' card-static' : ''}" style="--i:${Math.min(index, 14)}">
+      <div class="card-main">
+        <div class="rank">
+          <span class="rank-no">#${index + 1}</span>
+          <span class="rank-cat">${escapeHtml(deal.category)}</span>
+          <span class="rank-score">Agent ${score}/100</span>
+          ${heatHtml(deal)}
+        </div>
         <a class="title" href="${escapeHtml(deal.link)}" target="_blank" rel="noopener">${escapeHtml(deal.title)}</a>
-        <div class="meta">${escapeHtml(deal.merchant)} · ${deal.source === 'bargainradar' ? 'Bargain Radar signal' : 'OzBargain signal'}</div>
+        <div class="meta">${escapeHtml(deal.merchant)} · ${deal.source === 'bargainradar' ? 'Bargain Radar' : 'OzBargain'}</div>
         ${hypeWarning(deal)}
         <div class="badges">${badges}</div>
         <div class="pillrow">
-          <span class="pill">AI confidence ${aiConfidence(deal)}%</span>
+          <span class="pill">AI ${aiConfidence(deal)}%</span>
           <span class="pill">Urgency ${urgencyScore(deal)}%</span>
-          <span class="pill">${escapeHtml(agentAction(deal))}</span>
+          <span class="pill pill-action">${escapeHtml(agentAction(deal))}</span>
         </div>
         ${ledgerHtml(deal)}
         <div class="agent-note">${escapeHtml(agentInsight(deal))}</div>
-        <button class="details" type="button" data-scope="${scope}" data-index="${index}">Details</button>
       </div>
-      <div class="save">${money(deal.savings)}<span>${escapeHtml(valueLine(deal))}</span></div>
+      <div class="card-side">
+        <div class="save">${money(deal.savings)}${pct}<span>${escapeHtml(valueLine(deal))}</span></div>
+        ${spark ? `<div class="card-spark">${spark}<span class="spark-label">savings trend</span></div>` : ''}
+        <button class="details" type="button" data-scope="${scope}" data-index="${index}">Dossier</button>
+      </div>
     </article>`;
   }
 
@@ -1132,10 +1286,19 @@ SITE_SCRIPT = r"""<script>
     els.allCount.textContent = rows.length.toLocaleString();
     const todaySavings = todayRows.reduce((sum, deal) => sum + deal.savings, 0);
     const activeSavings = rows.reduce((sum, deal) => sum + deal.savings, 0);
-    // Top section — today's deals only
-    els.statDelta.textContent = todayRows.length.toLocaleString();
-    els.statDeltaTotal.textContent = money(todaySavings);
-    els.statTodayTop.textContent = money(todayRows.length ? Math.max(...todayRows.map(deal => deal.savings)) : 0);
+    // Hero — today's delta deals, falling back to active deals when today is quiet
+    const heroRows = todayRows.length ? todayRows : rows;
+    const heroSavings = todayRows.length ? todaySavings : activeSavings;
+    const heroLabels = document.querySelectorAll('.stat-strip .stat-label');
+    if (heroLabels.length === 3) {
+      const labels = todayRows.length
+        ? ['Top deal today', "Today's deals", "Today's value"]
+        : ['Top active deal', 'Active deals', 'Active value'];
+      heroLabels.forEach((el, i) => { el.textContent = labels[i]; });
+    }
+    els.statDelta.textContent = heroRows.length.toLocaleString();
+    els.statDeltaTotal.textContent = money(heroSavings);
+    els.statTodayTop.textContent = money(heroRows.length ? Math.max(...heroRows.map(deal => deal.savings)) : 0);
     // Active section — all active deals
     els.statCount.textContent = rows.length.toLocaleString();
     els.statTotal.textContent = money(activeSavings);
@@ -1182,38 +1345,98 @@ SITE_SCRIPT = r"""<script>
     applyFilters();
   }
 
-  function detailHtml(deal) {
-    const badges = freshnessBadges(deal).map(badge => `<span class="badge">${escapeHtml(badge)}</span>`).join('');
-    const lowestRow = Number(deal.lowest_price) > 0
-      ? `<dt>Lowest tracked</dt><dd>${money(deal.lowest_price)}${deal.is_lowest_price ? ' (current is lowest)' : ''}</dd>`
-      : '';
-    const seenRow = Number(deal.times_seen) > 0 ? `<dt>Times seen</dt><dd>${deal.times_seen}</dd>` : '';
-    const hypeRow = (deal.market_cheaper && Number(deal.market_saving) < 0)
-      ? `<dt>Market check</dt><dd>~${money(Math.abs(deal.market_saving))} cheaper elsewhere — verify</dd>`
-      : '';
-    return `<h2>${escapeHtml(deal.title)}</h2>
-      <div class="drawer-save">${money(deal.savings)} ${escapeHtml(valueLine(deal))} · Agent Score ${qualityScore(deal)}/100</div>
-      <div class="badges">${badges}</div>
-      <dl>
-        <dt>AI confidence</dt><dd>${aiConfidence(deal)}%</dd>
-        <dt>Urgency</dt><dd>${urgencyScore(deal)}%</dd>
-        <dt>Recommended action</dt><dd>${escapeHtml(agentAction(deal))}</dd>
-        <dt>Agent read</dt><dd>${escapeHtml(agentInsight(deal))}</dd>
-        ${hypeRow}
-        <dt>Merchant</dt><dd>${escapeHtml(deal.merchant)}</dd>
-        <dt>Category</dt><dd>${escapeHtml(deal.category)}</dd>
-        <dt>Value benchmark</dt><dd>${money(deal.best_savings)} best detected saving</dd>
-        ${lowestRow}
-        ${seenRow}
-        <dt>First detected</dt><dd>${new Date(deal.first_seen_at).toLocaleString()}</dd>
-        <dt>Last checked</dt><dd>${new Date(deal.last_seen_at).toLocaleString()}</dd>
-      </dl>
-      <a class="drawer-link" href="${escapeHtml(deal.link)}" target="_blank" rel="noopener">Open OzBargain deal</a>`;
+  function timelineSvg(deal) {
+    const pts = historyPoints(deal);
+    if (pts.length < 2) return '<div class="timeline-empty">Not enough history yet — the monitor adds a point every time this deal is re-seen.</div>';
+    const w = 320, h = 96, pad = 10;
+    const xy = sparkPath(pts, w, h, pad);
+    const line = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
+    const area = `${line}L${xy[xy.length - 1][0].toFixed(1)},${h - 2}L${xy[0][0].toFixed(1)},${h - 2}Z`;
+    const dots = xy.map(([x, y], i) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3"><title>${new Date(pts[i].day * 86400000).toLocaleDateString()} — ${money(pts[i].savings)}</title></circle>`).join('');
+    const first = pts[0], last = pts[pts.length - 1];
+    return `<svg class="timeline" viewBox="0 0 ${w} ${h}" role="img" aria-label="Savings history from ${money(first.savings)} to ${money(last.savings)}">
+        <path class="tl-area" d="${area}"/>
+        <path class="tl-line" d="${line}"/>
+        <g class="tl-dots">${dots}</g>
+      </svg>
+      <div class="timeline-range"><span>${new Date(first.day * 86400000).toLocaleDateString()}</span><span>${new Date(last.day * 86400000).toLocaleDateString()}</span></div>`;
   }
 
+  function trustBarsHtml(deal) {
+    const rows = [
+      ['AI confidence', aiConfidence(deal)],
+      ['Urgency', urgencyScore(deal)],
+      ['Agent score', qualityScore(deal)],
+    ];
+    return rows.map(([label, value]) => `<div class="trust-row">
+        <span class="trust-label">${label}</span>
+        <span class="trust-track"><span class="trust-fill" style="width:${value}%"></span></span>
+        <span class="trust-value">${value}</span>
+      </div>`).join('');
+  }
+
+  function stackHtml(deal) {
+    return effectivePrice(deal).map(l =>
+      `<div class="stack-row${l.warn ? ' warn' : ''}${l.good ? ' good' : ''}${l.note ? ' note' : ''}"><span>${escapeHtml(l.label)}</span><span>${escapeHtml(l.value)}</span></div>`
+    ).join('');
+  }
+
+  function detailHtml(deal) {
+    const badges = freshnessBadges(deal).map(badge => `<span class="badge${badge === 'All-time low' ? ' badge-atl' : ''}">${escapeHtml(badge)}</span>`).join('');
+    const seenRow = Number(deal.times_seen) > 0 ? `<div><dt>Times seen</dt><dd>${deal.times_seen}×</dd></div>` : '';
+    return `<div class="dossier">
+      <header class="dossier-head">
+        <div class="dossier-kicker">${escapeHtml(deal.category)} · ${escapeHtml(deal.merchant)}</div>
+        <h2>${escapeHtml(deal.title)}</h2>
+        <div class="badges">${badges}</div>
+      </header>
+      <div class="dossier-figures">
+        <div class="fig fig-hero"><span class="fig-label">Potential saving</span><span class="fig-value">${money(deal.savings)}</span></div>
+        ${deal.deal_price > 0 ? `<div class="fig"><span class="fig-label">Deal price</span><span class="fig-value">${money(deal.deal_price)}</span></div>` : ''}
+        ${deal.market_price > 0 ? `<div class="fig"><span class="fig-label">RRP</span><span class="fig-value">${money(deal.market_price)}</span></div>` : ''}
+        ${Number(deal.savings_percent) > 0 ? `<div class="fig"><span class="fig-label">Discount</span><span class="fig-value">${deal.savings_percent >= 10 ? Math.round(deal.savings_percent) : deal.savings_percent}%</span></div>` : ''}
+      </div>
+      <section class="dossier-block">
+        <h3>Savings timeline</h3>
+        ${timelineSvg(deal)}
+      </section>
+      <section class="dossier-block">
+        <h3>Trust breakdown</h3>
+        ${trustBarsHtml(deal)}
+        <div class="agent-note">${escapeHtml(agentInsight(deal))} — recommended: ${escapeHtml(agentAction(deal))}.</div>
+      </section>
+      <section class="dossier-block">
+        <h3>Value stack</h3>
+        <div class="stack">${stackHtml(deal)}</div>
+      </section>
+      <section class="dossier-block dossier-meta">
+        <div><dt>First detected</dt><dd>${new Date(deal.first_seen_at).toLocaleDateString()}</dd></div>
+        <div><dt>Last checked</dt><dd>${new Date(deal.last_seen_at).toLocaleDateString()}</dd></div>
+        ${seenRow}
+        <div><dt>Best saving seen</dt><dd>${money(deal.best_savings)}</dd></div>
+      </section>
+      <a class="drawer-link" href="${escapeHtml(deal.link)}" target="_blank" rel="noopener">Open deal ↗</a>
+    </div>`;
+  }
+
+  let drawerReturnFocus = null;
+
   function openDetails(deal) {
+    if (!deal) return;
+    drawerReturnFocus = document.activeElement;
     els.drawerContent.innerHTML = detailHtml(deal);
     els.drawer.hidden = false;
+    document.getElementById('drawer-scrim').hidden = false;
+    document.body.classList.add('drawer-open');
+    els.drawerClose.focus();
+  }
+
+  function closeDetails() {
+    els.drawer.hidden = true;
+    document.getElementById('drawer-scrim').hidden = true;
+    document.body.classList.remove('drawer-open');
+    if (drawerReturnFocus && drawerReturnFocus.focus) drawerReturnFocus.focus();
+    drawerReturnFocus = null;
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -1263,7 +1486,7 @@ SITE_SCRIPT = r"""<script>
     ['Shopping', /\b(referee|referrer|first purchase|next purchase)\b/],
   ];
 
-  const STOP = new Set(['a','an','and','any','are','around','ask','best','better','can','current','deal','deals','find','for','from','give','good','have','help','i','in','is','latest','list','me','now','of','offer','offers','on','or','please','present','relevant','result','results','right','search','show','some','the','these','this','to','top','what','which','with','about','me','my','you','your']);
+  const STOP = new Set(['a','an','and','any','are','around','ask','best','better','can','current','deal','deals','find','for','from','give','good','have','help','i','in','is','latest','list','me','now','of','offer','offers','on','or','please','present','relevant','result','results','right','search','show','some','the','these','this','to','top','what','which','with','about','me','my','you','your','should','could','would','buy','get','want','need','something','anything','stuff','whats','there','here','looking','today','available']);
 
   function tokenize(text) {
     const tokens = String(text || '').toLowerCase().match(/[a-z0-9]+(?:\.[a-z0-9]+)?/g) || [];
@@ -1355,21 +1578,29 @@ SITE_SCRIPT = r"""<script>
       out = out.filter(d => set.has(d.category) || slots.categories.some(c => dealText(d).includes(c.toLowerCase())));
     }
     if (slots.merchants && slots.merchants.length) out = out.filter(d => slots.merchants.some(mn => String(d.merchant || '').toLowerCase().includes(mn)));
-    const kw = tokenize(text).filter(t => !['deal', 'deals', 'cheap', 'cheapest', 'best', 'find', 'show', 'good', 'under', 'over', 'between', 'top', 'price', 'prices'].includes(t));
+    const kw = tokenize(text).filter(t => ![
+      'deal', 'deals', 'cheap', 'cheapest', 'best', 'find', 'show', 'good', 'under', 'over', 'between', 'top', 'price', 'prices',
+      'today', 'buy', 'get', 'want', 'need', 'looking', 'look', 'worth', 'stuff', 'something', 'anything', 'whats', 'offers', 'offer', 'available', 'there',
+    ].includes(t));
     if (kw.length) {
       const scored = out.map(d => {
         const textBlob = dealText(d);
         const tokens = dealTokens(d);
         const score = kw.reduce((sc, t) => {
           if (tokens.has(t)) return sc + 4;
-          if (textBlob.includes(t)) return sc + 1;
+          if (t.length >= 4 && textBlob.includes(t)) return sc + 1;
           return sc;
         }, 0);
         return [d, score];
-      }).filter(([, sc]) => sc > 0);
-      if (!scored.length) return [];
-      scored.sort((a, b) => b[1] - a[1] || b[0].savings - a[0].savings);
-      out = scored.map(([d]) => d);
+      });
+      // Require a real word match (score >= 4); loose substring-only hits need
+      // at least two, otherwise report no match instead of guessing.
+      const strong = scored.filter(([, sc]) => sc >= 4);
+      const okay = scored.filter(([, sc]) => sc >= 2);
+      const picked = strong.length ? strong : okay;
+      if (!picked.length) return [];
+      picked.sort((a, b) => b[1] - a[1] || b[0].savings - a[0].savings);
+      out = picked.map(([d]) => d);
     }
     return out;
   }
@@ -1569,10 +1800,16 @@ SITE_SCRIPT = r"""<script>
   }
 
   function handleSearch(text, slots) {
+    const kwCount = tokenize(text).length;
+    const hasSlots = !!(slots.priceMax || slots.priceMin || slots.savingsMin || (slots.categories && slots.categories.length) || (slots.merchants && slots.merchants.length));
     let rows = toolFilter(activePool(), slots, text);
     rows = toolRank(rows, slots.metric);
     convo.lastRows = rows;
-    if (!rows.length) return { text: "No active deals match that. Try a category, merchant, product, a price like “under $500”, or ask for urgent/high-confidence deals." };
+    if (!rows.length) return { text: "Nothing in the current deal list matches that. I only know the deals on this page — try a product (“dyson”, “oled tv”), a category, a merchant, or a price like “under $500”." };
+    // Vague ask with no usable keywords or filters — be upfront instead of pretending it matched.
+    if (!kwCount && !hasSlots && !slots.metric) {
+      return { text: "Nothing specific detected in that — here are today's strongest live deals instead:", html: dealListHtml(rows, slots.limit || 5) };
+    }
     const lead = slots.metric === 'urgency' ? 'Most time-sensitive matches:'
       : slots.metric === 'confidence' ? 'Highest-confidence matches:'
       : slots.priceMax || slots.priceMin ? 'Matches in that price range:'
@@ -1677,7 +1914,9 @@ SITE_SCRIPT = r"""<script>
     els.toggle.setAttribute('aria-expanded', String(!hidden));
   });
   els.resetButtons.forEach(button => button.addEventListener('click', resetFilters));
-  els.drawerClose.addEventListener('click', () => els.drawer.hidden = true);
+  els.drawerClose.addEventListener('click', closeDetails);
+  document.getElementById('drawer-scrim').addEventListener('click', closeDetails);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !els.drawer.hidden) closeDetails(); });
   document.querySelectorAll('.preset').forEach(button => {
     button.addEventListener('click', () => applyPreset(button.dataset.preset));
   });
@@ -1755,19 +1994,178 @@ SITE_SCRIPT = r"""<script>
     }
   })();
 
+  // ── Theme, density, motion ─────────────────────────────────────
+  const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  (function initTheme() {
+    const button = document.getElementById('theme-toggle');
+    if (!button) return;
+    const apply = (theme, persist) => {
+      document.documentElement.dataset.theme = theme;
+      button.setAttribute('aria-pressed', String(theme === 'light'));
+      if (persist) { try { localStorage.setItem('ozb-theme', theme); } catch (e) {} }
+    };
+    let saved = 'dark';
+    try { saved = localStorage.getItem('ozb-theme') || 'dark'; } catch (e) {}
+    apply(saved, false);
+    button.addEventListener('click', () => apply(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light', true));
+  })();
+
+  (function initDensity() {
+    const button = document.getElementById('density-toggle');
+    if (!button) return;
+    const apply = (density, persist) => {
+      document.body.dataset.density = density;
+      button.setAttribute('aria-pressed', String(density === 'compact'));
+      const label = button.querySelector('span');
+      if (label) label.textContent = density === 'compact' ? 'List' : 'Cards';
+      button.title = density === 'compact' ? 'Switch to card view' : 'Switch to compact list view';
+      if (persist) { try { localStorage.setItem('ozb-density', density); } catch (e) {} }
+    };
+    let saved = '';
+    try { saved = localStorage.getItem('ozb-density') || ''; } catch (e) {}
+    apply(saved || (window.innerWidth <= 640 ? 'compact' : 'cards'), false);
+    button.addEventListener('click', () => apply(document.body.dataset.density === 'compact' ? 'cards' : 'compact', true));
+  })();
+
+  function countUpStats() {
+    if (REDUCED_MOTION) return;
+    document.querySelectorAll('[data-countup]').forEach(el => {
+      const raw = el.textContent;
+      const target = Number(raw.replace(/[^0-9.]/g, ''));
+      if (!Number.isFinite(target) || target <= 0) return;
+      const prefix = raw.includes('$') ? '$' : '';
+      const start = performance.now();
+      const duration = 750;
+      const step = now => {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = prefix + Math.round(target * eased).toLocaleString();
+        if (t < 1) requestAnimationFrame(step);
+        else el.textContent = raw;
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  // ── Market pulse chart ─────────────────────────────────────────
+  (function renderPulse() {
+    const host = document.getElementById('pulse-chart');
+    if (!host) return;
+    let series = [];
+    try { series = JSON.parse(document.querySelector('#pulse-data').textContent) || []; } catch (e) {}
+    if (series.length < 2) {
+      const wrap = document.getElementById('market-pulse');
+      if (wrap) wrap.classList.add('pulse-empty');
+      host.innerHTML = '<div class="timeline-empty">Pulse builds as runs accumulate.</div>';
+      return;
+    }
+    const w = 460, h = 110, pad = 8;
+    const xs = series.map(p => p.d);
+    const ys = series.map(p => p.t);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs);
+    const yMax = Math.max(...ys) || 1;
+    const xr = xMax - xMin || 1;
+    const xy = series.map(p => [
+      pad + ((p.d - xMin) / xr) * (w - pad * 2),
+      h - pad - (p.t / yMax) * (h - pad * 2.6),
+    ]);
+    const line = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
+    const area = `${line}L${xy[xy.length - 1][0].toFixed(1)},${h - 2}L${xy[0][0].toFixed(1)},${h - 2}Z`;
+    const [lx, ly] = xy[xy.length - 1];
+    const peak = series.reduce((a, b) => (b.t > a.t ? b : a));
+    host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="pulse-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" class="pulse-stop-a"/><stop offset="1" class="pulse-stop-b"/>
+        </linearGradient></defs>
+        <path class="pulse-area" d="${area}" fill="url(#pulse-fill)"/>
+        <path class="pulse-line" d="${line}"/>
+        <circle class="pulse-dot" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.4"/>
+      </svg>
+      <div class="pulse-legend"><span>peak ${money(peak.t)} · ${new Date(peak.d * 86400000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span><span>latest ${money(series[series.length - 1].t)}</span></div>`;
+  })();
+
+  // ── Email alerts subscription ─────────────────────────────────
+  (function subscribeSetup() {
+    const form = document.querySelector('#subscribe-form');
+    if (!form) return;
+    const email = document.querySelector('#subscribe-email');
+    const interests = document.querySelector('#subscribe-interests');
+    const note = document.querySelector('#subscribe-note');
+    const defaultNote = note.textContent;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const addr = email.value.trim();
+      if (!addr || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
+        note.textContent = 'Please enter a valid email address.';
+        note.classList.add('subscribe-error');
+        return;
+      }
+      const lines = [
+        'Please add me to the daily OZB Deal Radar email digest.',
+        '',
+        'Email: ' + addr,
+      ];
+      const wants = interests.value.trim();
+      if (wants) lines.push('Interests: ' + wants);
+      lines.push('', 'Sent from the Deal Radar website.');
+      window.location.href = 'mailto:eswar67@gmail.com'
+        + '?subject=' + encodeURIComponent('Subscribe to OZB Deal Radar alerts')
+        + '&body=' + encodeURIComponent(lines.join('\n'));
+      note.classList.remove('subscribe-error');
+      note.textContent = 'Email drafted — hit send in your mail app and you\'ll be added within a day.';
+      try { localStorage.setItem('ozb-subscribed', addr); } catch (e) {}
+    });
+    email.addEventListener('input', () => {
+      note.classList.remove('subscribe-error');
+      note.textContent = defaultNote;
+    });
+    try {
+      const saved = localStorage.getItem('ozb-subscribed');
+      if (saved) {
+        email.value = saved;
+        note.textContent = 'Request already sent for ' + saved + ' — resubmit any time to update interests.';
+      }
+    } catch (e) {}
+  })();
+
   const scoreOption = document.createElement('option');
   scoreOption.value = 'score-desc';
   scoreOption.textContent = 'Value score high to low';
   els.sort.prepend(scoreOption);
   loadStateFromUrl();
   applyFilters();
+  cardsAnimated = true;
+  countUpStats();
   addChatMessage('assistant', 'Ask me for best deals, urgent offers, cashback risk, or a product/category you care about.');
 </script>
 """
 
 
+def _previous_delta_map(output_file: Path) -> dict:
+    """Carry today's delta flags across manual rebuilds so they aren't wiped."""
+    try:
+        text = output_file.read_text()
+        m = re.search(r'<script id="deal-data" type="application/json">(.*?)</script>', text, re.DOTALL)
+        if not m:
+            return {}
+        rows = json.loads(m.group(1).replace("<\\/", "</"))
+        return {
+            row.get("link"): row.get("delta_reason", "")
+            for row in rows
+            if row.get("is_today_delta") and row.get("link")
+        }
+    except Exception:
+        return {}
+
+
 def build(memory_file: Path = MEMORY_FILE, output_file: Path = OUTPUT_FILE) -> tuple[int, Path]:
     deals, generated_at = load_all_memory_deals(memory_file)
+    previous_delta = _previous_delta_map(output_file)
+    for deal in deals:
+        if deal["link"] in previous_delta:
+            deal["is_today_delta"] = True
+            deal["delta_reason"] = previous_delta[deal["link"]]
     output_file.parent.mkdir(parents=True, exist_ok=True)
     output_file.write_text(render_jekyll_html(deals, generated_at))
     return len(deals), output_file

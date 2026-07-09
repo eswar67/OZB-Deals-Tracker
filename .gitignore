@@ -30,3 +30,8 @@ __pycache__/
 # One-off scripts
 fix_db.py
 deal_history.db
+.preview/
+token_OLD.json
+.pnpm-store/
+points-plus-flights/
+wedding_video/
