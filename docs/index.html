@@ -420,7 +420,12 @@ title: OZB Deal Radar — quantified deal intelligence
         <label class="subscribe-label" for="subscribe-interests">Interests <span>(optional — tailors nothing yet, helps future personalisation)</span></label>
         <input class="subscribe-input" id="subscribe-interests" type="text" placeholder="e.g. laptops, qantas points, home loans">
         <button class="subscribe-button" type="submit">Request subscription</button>
-        <p class="subscribe-note" id="subscribe-note">Opens a pre-filled email — hit send and you'll be added to the next digest.</p>
+        <div class="subscribe-actions" id="subscribe-actions" hidden>
+          <a class="subscribe-action subscribe-action-primary" id="subscribe-gmail" target="_blank" rel="noopener">Open in Gmail</a>
+          <a class="subscribe-action" id="subscribe-mailapp">Open mail app</a>
+          <button class="subscribe-action" id="subscribe-copy" type="button">Copy request</button>
+        </div>
+        <p class="subscribe-note" id="subscribe-note">Prepares a pre-filled request — send it via Gmail, your mail app, or copy &amp; paste.</p>
       </form>
     </section>
   </div>
@@ -1678,44 +1683,74 @@ title: OZB Deal Radar — quantified deal intelligence
 
   // ── Email alerts subscription ─────────────────────────────────
   (function subscribeSetup() {
+    // mailto: alone silently fails when the browser has no default mail app,
+    // so submitting reveals three working paths: Gmail web compose (works in
+    // any browser), the OS mail app, and copy-to-clipboard.
     const form = document.querySelector('#subscribe-form');
     if (!form) return;
     const email = document.querySelector('#subscribe-email');
     const interests = document.querySelector('#subscribe-interests');
     const note = document.querySelector('#subscribe-note');
+    const actions = document.querySelector('#subscribe-actions');
+    const gmailLink = document.querySelector('#subscribe-gmail');
+    const mailLink = document.querySelector('#subscribe-mailapp');
+    const copyBtn = document.querySelector('#subscribe-copy');
+    const TO = 'eswar67@gmail.com';
+    const SUBJECT = 'Subscribe to OZB Deal Radar alerts';
     const defaultNote = note.textContent;
+    let requestText = '';
+
+    function buildRequest() {
+      const lines = [
+        'Please add me to the daily OZB Deal Radar email digest.',
+        '',
+        'Email: ' + email.value.trim(),
+      ];
+      const wants = interests.value.trim();
+      if (wants) lines.push('Interests: ' + wants);
+      lines.push('', 'Sent from the Deal Radar website.');
+      return lines.join('\n');
+    }
+
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       const addr = email.value.trim();
       if (!addr || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
         note.textContent = 'Please enter a valid email address.';
         note.classList.add('subscribe-error');
+        actions.hidden = true;
         return;
       }
-      const lines = [
-        'Please add me to the daily OZB Deal Radar email digest.',
-        '',
-        'Email: ' + addr,
-      ];
-      const wants = interests.value.trim();
-      if (wants) lines.push('Interests: ' + wants);
-      lines.push('', 'Sent from the Deal Radar website.');
-      window.location.href = 'mailto:eswar67@gmail.com'
-        + '?subject=' + encodeURIComponent('Subscribe to OZB Deal Radar alerts')
-        + '&body=' + encodeURIComponent(lines.join('\n'));
+      requestText = buildRequest();
+      const su = encodeURIComponent(SUBJECT);
+      const body = encodeURIComponent(requestText);
+      gmailLink.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + TO + '&su=' + su + '&body=' + body;
+      mailLink.href = 'mailto:' + TO + '?subject=' + su + '&body=' + body;
+      actions.hidden = false;
       note.classList.remove('subscribe-error');
-      note.textContent = 'Email drafted — hit send in your mail app and you\'ll be added within a day.';
+      note.textContent = 'Almost done — pick an option above, or email ' + TO + ' directly. You\'ll be added within a day.';
       try { localStorage.setItem('ozb-subscribed', addr); } catch (e) {}
     });
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(requestText || buildRequest());
+        note.textContent = 'Request copied — paste it into an email to ' + TO + '.';
+      } catch (e) {
+        note.textContent = 'Copy blocked by the browser — email ' + TO + ' with your address instead.';
+      }
+    });
+
     email.addEventListener('input', () => {
       note.classList.remove('subscribe-error');
       note.textContent = defaultNote;
+      actions.hidden = true;
     });
     try {
       const saved = localStorage.getItem('ozb-subscribed');
       if (saved) {
         email.value = saved;
-        note.textContent = 'Request already sent for ' + saved + ' — resubmit any time to update interests.';
+        note.textContent = 'Request started for ' + saved + ' — resubmit any time to update interests.';
       }
     } catch (e) {}
   })();

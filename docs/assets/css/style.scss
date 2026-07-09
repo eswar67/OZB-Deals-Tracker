@@ -1807,3 +1807,38 @@ body.drawer-open { overflow: hidden; }
 @media (max-width: 860px) {
   .subscribe-card { grid-template-columns: 1fr; gap: 18px; padding: 20px; }
 }
+
+/* ── Subscribe action row (Gmail / mail app / copy) ─────────────── */
+
+.subscribe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.subscribe-action {
+  flex: 1 1 auto;
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.subscribe-action:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.subscribe-action-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  border-color: transparent;
+  color: var(--accent-ink);
+}
