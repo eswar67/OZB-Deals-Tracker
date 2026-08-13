@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from html import escape
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -188,31 +188,40 @@ def _compact_history(item: dict) -> list[list]:
 
 
 def _pulse_series(deals: list[dict]) -> list[dict]:
-    """Daily totals of tracked savings across all deals — the market pulse chart.
+    """Savings of the deals that entered each day's digest — the market pulse.
 
-    Backfill days are excluded. When deal memory is seeded (or history anchors
-    are rebuilt) one day absorbs hundreds of deals at once — e.g. 113 deals /
-    $61k against a typical 10 deals / $3k. That is a bookkeeping artifact, not
-    market movement, and on a shared axis it flattens every real day to a
-    hairline. Days whose deal count is a large multiple of the median are
-    dropped so the chart shows genuine daily trend.
+    Keyed on the digest date rather than price-history observations. Every run
+    restamps the observation of every deal it fetched, so a history-based
+    series gave the newest day ~113 deals against 3-10 for older days; the
+    newest day then looked like a backfill and got dropped, permanently
+    leaving today off the chart. One deal counted on the day it was emailed is
+    comparable across days and matches the "Today's deals / Today's value"
+    metrics exactly.
+
+    Seeding days are still excluded: bootstrapping deal memory can land dozens
+    of deals on one date, and on a shared axis that flattens every real day to
+    a hairline.
     """
+    epoch_min = datetime.min.replace(tzinfo=timezone.utc)
     daily: dict[int, dict] = {}
     for deal in deals:
-        for day, savings, _price in deal.get("history", []) or []:
-            entry = daily.setdefault(day, {"t": 0, "c": 0})
-            entry["t"] += max(0, int(savings))
-            entry["c"] += 1
+        emailed_at = deal.get("last_emailed_at")
+        if not emailed_at or emailed_at == epoch_min:
+            continue
+        day = int(emailed_at.astimezone(SYDNEY_TZ).toordinal() - date(1970, 1, 1).toordinal())
+        entry = daily.setdefault(day, {"t": 0, "c": 0})
+        entry["t"] += max(0, int(deal.get("savings", 0) or 0))
+        entry["c"] += 1
     if not daily:
         return []
 
-    counts = sorted(entry["c"] for entry in daily.values())
+    days = sorted(daily)[-21:]
+    counts = sorted(daily[day]["c"] for day in days)
     median_count = counts[len(counts) // 2] or 1
-    backfill_cutoff = max(median_count * 4, 40)
-    ordinary = [day for day, entry in daily.items() if entry["c"] < backfill_cutoff]
-    # Never return empty: if every day looks like a backfill, keep them all.
-    days = sorted(ordinary or daily)[-21:]
-    return [{"d": day, "t": daily[day]["t"], "c": daily[day]["c"]} for day in days]
+    seeding_cutoff = max(median_count * 4, 40)
+    ordinary = [day for day in days if daily[day]["c"] < seeding_cutoff]
+    # Never return empty: if every day looks seeded, keep them all.
+    return [{"d": day, "t": daily[day]["t"], "c": daily[day]["c"]} for day in (ordinary or days)]
 
 
 def _row_from_memory_item(item: dict) -> dict:
@@ -2265,7 +2274,11 @@ SITE_SCRIPT = r"""<script>
         tip.hidden = false;
         const rect = svgEl.getBoundingClientRect();
         const cx = (Number(g.dataset.cx) / w) * rect.width;
-        tip.style.left = Math.max(6, Math.min(rect.width - 6, cx)) + 'px';
+        // The tip is centred on its anchor, so clamp by half its own width —
+        // clamping to the chart edge alone let the newest bar's tip overflow
+        // the card and get clipped.
+        const half = tip.offsetWidth / 2;
+        tip.style.left = Math.max(half + 4, Math.min(rect.width - half - 4, cx)) + 'px';
         g.classList.add('is-hover');
       };
       const hide = () => { tip.hidden = true; g.classList.remove('is-hover'); };
