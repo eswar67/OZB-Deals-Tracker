@@ -353,10 +353,32 @@ html:not([data-theme="light"]) .ico-sun { display: none; }
   height: 110px;
 }
 
-.pulse-stop-a { stop-color: var(--accent); stop-opacity: 0.34; }
-.pulse-stop-b { stop-color: var(--accent); stop-opacity: 0; }
-.pulse-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.pulse-dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.pulse-bar rect {
+  fill: var(--accent);
+  fill-opacity: 0.42;
+  transition: fill-opacity 0.15s ease;
+}
+
+.pulse-bar:hover rect { fill-opacity: 0.95; }
+.pulse-bar.is-peak rect { fill-opacity: 0.72; }
+.pulse-bar.is-latest rect { fill-opacity: 1; }
+
+.pulse-axis { stroke: var(--line); stroke-width: 1; }
+
+.pulse-avg {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.55;
+}
+
+.pulse-tick {
+  fill: var(--ink-muted);
+  font-family: var(--f-mono);
+  font-size: 9px;
+}
+
+.pulse-tick-avg { fill: var(--accent); opacity: 0.9; }
 
 .pulse-legend {
   display: flex;

@@ -188,14 +188,30 @@ def _compact_history(item: dict) -> list[list]:
 
 
 def _pulse_series(deals: list[dict]) -> list[dict]:
-    """Daily totals of tracked savings across all deals — the market pulse chart."""
+    """Daily totals of tracked savings across all deals — the market pulse chart.
+
+    Backfill days are excluded. When deal memory is seeded (or history anchors
+    are rebuilt) one day absorbs hundreds of deals at once — e.g. 113 deals /
+    $61k against a typical 10 deals / $3k. That is a bookkeeping artifact, not
+    market movement, and on a shared axis it flattens every real day to a
+    hairline. Days whose deal count is a large multiple of the median are
+    dropped so the chart shows genuine daily trend.
+    """
     daily: dict[int, dict] = {}
     for deal in deals:
         for day, savings, _price in deal.get("history", []) or []:
             entry = daily.setdefault(day, {"t": 0, "c": 0})
             entry["t"] += max(0, int(savings))
             entry["c"] += 1
-    days = sorted(daily)[-21:]
+    if not daily:
+        return []
+
+    counts = sorted(entry["c"] for entry in daily.values())
+    median_count = counts[len(counts) // 2] or 1
+    backfill_cutoff = max(median_count * 4, 40)
+    ordinary = [day for day, entry in daily.items() if entry["c"] < backfill_cutoff]
+    # Never return empty: if every day looks like a backfill, keep them all.
+    days = sorted(ordinary or daily)[-21:]
     return [{"d": day, "t": daily[day]["t"], "c": daily[day]["c"]} for day in days]
 
 
@@ -730,7 +746,7 @@ title: OZB Deal Radar — quantified deal intelligence
         </div>
       </section>
       <figure class="market-pulse" id="market-pulse" aria-label="Tracked savings per day across recent runs">
-        <figcaption class="pulse-caption">Market pulse <span>tracked savings / day · √ scale</span></figcaption>
+        <figcaption class="pulse-caption">Market pulse <span>savings tracked per day</span></figcaption>
         <div class="pulse-chart" id="pulse-chart" role="img" aria-label="Area chart of total tracked savings per day"></div>
       </figure>
     </div>
@@ -2097,31 +2113,45 @@ SITE_SCRIPT = r"""<script>
       host.innerHTML = '<div class="timeline-empty">Pulse builds as runs accumulate.</div>';
       return;
     }
-    const w = 460, h = 110, pad = 8;
-    const xs = series.map(p => p.d);
-    const ys = series.map(p => p.t);
-    const xMin = Math.min(...xs), xMax = Math.max(...xs);
-    const yMax = Math.max(...ys) || 1;
-    const xr = xMax - xMin || 1;
-    const xy = series.map(p => [
-      pad + ((p.d - xMin) / xr) * (w - pad * 2),
-      // sqrt scale: daily totals are heavily right-skewed (one $50k+ day
-      // crushes every other point flat on a linear axis)
-      h - pad - Math.sqrt(p.t / yMax) * (h - pad * 2.6),
-    ]);
-    const line = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
-    const area = `${line}L${xy[xy.length - 1][0].toFixed(1)},${h - 2}L${xy[0][0].toFixed(1)},${h - 2}Z`;
-    const [lx, ly] = xy[xy.length - 1];
+    // One bar per day — discrete daily totals read better as bars than as a
+    // continuous line, and each bar carries its own date/value/count tooltip.
+    const w = 460, h = 110;
+    const padT = 14, padB = 16, padX = 6;
+    const plot = h - padT - padB;
+    const yMax = Math.max(...series.map(p => p.t)) || 1;
+    const avg = series.reduce((s, p) => s + p.t, 0) / series.length;
+    const slot = (w - padX * 2) / series.length;
+    const barW = Math.max(3, Math.min(18, slot * 0.62));
+    const dayMs = 86400000;
+    const fmtDay = d => new Date(d * dayMs).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+
+    const latest = series[series.length - 1];
     const peak = series.reduce((a, b) => (b.t > a.t ? b : a));
-    host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
-        <defs><linearGradient id="pulse-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" class="pulse-stop-a"/><stop offset="1" class="pulse-stop-b"/>
-        </linearGradient></defs>
-        <path class="pulse-area" d="${area}" fill="url(#pulse-fill)"/>
-        <path class="pulse-line" d="${line}"/>
-        <circle class="pulse-dot" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.4"/>
+    const avgY = padT + plot - (avg / yMax) * plot;
+
+    const bars = series.map((p, i) => {
+      const bh = Math.max(2, (p.t / yMax) * plot);
+      const x = padX + slot * i + (slot - barW) / 2;
+      const y = padT + plot - bh;
+      const isPeak = p.d === peak.d;
+      const isLast = i === series.length - 1;
+      return `<g class="pulse-bar${isPeak ? ' is-peak' : ''}${isLast ? ' is-latest' : ''}">
+        <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="2"/>
+        <title>${fmtDay(p.d)} — ${money(p.t)} across ${p.c} deal${p.c === 1 ? '' : 's'}</title>
+      </g>`;
+    }).join('');
+
+    host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" role="img"
+        aria-label="Daily tracked savings for the last ${series.length} days, ${money(series[0].t)} to ${money(latest.t)}, peak ${money(peak.t)}">
+        <line class="pulse-axis" x1="${padX}" y1="${(padT + plot).toFixed(1)}" x2="${w - padX}" y2="${(padT + plot).toFixed(1)}"/>
+        <line class="pulse-avg" x1="${padX}" y1="${avgY.toFixed(1)}" x2="${w - padX}" y2="${avgY.toFixed(1)}"/>
+        <text class="pulse-tick" x="${padX}" y="10">${money(yMax)}</text>
+        <text class="pulse-tick pulse-tick-avg" x="${w - padX}" y="${(avgY - 3).toFixed(1)}" text-anchor="end">avg ${money(avg)}</text>
+        ${bars}
+        <text class="pulse-tick" x="${padX}" y="${h - 4}">${fmtDay(series[0].d)}</text>
+        <text class="pulse-tick" x="${w - padX}" y="${h - 4}" text-anchor="end">${fmtDay(latest.d)}</text>
       </svg>
-      <div class="pulse-legend"><span>peak ${money(peak.t)} · ${new Date(peak.d * 86400000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span><span>latest ${money(series[series.length - 1].t)}</span></div>`;
+      <div class="pulse-legend"><span>peak ${money(peak.t)} · ${fmtDay(peak.d)}</span><span>latest ${money(latest.t)} · ${latest.c} deals</span></div>`;
   })();
 
   // ── Email alerts subscription ─────────────────────────────────
