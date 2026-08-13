@@ -730,7 +730,7 @@ title: OZB Deal Radar — quantified deal intelligence
         </div>
       </section>
       <figure class="market-pulse" id="market-pulse" aria-label="Tracked savings per day across recent runs">
-        <figcaption class="pulse-caption">Market pulse <span>tracked savings / day</span></figcaption>
+        <figcaption class="pulse-caption">Market pulse <span>tracked savings / day · √ scale</span></figcaption>
         <div class="pulse-chart" id="pulse-chart" role="img" aria-label="Area chart of total tracked savings per day"></div>
       </figure>
     </div>
@@ -2105,7 +2105,9 @@ SITE_SCRIPT = r"""<script>
     const xr = xMax - xMin || 1;
     const xy = series.map(p => [
       pad + ((p.d - xMin) / xr) * (w - pad * 2),
-      h - pad - (p.t / yMax) * (h - pad * 2.6),
+      // sqrt scale: daily totals are heavily right-skewed (one $50k+ day
+      // crushes every other point flat on a linear axis)
+      h - pad - Math.sqrt(p.t / yMax) * (h - pad * 2.6),
     ]);
     const line = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
     const area = `${line}L${xy[xy.length - 1][0].toFixed(1)},${h - 2}L${xy[0][0].toFixed(1)},${h - 2}Z`;
