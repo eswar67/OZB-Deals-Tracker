@@ -49,7 +49,7 @@ from modules.prefs          import match_all
 from modules.email_builder  import build_email_html
 from modules.value_parser   import parse_all as parse_deal_values
 from modules.briefing       import build_briefing
-from modules.deal_memory    import annotate_deals, record_run, MEMORY_FILE
+from modules.deal_memory    import annotate_deals, record_run, refresh_deal_expiry, MEMORY_FILE
 
 # ── Config ────────────────────────────────────────────────────────────────────
 _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
@@ -2340,6 +2340,13 @@ def main():
             log.info("Restored %s previous site delta deal(s) for manual rerun", restored)
             top_deals = [d for d in active_top_deals if is_delta_deal(d)]
     log.info(f"{len(top_deals)} delta deal(s) are new, first-email, or improved")
+
+    # Re-verify remembered deals against OzBargain before building the site so
+    # the public list only shows deals that are actually still live.
+    try:
+        refresh_deal_expiry()
+    except Exception as exc:
+        log.warning("Expiry refresh failed: %s", exc)
 
     publish_deals_site(active_top_deals)
 

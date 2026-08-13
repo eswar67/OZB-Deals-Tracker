@@ -123,6 +123,25 @@ def _save_memory(memory: dict) -> None:
     MEMORY_FILE.write_text(json.dumps(memory, indent=2, sort_keys=True))
 
 
+def refresh_deal_expiry(limit: int = 400) -> dict:
+    """Re-verify remembered deals against OzBargain and persist the verdicts.
+
+    Run this before building the site so the 'All active deals' list reflects
+    what is actually still live. Deals already marked expired are skipped, so
+    the cost shrinks as the backlog gets classified.
+    """
+    from modules.expiry_check import refresh_expiry
+
+    memory = _load_memory()
+    store = memory.setdefault("deals", {})
+    if not store:
+        return {"checked": 0, "expired": 0, "live": 0, "unknown": 0}
+    counts = refresh_expiry(store, limit=limit)
+    if counts.get("checked"):
+        _save_memory(memory)
+    return counts
+
+
 def annotate_deals(deals: list[dict]) -> list[dict]:
     """Add prior-memory fields before ranking/emailing."""
     memory = _load_memory().get("deals", {})

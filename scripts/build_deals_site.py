@@ -242,6 +242,9 @@ def _row_from_memory_item(item: dict) -> dict:
         "category": _category_from_signals(title, item.get("categories") or [], merchant),
         "merchant": merchant,
         "source": item.get("source", "") or ("bargainradar" if "bargainradar.com.au" in str(item.get("link", "")) else "ozbargain"),
+        # Verified against the OzBargain node page, not inferred from the title.
+        "expired": bool(item.get("expired")),
+        "expires_on": str(item.get("expires_on", "") or ""),
     }
     row["lowest_price_seen"] = int(item.get("lowest_price_seen", 0) or 0)
     history = item.get("price_history", []) or []
@@ -558,6 +561,8 @@ def _deal_payload(deals: list[dict]) -> str:
             "market_saving": int(deal.get("market_saving", 0) or 0),
             "cashback_platform": deal.get("cashback_platform", "") or "",
             "price_beat_count": int(deal.get("price_beat_count", 0) or 0),
+            "expired": bool(deal.get("expired")),
+            "expires_on": deal.get("expires_on", "") or "",
             "history": deal.get("history", []) or [],
         })
     return json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
@@ -1027,10 +1032,12 @@ SITE_SCRIPT = r"""<script>
     return new Set(tokenize(dealText(deal)));
   }
 
-  // Only genuinely dead deals are suppressed — long-stale deals stay listed
-  // (they carry a "Stale" badge instead). OzBargain posters edit the title
-  // when a deal dies, so the title is the signal.
+  // Only genuinely dead deals are suppressed — long-stale-but-live deals stay
+  // listed (they carry a "Stale" badge instead). deal.expired is the verdict
+  // from the OzBargain node page itself; the title regex is a fallback for
+  // deals whose page has not been checked yet.
   function isExpired(deal) {
+    if (deal.expired) return true;
     return /\b(oos|expired|expire[sd]?|sold\s?out|out\s+of\s+stock|no\s+longer\s+available|deal\s+ended)\b/i
       .test(deal.title || '');
   }
