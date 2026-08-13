@@ -849,7 +849,18 @@ title: OZB Deal Radar — quantified deal intelligence
           <div class="metric-value" id="stat-active-avg">{_money(active_avg)}</div>
         </div>
       </section>
-      <div class="section-subtitle">Full current active list, still sorted by savings and controlled by the filters above.</div>
+      <div class="group-rail">
+        <div class="section-subtitle">Full current active list, still sorted by savings and controlled by the filters above.</div>
+        <label class="group-by">
+          Group by
+          <select id="group-by">
+            <option value="category">Category</option>
+            <option value="savings">Savings band</option>
+            <option value="merchant">Merchant</option>
+            <option value="none">No grouping</option>
+          </select>
+        </label>
+      </div>
       <section class="grid" id="deals"></section>
       <div class="empty" id="empty">No active deals match the current filters.</div>
     </details>
@@ -957,6 +968,7 @@ SITE_SCRIPT = r"""<script>
     drawerClose: document.querySelector('#drawer-close'),
     drawerContent: document.querySelector('#drawer-content'),
     empty: document.querySelector('#empty'),
+    groupBy: document.querySelector('#group-by'),
     todayEmpty: document.querySelector('#today-empty'),
     todayCount: document.querySelector('#today-count'),
     allCount: document.querySelector('#all-count'),
@@ -1289,6 +1301,7 @@ SITE_SCRIPT = r"""<script>
     if (els.agentPicksOnly.checked) params.set('agent', '1');
     if (els.urgentOnly.checked) params.set('urgent', '1');
     if (!els.hideExpired.checked) params.set('expired', 'show');
+    if (els.groupBy && els.groupBy.value !== 'category') params.set('group', els.groupBy.value);
     const next = `${location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
     history.replaceState(null, '', next);
   }
@@ -1304,6 +1317,75 @@ SITE_SCRIPT = r"""<script>
     els.agentPicksOnly.checked = params.get('agent') === '1';
     els.urgentOnly.checked = params.get('urgent') === '1';
     els.hideExpired.checked = params.get('expired') !== 'show';
+    if (els.groupBy) els.groupBy.value = params.get('group') || 'category';
+  }
+
+  // ── Grouping for the long active list ──────────────────────────
+  const SAVINGS_BANDS = [
+    { label: '$1,000+',      min: 1000 },
+    { label: '$500 – $999',  min: 500  },
+    { label: '$200 – $499',  min: 200  },
+    { label: 'Under $200',   min: 0    },
+  ];
+
+  function groupKey(deal, mode) {
+    if (mode === 'category') return deal.category || 'Other';
+    if (mode === 'merchant') return deal.merchant || 'Unknown merchant';
+    if (mode === 'savings') return (SAVINGS_BANDS.find(b => deal.savings >= b.min) || SAVINGS_BANDS[3]).label;
+    return '';
+  }
+
+  // rows are already ranked; entries keep their flat index so Dossier buttons
+  // and rank numbers stay correct inside groups.
+  function buildGroups(rows, mode) {
+    const map = new Map();
+    rows.forEach((deal, i) => {
+      const key = groupKey(deal, mode);
+      if (!map.has(key)) map.set(key, { label: key, items: [], total: 0 });
+      const g = map.get(key);
+      g.items.push({ deal, i });
+      g.total += deal.savings;
+    });
+    let groups = [...map.values()];
+    if (mode === 'savings') {
+      const order = SAVINGS_BANDS.map(b => b.label);
+      groups.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
+      return groups;
+    }
+    // Long tail: hundreds of one-deal merchants is a flat list with extra
+    // chrome, so fold singletons into a single trailing group.
+    if (mode === 'merchant') {
+      const singles = groups.filter(g => g.items.length < 2);
+      if (singles.length > 6) {
+        groups = groups.filter(g => g.items.length >= 2);
+        groups.sort((a, b) => b.total - a.total || b.items.length - a.items.length);
+        const rest = {
+          label: `Other merchants (${singles.length})`,
+          items: singles.flatMap(g => g.items).sort((a, b) => a.i - b.i),
+          total: singles.reduce((s, g) => s + g.total, 0),
+        };
+        return [...groups, rest];
+      }
+    }
+    groups.sort((a, b) => b.total - a.total || b.items.length - a.items.length);
+    return groups;
+  }
+
+  function renderActiveList(rows) {
+    const mode = els.groupBy ? els.groupBy.value : 'none';
+    if (mode === 'none' || !rows.length) {
+      els.grid.innerHTML = rows.map((deal, index) => cardHtml(deal, index, 'all')).join('');
+      return;
+    }
+    // Big groups start collapsed so the page opens navigable, not as a wall.
+    els.grid.innerHTML = buildGroups(rows, mode).map((g, gi) => `
+      <details class="deal-group"${gi < 2 || g.items.length <= 8 ? ' open' : ''}>
+        <summary class="group-head">
+          <span class="group-name">${escapeHtml(g.label)}</span>
+          <span class="group-meta"><b>${g.items.length}</b> deal${g.items.length === 1 ? '' : 's'} · ${money(g.total)}</span>
+        </summary>
+        <div class="group-body">${g.items.map(it => cardHtml(it.deal, it.i, 'all')).join('')}</div>
+      </details>`).join('');
   }
 
   function applyFilters() {
@@ -1329,7 +1411,7 @@ SITE_SCRIPT = r"""<script>
     currentTodayRows = todayRows;
     currentFocusRows = focusRows;
     els.todayGrid.innerHTML = todayRows.map((deal, index) => cardHtml(deal, index, 'today')).join('');
-    els.grid.innerHTML = rows.map((deal, index) => cardHtml(deal, index, 'all')).join('');
+    renderActiveList(rows);
     els.urgentStrip.innerHTML = urgentStripHtml(focusRows);
     els.topStrip.innerHTML = topStripHtml(focusRows);
     renderCategorySummary(rows);
@@ -2017,6 +2099,9 @@ SITE_SCRIPT = r"""<script>
   document.querySelectorAll('[data-chat-prompt]').forEach(button => {
     button.addEventListener('click', () => askAssistant(button.dataset.chatPrompt || ''));
   });
+  if (els.groupBy) {
+    els.groupBy.addEventListener('change', () => { renderActiveList(currentRows); encodeState(); });
+  }
   for (const el of [els.search, els.category, els.merchant, els.minSaving, els.sort, els.watchlist, els.agentPicksOnly, els.urgentOnly, els.hideExpired]) {
     el.addEventListener('input', applyFilters);
     el.addEventListener('change', applyFilters);
