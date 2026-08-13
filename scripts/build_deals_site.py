@@ -879,7 +879,7 @@ title: OZB Deal Radar — quantified deal intelligence
       </div>
       <form class="subscribe-form" id="subscribe-form" data-endpoint="{subscribe_endpoint}" data-entry-email="{subscribe_entry_email}" data-entry-interests="{subscribe_entry_interests}">
         <label class="subscribe-label" for="subscribe-email">Email address</label>
-        <input class="subscribe-input" id="subscribe-email" type="email" required placeholder="you@example.com" autocomplete="email">
+        <input class="subscribe-input" id="subscribe-email" type="email" required placeholder="you@example.com" autocomplete="off" autocapitalize="off" spellcheck="false">
         <label class="subscribe-label" for="subscribe-interests">Interests <span>(optional — tailors nothing yet, helps future personalisation)</span></label>
         <input class="subscribe-input" id="subscribe-interests" type="text" placeholder="e.g. laptops, qantas points, home loans">
         <button class="subscribe-button" type="submit">Request subscription</button>
@@ -1027,8 +1027,12 @@ SITE_SCRIPT = r"""<script>
     return new Set(tokenize(dealText(deal)));
   }
 
+  // Only genuinely dead deals are suppressed — long-stale deals stay listed
+  // (they carry a "Stale" badge instead). OzBargain posters edit the title
+  // when a deal dies, so the title is the signal.
   function isExpired(deal) {
-    return /\b(oos|expired|sold out|out of stock)\b/i.test(deal.title || '');
+    return /\b(oos|expired|expire[sd]?|sold\s?out|out\s+of\s+stock|no\s+longer\s+available|deal\s+ended)\b/i
+      .test(deal.title || '');
   }
 
   function daysSince(value) {
@@ -2214,15 +2218,20 @@ SITE_SCRIPT = r"""<script>
     const peak = series.reduce((a, b) => (b.t > a.t ? b : a));
     const avgY = padT + plot - (avg / yMax) * plot;
 
+    // Hit area spans the full slot height so the pointer doesn't have to land
+    // on a 2px-tall bar; the visible bar is drawn separately.
     const bars = series.map((p, i) => {
       const bh = Math.max(2, (p.t / yMax) * plot);
       const x = padX + slot * i + (slot - barW) / 2;
       const y = padT + plot - bh;
       const isPeak = p.d === peak.d;
       const isLast = i === series.length - 1;
-      return `<g class="pulse-bar${isPeak ? ' is-peak' : ''}${isLast ? ' is-latest' : ''}">
+      const label = `${fmtDay(p.d)} — ${money(p.t)} across ${p.c} deal${p.c === 1 ? '' : 's'}`;
+      return `<g class="pulse-bar${isPeak ? ' is-peak' : ''}${isLast ? ' is-latest' : ''}"
+                 data-label="${escapeHtml(label)}" data-cx="${(x + barW / 2).toFixed(1)}">
+        <rect class="pulse-hit" x="${(padX + slot * i).toFixed(1)}" y="${padT}" width="${slot.toFixed(1)}" height="${plot}"/>
         <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="2"/>
-        <title>${fmtDay(p.d)} — ${money(p.t)} across ${p.c} deal${p.c === 1 ? '' : 's'}</title>
+        <title>${escapeHtml(label)}</title>
       </g>`;
     }).join('');
 
@@ -2236,7 +2245,29 @@ SITE_SCRIPT = r"""<script>
         <text class="pulse-tick" x="${padX}" y="${h - 4}">${fmtDay(series[0].d)}</text>
         <text class="pulse-tick" x="${w - padX}" y="${h - 4}" text-anchor="end">${fmtDay(latest.d)}</text>
       </svg>
+      <div class="pulse-tip" id="pulse-tip" hidden></div>
       <div class="pulse-legend"><span>peak ${money(peak.t)} · ${fmtDay(peak.d)}</span><span>latest ${money(latest.t)} · ${latest.c} deals</span></div>`;
+
+    // Native SVG <title> tooltips are slow and unreliable inside <g>, so drive
+    // a real tooltip from the full-height hit areas.
+    const tip = host.querySelector('#pulse-tip');
+    const svgEl = host.querySelector('svg');
+    host.querySelectorAll('.pulse-bar').forEach(g => {
+      const show = () => {
+        tip.textContent = g.dataset.label;
+        tip.hidden = false;
+        const rect = svgEl.getBoundingClientRect();
+        const cx = (Number(g.dataset.cx) / w) * rect.width;
+        tip.style.left = Math.max(6, Math.min(rect.width - 6, cx)) + 'px';
+        g.classList.add('is-hover');
+      };
+      const hide = () => { tip.hidden = true; g.classList.remove('is-hover'); };
+      g.setAttribute('tabindex', '0');
+      g.addEventListener('mouseenter', show);
+      g.addEventListener('mouseleave', hide);
+      g.addEventListener('focus', show);
+      g.addEventListener('blur', hide);
+    });
   })();
 
   // ── Email alerts subscription ─────────────────────────────────
@@ -2337,12 +2368,11 @@ SITE_SCRIPT = r"""<script>
       note.textContent = defaultNote;
       actions.hidden = true;
     });
+    // Never pre-fill the address — the field stays empty so nobody sees a
+    // stranger's (or a browser-autofilled) email sitting in the form.
     try {
       const saved = localStorage.getItem('ozb-subscribed');
-      if (saved) {
-        email.value = saved;
-        note.textContent = 'Request started for ' + saved + ' — resubmit any time to update interests.';
-      }
+      if (saved) note.textContent = 'Already subscribed on this device. Enter an address to add another.';
     } catch (e) {}
   })();
 

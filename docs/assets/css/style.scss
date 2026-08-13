@@ -353,15 +353,15 @@ html:not([data-theme="light"]) .ico-sun { display: none; }
   height: 110px;
 }
 
-.pulse-bar rect {
+.pulse-bar rect:not(.pulse-hit) {
   fill: var(--accent);
   fill-opacity: 0.42;
   transition: fill-opacity 0.15s ease;
 }
 
-.pulse-bar:hover rect { fill-opacity: 0.95; }
-.pulse-bar.is-peak rect { fill-opacity: 0.72; }
-.pulse-bar.is-latest rect { fill-opacity: 1; }
+.pulse-bar:hover rect:not(.pulse-hit) { fill-opacity: 0.95; }
+.pulse-bar.is-peak rect:not(.pulse-hit) { fill-opacity: 0.72; }
+.pulse-bar.is-latest rect:not(.pulse-hit) { fill-opacity: 1; }
 
 .pulse-axis { stroke: var(--line); stroke-width: 1; }
 
@@ -1959,4 +1959,32 @@ body.drawer-open { overflow: hidden; }
 @media (max-width: 640px) {
   .group-rail { align-items: flex-start; }
   .group-body { padding: 0 8px 10px; }
+}
+
+/* ── Market pulse tooltip ───────────────────────────────────────── */
+
+.pulse-chart { position: relative; }
+
+.pulse-bar rect.pulse-hit { fill: transparent; fill-opacity: 0; }
+
+.pulse-bar { cursor: pointer; }
+.pulse-bar:focus { outline: none; }
+.pulse-bar.is-hover rect:not(.pulse-hit),
+.pulse-bar:focus rect:not(.pulse-hit) { fill-opacity: 1; }
+
+.pulse-tip {
+  position: absolute;
+  top: -2px;
+  transform: translateX(-50%);
+  padding: 5px 9px;
+  border: 1px solid var(--line-accent);
+  border-radius: var(--r-sm);
+  background: var(--raised);
+  color: var(--ink);
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--shadow-lift);
+  z-index: 5;
 }
