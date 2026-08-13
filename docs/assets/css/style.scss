@@ -1940,6 +1940,19 @@ body.drawer-open { overflow: hidden; }
   color: var(--ink);
 }
 
+/* Marks a catch-all group that absorbed the small-category tail. */
+.group-note {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--ink-muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
 .group-meta {
   font-family: var(--f-mono);
   font-size: 11px;

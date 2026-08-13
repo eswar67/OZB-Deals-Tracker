@@ -1366,29 +1366,48 @@ SITE_SCRIPT = r"""<script>
       g.items.push({ deal, i });
       g.total += deal.savings;
     });
-    let groups = [...map.values()];
+    const groups = [...map.values()];
     if (mode === 'savings') {
       const order = SAVINGS_BANDS.map(b => b.label);
       groups.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
       return groups;
     }
-    // Long tail: hundreds of one-deal merchants is a flat list with extra
-    // chrome, so fold singletons into a single trailing group.
-    if (mode === 'merchant') {
-      const singles = groups.filter(g => g.items.length < 2);
-      if (singles.length > 6) {
-        groups = groups.filter(g => g.items.length >= 2);
-        groups.sort((a, b) => b.total - a.total || b.items.length - a.items.length);
-        const rest = {
-          label: `Other merchants (${singles.length})`,
-          items: singles.flatMap(g => g.items).sort((a, b) => a.i - b.i),
-          total: singles.reduce((s, g) => s + g.total, 0),
-        };
-        return [...groups, rest];
-      }
+    return mode === 'merchant'
+      ? foldSmallGroups(groups, 'Other merchants', 2)
+      : foldSmallGroups(groups, 'Other', 3);
+  }
+
+  function sortGroups(groups, catchAllLabel) {
+    // Grab-bag last, everything else by total savings.
+    return groups.sort((a, b) =>
+      (a.label === catchAllLabel) - (b.label === catchAllLabel)
+      || b.total - a.total
+      || b.items.length - a.items.length);
+  }
+
+  // A group of one or two deals is a card wearing extra chrome — it costs a
+  // header and a collapse toggle to show less than a plain row would. Fold
+  // those into the trailing catch-all so the list stays scannable. Merchants
+  // tail off far harder than categories, so they keep a lower bar: at a
+  // minimum of 3 only a handful of merchants survive and the bucket swallows
+  // most of the list.
+  function foldSmallGroups(groups, catchAllLabel, minSize) {
+    const small = groups.filter(g => g.items.length < minSize && g.label !== catchAllLabel);
+    // Folding a single stray group buys nothing; only worth it for a real tail.
+    if (small.length < 3) return sortGroups(groups, catchAllLabel);
+
+    const kept = groups.filter(g => !small.includes(g));
+    let bucket = kept.find(g => g.label === catchAllLabel);
+    if (!bucket) {
+      bucket = { label: catchAllLabel, items: [], total: 0 };
+      kept.push(bucket);
     }
-    groups.sort((a, b) => b.total - a.total || b.items.length - a.items.length);
-    return groups;
+    // Merge into the existing catch-all rather than showing it alongside a
+    // second "Other"-ish group.
+    bucket.items = bucket.items.concat(small.flatMap(g => g.items)).sort((a, b) => a.i - b.i);
+    bucket.total += small.reduce((sum, g) => sum + g.total, 0);
+    bucket.folded = small.length;
+    return sortGroups(kept, catchAllLabel);
   }
 
   function renderActiveList(rows) {
@@ -1401,7 +1420,7 @@ SITE_SCRIPT = r"""<script>
     els.grid.innerHTML = buildGroups(rows, mode).map((g, gi) => `
       <details class="deal-group"${gi < 2 || g.items.length <= 8 ? ' open' : ''}>
         <summary class="group-head">
-          <span class="group-name">${escapeHtml(g.label)}</span>
+          <span class="group-name">${escapeHtml(g.label)}${g.folded ? ` <span class="group-note">+${g.folded} small</span>` : ''}</span>
           <span class="group-meta"><b>${g.items.length}</b> deal${g.items.length === 1 ? '' : 's'} · ${money(g.total)}</span>
         </summary>
         <div class="group-body">${g.items.map(it => cardHtml(it.deal, it.i, 'all')).join('')}</div>
