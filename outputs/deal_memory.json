@@ -33,7 +33,7 @@
       "deal_price": 200,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:42+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:31+00:00",
       "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
       "first_title": "Referrer & Referee Each Get $200 Amazon Australia Gift Card Each after Referee Installs SigenStor System @ Sigenergy",
       "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
@@ -1287,7 +1287,7 @@
       "deal_price": 449,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:42+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:31+00:00",
       "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
       "first_title": "10% off Ausclimate Dehumidifiers: e.g. 45L Smart ACD245 $449.10 Delivered (RRP $699) @ Ausclimate",
       "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
@@ -2661,7 +2661,7 @@
       "deal_price": 2000,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:43+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:32+00:00",
       "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
       "first_title": "$2000 off: Chery Tiggo 4 Hybrid Urban from $27,990 Driveaway, Ultimate $30,990 @ Chery",
       "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
@@ -3282,7 +3282,7 @@
       "deal_price": 10,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:43+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:32+00:00",
       "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
       "first_title": "Referee & Referrer Get $10-$200 off First/Next Purchase @ Whatnot",
       "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
@@ -3399,7 +3399,7 @@
       "deal_price": 199,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:43+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:33+00:00",
       "first_seen_at": "2026-06-14T04:56:24.244626+00:00",
       "first_title": "Anker Solix C300X DC Portable Power Station 300w $199 (Was $429, 54% off) @ Anker Solix AU",
       "last_emailed_at": "2026-06-14T04:56:24.244626+00:00",
@@ -3619,7 +3619,7 @@
       "deal_price": 140,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:44+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:33+00:00",
       "first_seen_at": "2026-06-17T05:54:46+00:00",
       "first_title": "Up to $140 off an Experience When Booking Accommodation in Selected Cities (Min. US$50 Spend) @ Airbnb",
       "last_emailed_at": "2026-06-17T06:00:45+00:00",
@@ -3953,7 +3953,7 @@
       "deal_price": 50,
       "email_count": 2,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:44+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:34+00:00",
       "first_seen_at": "2026-06-15T06:58:12+00:00",
       "first_title": "Register a Ptd. Ltd Company ($611) & Receive $305.50 cashback & 50% off Virtual Office (Sydney Only) for 12 Months @ ANNA",
       "last_emailed_at": "2026-07-02T10:12:27+00:00",
@@ -6608,7 +6608,7 @@
       "deal_price": 20,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:44+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:34+00:00",
       "first_seen_at": "2026-06-27T09:31:09+00:00",
       "first_title": "[Prime] Blink Outdoor Camera 2K+ (2 Camera System) $20 (New Prime Signups, RRP $219) Delivered @ Amazon AU",
       "last_emailed_at": "2026-06-27T09:31:09+00:00",
@@ -7559,7 +7559,7 @@
       "deal_price": 449,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:45+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:34+00:00",
       "first_seen_at": "2026-07-01T10:44:41+00:00",
       "first_title": "FlexiSpot C7 Ergonomic Office Chair (Mesh Version with Footrest) $449.99 (Was $699.99) Delivered @ FlexiSpot",
       "last_emailed_at": "2026-07-01T10:44:41+00:00",
@@ -7781,8 +7781,9 @@
       "best_seen_at": "2026-07-03T10:08:12+00:00",
       "deal_price": 559,
       "email_count": 1,
-      "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:45+00:00",
+      "expired": true,
+      "expires_on": "17 Aug",
+      "expiry_checked_at": "2026-08-18T08:16:27+00:00",
       "first_seen_at": "2026-07-03T10:08:12+00:00",
       "first_title": "Sennheiser HD 660S2 Headphones $559 Delivered (RRP $949.95) @ Sennheiser Au",
       "last_emailed_at": "2026-07-03T10:08:12+00:00",
@@ -7808,8 +7809,9 @@
       "best_seen_at": "2026-07-03T10:08:12+00:00",
       "deal_price": 39,
       "email_count": 1,
-      "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:45+00:00",
+      "expired": true,
+      "expires_on": "17 Aug",
+      "expiry_checked_at": "2026-08-18T08:16:27+00:00",
       "first_seen_at": "2026-07-03T10:08:12+00:00",
       "first_title": "Jurassic World Rebirth Ultimate Action Chomp T. Rex $39 (RRP $144.99) + $9.95 Shipping ($0 C&C/ In-Store/ $99 Spend) @ MYER",
       "last_emailed_at": "2026-07-03T10:08:12+00:00",
@@ -7892,7 +7894,7 @@
       "deal_price": 28990,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:46+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:35+00:00",
       "first_seen_at": "2026-07-03T10:08:12+00:00",
       "first_title": "Volkswagen T-Cross 85TSI Life MY24 $28,990 Driveaway (Save $7,458) @ Volkswagen",
       "last_emailed_at": "2026-07-03T10:08:12+00:00",
@@ -8009,7 +8011,7 @@
       "deal_price": 590,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:46+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:35+00:00",
       "first_seen_at": "2026-07-04T09:25:49+00:00",
       "first_title": "Up to 25% off Space Saver Spare Wheel Kit for Tesla, MG4 etc: e.g. MG4 Kit with Jack & Carry Bag $590 + Del @ Cybermetals",
       "last_emailed_at": "2026-07-04T09:25:49+00:00",
@@ -8092,7 +8094,7 @@
       "deal_price": 100,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:46+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:35+00:00",
       "first_seen_at": "2026-07-05T09:44:39+00:00",
       "first_title": "Baccarat 9L Air Fryer $100 (Was $359.99) + $11.95 Delivery ($0 with $130 Order) @ Baccarat",
       "last_emailed_at": "2026-07-05T09:44:39+00:00",
@@ -8119,7 +8121,7 @@
       "deal_price": 61,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:47+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:36+00:00",
       "first_seen_at": "2026-07-05T09:44:39+00:00",
       "first_title": "12x Mortein Naturgard 152g Multi Insect Automatic Spray Refill $61.80 Delivered (RRP $192) @ Lower Price People eBay",
       "last_emailed_at": "2026-07-05T09:44:39+00:00",
@@ -8174,7 +8176,7 @@
       "deal_price": 174,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:47+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:36+00:00",
       "first_seen_at": "2026-07-05T09:44:39+00:00",
       "first_title": "Nexgrill Ranger 4 Burner BBQ $174.50 (50% off) in Closure Stores Only @ Barbeques Galore",
       "last_emailed_at": "2026-07-05T09:44:39+00:00",
@@ -8201,7 +8203,7 @@
       "deal_price": 499,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:48+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:36+00:00",
       "first_seen_at": "2026-07-06T11:40:12+00:00",
       "first_title": "Artist AT73 Pink Paisley Burst Electric Guitar with Hand Made Pickups - $499 Delivered @ Artist Guitars",
       "last_emailed_at": "2026-07-06T11:40:12+00:00",
@@ -8256,7 +8258,7 @@
       "deal_price": 89,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:48+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:37+00:00",
       "first_seen_at": "2026-07-06T11:40:12+00:00",
       "first_title": "adidas Men\u2019s Puffer Jacket L/XL $89 (60% off) + $10 Delivery ($0 with $100 Order) @ ModeFree Studio",
       "last_emailed_at": "2026-07-06T11:40:12+00:00",
@@ -8311,7 +8313,7 @@
       "deal_price": 99,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:48+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:37+00:00",
       "first_seen_at": "2026-07-06T11:40:12+00:00",
       "first_title": "New Balance Men's Kawhi 4 Basketball Shoes (Hi-Pink/Black/Neo Flame) $99.99 (RRP $259.99) + $9.99 Del ($0 C&C) @ Jim Kidd Sports",
       "last_emailed_at": "2026-07-06T11:40:12+00:00",
@@ -8702,26 +8704,26 @@
       "deal_price": 140,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:49+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:38+00:00",
       "first_seen_at": "2026-07-07T10:28:17+00:00",
       "first_title": "[Prime] Sunbeam EM5000K Caf\u00e9 Barista Coffee Machine $140.99 (RRP $299) Delivered @ Amazon AU",
       "last_emailed_at": "2026-07-07T10:28:17+00:00",
       "last_savings": 159,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Sunbeam EM5000K Caf\u00e9 Barista Coffee Machine $140.99 (RRP $299) Delivered @ Amazon AU",
       "link": "https://www.ozbargain.com.au/node/966588",
       "market_price": 299,
       "node_id": "966588",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 140,
           "market_price": 299,
           "savings": 159
         }
       ],
       "source": "html",
-      "times_seen": 21
+      "times_seen": 22
     },
     "node:966589": {
       "best_savings": 192,
@@ -8875,21 +8877,21 @@
       "first_title": "[Prime] Dreame X40 Ultra Robotic Vacuum with Removable & Liftable Mop $749.99 (RRP $2,799) Delivered @ Dreame via Amazon AU",
       "last_emailed_at": "2026-07-07T10:28:17+00:00",
       "last_savings": 2050,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "[Prime] Dreame X40 Ultra Robotic Vacuum with Removable & Liftable Mop $749.99 (RRP $2,799) Delivered @ Dreame via Amazon AU",
       "link": "https://www.ozbargain.com.au/node/966632",
       "market_price": 2799,
       "node_id": "966632",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 749,
           "market_price": 2799,
           "savings": 2050
         }
       ],
       "source": "html",
-      "times_seen": 7
+      "times_seen": 8
     },
     "node:966635": {
       "best_savings": 1400,
@@ -10023,26 +10025,26 @@
       "deal_price": 100000,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:49+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:38+00:00",
       "first_seen_at": "2026-07-08T09:28:13+00:00",
       "first_title": "100,000 Bonus Velocity or Qantas Points with $100,000 Line of Credit Approval & $15,000 Spend in 3 Months @ Octet (New Customer)",
       "last_emailed_at": "2026-07-08T09:28:13+00:00",
       "last_savings": 1350,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "100,000 Bonus Velocity or Qantas Points with $100,000 Line of Credit Approval & $15,000 Spend in 3 Months @ Octet (New Customer)",
       "link": "https://www.ozbargain.com.au/node/966968",
       "market_price": 0,
       "node_id": "966968",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 100000,
           "market_price": 0,
           "savings": 1350
         }
       ],
       "source": "html",
-      "times_seen": 45
+      "times_seen": 46
     },
     "node:966987": {
       "best_savings": 110,
@@ -10134,26 +10136,26 @@
       "deal_price": 249,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:49+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:38+00:00",
       "first_seen_at": "2026-07-08T09:28:13+00:00",
       "first_title": "Tommy Hilfiger Water Repellent Down Puffer Jacket $249 (Was $500), 2 for $348.60 Delivered @ Tommy Hilfiger",
       "last_emailed_at": "2026-07-08T09:28:13+00:00",
       "last_savings": 152,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Tommy Hilfiger Water Repellent Down Puffer Jacket $249 (Was $500), 2 for $348.60 Delivered @ Tommy Hilfiger",
       "link": "https://www.ozbargain.com.au/node/967008",
       "market_price": 401,
       "node_id": "967008",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 249,
           "market_price": 401,
           "savings": 152
         }
       ],
       "source": "html",
-      "times_seen": 45
+      "times_seen": 46
     },
     "node:967019": {
       "best_savings": 140,
@@ -10525,26 +10527,26 @@
       "deal_price": 2498,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:50+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:39+00:00",
       "first_seen_at": "2026-07-09T10:27:32+00:00",
       "first_title": "THE Bastard VX Large Kamado Charcoal Grill $2,498 + Delivery ($0 NSW C&C) @ Botanex",
       "last_emailed_at": "2026-07-09T10:27:32+00:00",
       "last_savings": 1452,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "THE Bastard VX Large Kamado Charcoal Grill $2,498 + Delivery ($0 NSW C&C) @ Botanex",
       "link": "https://www.ozbargain.com.au/node/967102",
       "market_price": 0,
       "node_id": "967102",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 2498,
           "market_price": 0,
           "savings": 1452
         }
       ],
       "source": "html",
-      "times_seen": 44
+      "times_seen": 45
     },
     "node:967108": {
       "best_savings": 146,
@@ -11669,26 +11671,26 @@
       "deal_price": 303,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:10+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:00+00:00",
       "first_seen_at": "2026-07-12T09:05:43+00:00",
       "first_title": "[Prime] SIHOO B100 PRO Ergonomic Office Chair with Footrest  $303.98 (RRP $459.99) Delivered @ Amazon AU",
       "last_emailed_at": "2026-07-12T09:05:43+00:00",
       "last_savings": 156,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "SIHOO B100 PRO Ergonomic Office Chair with Footrest  $303.98 (RRP $459.99) Delivered @ SIHOO AU Amazon AU",
       "link": "https://www.ozbargain.com.au/node/967552",
       "market_price": 459,
       "node_id": "967552",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 303,
           "market_price": 459,
           "savings": 156
         }
       ],
       "source": "html",
-      "times_seen": 5
+      "times_seen": 6
     },
     "node:967558": {
       "best_savings": 103,
@@ -11976,26 +11978,26 @@
       "deal_price": 99,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:11+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:02+00:00",
       "first_seen_at": "2026-07-14T09:07:07+00:00",
       "first_title": "120x Clear Safety Glasses $99 (Was $249) + Delivery ($0 QLD C&C/ $310 Order) @ HLP Medical Supplies",
       "last_emailed_at": "2026-07-14T09:07:07+00:00",
       "last_savings": 150,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "120x Clear Safety Glasses $99 (Was $249) + Delivery ($0 QLD C&C/ $310 Order) @ HLP Medical Supplies",
       "link": "https://www.ozbargain.com.au/node/967767",
       "market_price": 249,
       "node_id": "967767",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 99,
           "market_price": 249,
           "savings": 150
         }
       ],
       "source": "html",
-      "times_seen": 39
+      "times_seen": 40
     },
     "node:967771": {
       "best_savings": 290,
@@ -12143,26 +12145,26 @@
       "deal_price": 50,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:12+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:03+00:00",
       "first_seen_at": "2026-07-14T09:07:07+00:00",
       "first_title": "Up to 80% Off: ASICS, adidas, Nike, Veja Sneakers from $50 + $11 Delivery ($0 C&C/ $350 Order) @ Incu",
       "last_emailed_at": "2026-07-14T09:07:07+00:00",
       "last_savings": 200,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Up to 80% Off: ASICS, adidas, Nike, Veja Sneakers from $50 + $11 Delivery ($0 C&C/ $350 Order) @ Incu",
       "link": "https://www.ozbargain.com.au/node/967819",
       "market_price": 250,
       "node_id": "967819",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 50,
           "market_price": 250,
           "savings": 200
         }
       ],
       "source": "html",
-      "times_seen": 39
+      "times_seen": 40
     },
     "node:967843": {
       "best_savings": 250,
@@ -12170,26 +12172,26 @@
       "deal_price": 250,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:13+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:04+00:00",
       "first_seen_at": "2026-07-14T09:07:07+00:00",
       "first_title": "[NSW, QLD, VIC] $250 off The First 4 Weeks for New Subscribers @ Carbar",
       "last_emailed_at": "2026-07-14T09:07:07+00:00",
       "last_savings": 250,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "[NSW, QLD, VIC] $250 off The First 4 Weeks for New Subscribers @ carbar",
       "link": "https://www.ozbargain.com.au/node/967843",
       "market_price": 0,
       "node_id": "967843",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 250,
           "market_price": 0,
           "savings": 250
         }
       ],
       "source": "html",
-      "times_seen": 39
+      "times_seen": 40
     },
     "node:967872": {
       "best_savings": 160,
@@ -12225,26 +12227,26 @@
       "deal_price": 485,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:13+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:04+00:00",
       "first_seen_at": "2026-07-15T09:11:36+00:00",
       "first_title": "Razer Kraken V4 Pro Wireless Gaming Headset with OLED Control Hub $485.36 (RRP $649.95) Delivered @ Amazon Germany via AU",
       "last_emailed_at": "2026-07-15T09:11:36+00:00",
       "last_savings": 164,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Razer Kraken V4 Pro Wireless Gaming Headset with OLED Control Hub $485.36 (RRP $649.95) Delivered @ Amazon Germany via AU",
       "link": "https://www.ozbargain.com.au/node/967935",
       "market_price": 649,
       "node_id": "967935",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 485,
           "market_price": 649,
           "savings": 164
         }
       ],
       "source": "html",
-      "times_seen": 38
+      "times_seen": 39
     },
     "node:967985": {
       "best_savings": 163,
@@ -12252,26 +12254,26 @@
       "deal_price": 163,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:14+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:05+00:00",
       "first_seen_at": "2026-07-16T09:18:14+00:00",
       "first_title": "50% off Persol Sunglasses: from $163 Delivered / C&C @ Sunglass Hut",
       "last_emailed_at": "2026-07-16T09:18:14+00:00",
       "last_savings": 163,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "50% off Persol Sunglasses: from $163 Delivered / C&C @ Sunglass Hut",
       "link": "https://www.ozbargain.com.au/node/967985",
       "market_price": 326,
       "node_id": "967985",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 163,
           "market_price": 326,
           "savings": 163
         }
       ],
       "source": "html",
-      "times_seen": 37
+      "times_seen": 38
     },
     "node:967987": {
       "best_savings": 200,
@@ -12363,26 +12365,26 @@
       "deal_price": 69,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:14+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:05+00:00",
       "first_seen_at": "2026-07-16T09:18:14+00:00",
       "first_title": "nbn FTTP or HFC 500/50Mbps $69/Month for 6 Months (Ongoing $109/M) & 34,000 Flybuys Points after 3 Months (Worth $170) @ Optus",
       "last_emailed_at": "2026-07-16T09:18:14+00:00",
       "last_savings": 170,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "nbn FTTP or HFC 500/50Mbps $69/Month for 6 Months (Ongoing $109/M) & 34,000 Flybuys Points after 3 Months (Worth $170) @ Optus",
       "link": "https://www.ozbargain.com.au/node/968013",
       "market_price": 0,
       "node_id": "968013",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 69,
           "market_price": 0,
           "savings": 170
         }
       ],
       "source": "html",
-      "times_seen": 37
+      "times_seen": 38
     },
     "node:968024": {
       "best_savings": 141,
@@ -12390,26 +12392,26 @@
       "deal_price": 158,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:14+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:06+00:00",
       "first_seen_at": "2026-07-16T09:18:14+00:00",
       "first_title": "Logitech G502X Plus Wireless Gaming Mouse, White $158.49 (RRP $299.95) Delivered @ Veloreo Pty Ltd via Amazon AU",
       "last_emailed_at": "2026-07-16T09:18:14+00:00",
       "last_savings": 141,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Logitech G502X Plus Wireless Gaming Mouse, White $158.49 (RRP $299.95) Delivered @ Veloreo Pty Ltd via Amazon AU",
       "link": "https://www.ozbargain.com.au/node/968024",
       "market_price": 299,
       "node_id": "968024",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 158,
           "market_price": 299,
           "savings": 141
         }
       ],
       "source": "html",
-      "times_seen": 37
+      "times_seen": 38
     },
     "node:968035": {
       "best_savings": 133,
@@ -12557,26 +12559,26 @@
       "deal_price": 369,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:15+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:06+00:00",
       "first_seen_at": "2026-07-16T09:18:14+00:00",
       "first_title": "Yaber T2 Portable Projector \u2013 Native 1080P FHD, JBL Sound, Built-in Battery $369 (RRP $599) + $4.99 Shipping @ Mobileskin",
       "last_emailed_at": "2026-07-16T09:18:14+00:00",
       "last_savings": 230,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Yaber T2 Portable Projector \u2013 Native 1080P FHD, JBL Sound, Built-in Battery $369 (RRP $599) + $4.99 Shipping @ Mobileskin",
       "link": "https://www.ozbargain.com.au/node/968088",
       "market_price": 599,
       "node_id": "968088",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 369,
           "market_price": 599,
           "savings": 230
         }
       ],
       "source": "html",
-      "times_seen": 37
+      "times_seen": 38
     },
     "node:968128": {
       "best_savings": 124,
@@ -12640,26 +12642,26 @@
       "deal_price": 84,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:15+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:06+00:00",
       "first_seen_at": "2026-07-17T09:12:14+00:00",
       "first_title": "Scanpan Impact 2-Piece Stainless Steel Fry Pan Set, 20cm & 28cm $84.99 (RRP $219) Delivered @ Amazon AU",
       "last_emailed_at": "2026-07-17T09:12:14+00:00",
       "last_savings": 135,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Scanpan Impact 2-Piece Stainless Steel Fry Pan Set, 20cm & 28cm $84.99 (RRP $219) Delivered @ Amazon AU",
       "link": "https://www.ozbargain.com.au/node/968147",
       "market_price": 219,
       "node_id": "968147",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 84,
           "market_price": 219,
           "savings": 135
         }
       ],
       "source": "html",
-      "times_seen": 36
+      "times_seen": 37
     },
     "node:968148": {
       "best_savings": 124,
@@ -12807,26 +12809,26 @@
       "deal_price": 749,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:15+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:07+00:00",
       "first_seen_at": "2026-07-17T09:12:14+00:00",
       "first_title": "roborock Qrevo L Robot Vacuum and Mop, All-in-one Vacuum Cleaner $749 (RRP $1,599) Delivered @ Roborock Amazon AU",
       "last_emailed_at": "2026-07-17T09:12:14+00:00",
       "last_savings": 850,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "roborock Qrevo L Robot Vacuum and Mop, All-in-one Vacuum Cleaner $749 (RRP $1,599) Delivered @ Roborock Amazon AU",
       "link": "https://www.ozbargain.com.au/node/968212",
       "market_price": 1599,
       "node_id": "968212",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 749,
           "market_price": 1599,
           "savings": 850
         }
       ],
       "source": "html",
-      "times_seen": 36
+      "times_seen": 37
     },
     "node:968218": {
       "best_savings": 372,
@@ -12890,26 +12892,26 @@
       "deal_price": 49,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:16+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:07+00:00",
       "first_seen_at": "2026-07-18T08:50:46+00:00",
       "first_title": "Doulton Collective Dinnerware Set 12pcs $49 (75% off RRP $199) + $14.95/$19.95 Delivery @ Royal Doulton Outlet",
       "last_emailed_at": "2026-07-18T08:50:46+00:00",
       "last_savings": 150,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Doulton Collective Dinnerware Set 12pcs $49 (75% off RRP $199) + $14.95/$19.95 Delivery @ Royal Doulton Outlet",
       "link": "https://www.ozbargain.com.au/node/968254",
       "market_price": 199,
       "node_id": "968254",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 49,
           "market_price": 199,
           "savings": 150
         }
       ],
       "source": "html",
-      "times_seen": 35
+      "times_seen": 36
     },
     "node:968256": {
       "best_savings": 400,
@@ -13113,26 +13115,26 @@
       "deal_price": 199,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:16+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:07+00:00",
       "first_seen_at": "2026-07-19T09:06:58+00:00",
       "first_title": "Philips Neopix 444 Projector $199 (Was $699) @ Big W",
       "last_emailed_at": "2026-07-19T09:06:58+00:00",
       "last_savings": 500,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Philips Neopix 444 Projector $199 (Was $699) Delivered @ BIG W",
       "link": "https://www.ozbargain.com.au/node/968388",
       "market_price": 699,
       "node_id": "968388",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 199,
           "market_price": 699,
           "savings": 500
         }
       ],
       "source": "html",
-      "times_seen": 34
+      "times_seen": 35
     },
     "node:968392": {
       "best_savings": 265,
@@ -13140,26 +13142,26 @@
       "deal_price": 316,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:16+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:08+00:00",
       "first_seen_at": "2026-07-20T10:15:33+00:00",
       "first_title": "Ubiquiti UniFi Protect G5 PTZ 2K HD Weatherproof IP66 Security Camera $316.95 (RRP $581.90) Delivered @ FrontidaHealth Amazon AU",
       "last_emailed_at": "2026-07-20T10:15:33+00:00",
       "last_savings": 265,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Ubiquiti UniFi Protect G5 PTZ 2K HD Weatherproof IP66 Security Camera $316.95 (RRP $581.90) Delivered @ FrontidaHealth Amazon AU",
       "link": "https://www.ozbargain.com.au/node/968392",
       "market_price": 581,
       "node_id": "968392",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 316,
           "market_price": 581,
           "savings": 265
         }
       ],
       "source": "html",
-      "times_seen": 33
+      "times_seen": 34
     },
     "node:968413": {
       "best_savings": 150,
@@ -13195,26 +13197,26 @@
       "deal_price": 200,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:17+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:08+00:00",
       "first_seen_at": "2026-07-20T10:15:33+00:00",
       "first_title": "nbn New Development Fee $200 (Was $300) with a Monthly nbn Plan @ Arctel",
       "last_emailed_at": "2026-07-20T10:15:33+00:00",
       "last_savings": 100,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "nbn New Development Fee $200 (Was $300) with a Monthly nbn Plan @ Arctel",
       "link": "https://www.ozbargain.com.au/node/968438",
       "market_price": 300,
       "node_id": "968438",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 200,
           "market_price": 300,
           "savings": 100
         }
       ],
       "source": "html",
-      "times_seen": 33
+      "times_seen": 34
     },
     "node:968501": {
       "best_savings": 117,
@@ -13278,26 +13280,26 @@
       "deal_price": 329,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:17+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:08+00:00",
       "first_seen_at": "2026-07-21T09:30:14+00:00",
       "first_title": "Velocity High Flyer Credit Card: 40,000 Velocity Points with $3.5k Spend Each Month for 2 Months, $329 AF @ Virgin Money",
       "last_emailed_at": "2026-07-21T09:30:14+00:00",
       "last_savings": 540,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Velocity High Flyer Credit Card: 40,000 Velocity Points with $3.5k Spend Each Month for 2 Months, $329 AF @ Virgin Money",
       "link": "https://www.ozbargain.com.au/node/968524",
       "market_price": 0,
       "node_id": "968524",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 329,
           "market_price": 0,
           "savings": 540
         }
       ],
       "source": "html",
-      "times_seen": 32
+      "times_seen": 33
     },
     "node:968528": {
       "best_savings": 250,
@@ -13305,26 +13307,26 @@
       "deal_price": 149,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:17+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:09+00:00",
       "first_seen_at": "2026-07-21T09:30:14+00:00",
       "first_title": "dreame Pocket Uni Pure Hair Dryer $149.99 (RRP $399.99) Delivered @ Dreame Official Amazon AU",
       "last_emailed_at": "2026-07-21T09:30:14+00:00",
       "last_savings": 250,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "dreame Pocket Uni Pure Hair Dryer $149.99 (RRP $399.99) Delivered @ Dreame Official Amazon AU",
       "link": "https://www.ozbargain.com.au/node/968528",
       "market_price": 399,
       "node_id": "968528",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 149,
           "market_price": 399,
           "savings": 250
         }
       ],
       "source": "html",
-      "times_seen": 32
+      "times_seen": 33
     },
     "node:968529": {
       "best_savings": 149,
@@ -13332,26 +13334,26 @@
       "deal_price": 450,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:18+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:09+00:00",
       "first_seen_at": "2026-07-21T09:30:14+00:00",
       "first_title": "GoChess Wizard Mini Set $450 (Was $599) + Delivery ($0 C&C/in-Store) @ EB Games",
       "last_emailed_at": "2026-07-21T09:30:14+00:00",
       "last_savings": 149,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "GoChess Wizard Mini Set $450 (Was $599) + Delivery ($0 C&C/in-Store) @ EB Games",
       "link": "https://www.ozbargain.com.au/node/968529",
       "market_price": 599,
       "node_id": "968529",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 450,
           "market_price": 599,
           "savings": 149
         }
       ],
       "source": "html",
-      "times_seen": 32
+      "times_seen": 33
     },
     "node:968564": {
       "best_savings": 160,
@@ -13443,26 +13445,26 @@
       "deal_price": 125,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:18+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:10+00:00",
       "first_seen_at": "2026-07-21T09:30:14+00:00",
       "first_title": "Baccarat Culinarix 5 Pieces Cookware Set in Black $125.00 (RRP $999.99) Delivered @ MYER",
       "last_emailed_at": "2026-07-21T09:30:14+00:00",
       "last_savings": 874,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Baccarat Culinarix 5 Pieces Cookware Set in Black $125.00 (RRP $999.99) Delivered @ MYER",
       "link": "https://www.ozbargain.com.au/node/968608",
       "market_price": 999,
       "node_id": "968608",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 125,
           "market_price": 999,
           "savings": 874
         }
       ],
       "source": "html",
-      "times_seen": 32
+      "times_seen": 33
     },
     "node:968611": {
       "best_savings": 139,
@@ -13470,26 +13472,26 @@
       "deal_price": 140,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:18+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:10+00:00",
       "first_seen_at": "2026-07-21T09:30:14+00:00",
       "first_title": "Sunbeam Compact Barista Espresso Machine $140 (RRP $279) Delivered @ Amazon AU",
       "last_emailed_at": "2026-07-21T09:30:14+00:00",
       "last_savings": 139,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Sunbeam Compact Barista Espresso Machine $140 (RRP $279) Delivered @ Amazon AU",
       "link": "https://www.ozbargain.com.au/node/968611",
       "market_price": 279,
       "node_id": "968611",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 140,
           "market_price": 279,
           "savings": 139
         }
       ],
       "source": "html",
-      "times_seen": 32
+      "times_seen": 33
     },
     "node:968628": {
       "best_savings": 329,
@@ -13525,26 +13527,26 @@
       "deal_price": 65,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:19+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:10+00:00",
       "first_seen_at": "2026-07-22T09:29:12+00:00",
       "first_title": "McLaren Vale Shiraz 2024 Mixed 6-Pack $65 Delivered ($0 SA C&C, RRP $178) @ Bec Hardy Wines",
       "last_emailed_at": "2026-07-22T09:29:12+00:00",
       "last_savings": 113,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "McLaren Vale Shiraz 2024 Mixed 6-Pack $65 Delivered ($0 SA C&C, RRP $178) @ Bec Hardy Wines",
       "link": "https://www.ozbargain.com.au/node/968654",
       "market_price": 178,
       "node_id": "968654",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 65,
           "market_price": 178,
           "savings": 113
         }
       ],
       "source": "html",
-      "times_seen": 31
+      "times_seen": 32
     },
     "node:968677": {
       "best_savings": 115,
@@ -13586,21 +13588,21 @@
       "first_title": "dreame L10s Ultra Gen2 Robot Vacuum and Mop $409.99 (RRP $1,699) Delivered @ Dreame Official AU via Amazon AU",
       "last_emailed_at": "2026-07-22T09:29:12+00:00",
       "last_savings": 1290,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "dreame L10s Ultra Gen2 Robot Vacuum and Mop $409.99 (RRP $1,699) Delivered @ Dreame Official AU via Amazon AU",
       "link": "https://www.ozbargain.com.au/node/968679",
       "market_price": 1699,
       "node_id": "968679",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 409,
           "market_price": 1699,
           "savings": 1290
         }
       ],
       "source": "html",
-      "times_seen": 6
+      "times_seen": 7
     },
     "node:968693": {
       "best_savings": 140,
@@ -13608,26 +13610,26 @@
       "deal_price": 79,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:19+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:11+00:00",
       "first_seen_at": "2026-07-22T09:29:12+00:00",
       "first_title": "Macpac Men's Uber Light Down Puffer Jacket V2 $79 (was $219.99) + Delivery ($0 C&C/ in Limited Stores/ $120 Order) @ BCF",
       "last_emailed_at": "2026-07-22T09:29:12+00:00",
       "last_savings": 140,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Macpac Men's Uber Light Down Puffer Jacket V2 $79 (was $219.99) + Delivery ($0 C&C/ in Limited Stores/ $120 Order) @ BCF",
       "link": "https://www.ozbargain.com.au/node/968693",
       "market_price": 219,
       "node_id": "968693",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 79,
           "market_price": 219,
           "savings": 140
         }
       ],
       "source": "html",
-      "times_seen": 31
+      "times_seen": 32
     },
     "node:968695": {
       "best_savings": 650,
@@ -13719,26 +13721,26 @@
       "deal_price": 4500,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:20+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:11+00:00",
       "first_seen_at": "2026-07-23T09:27:17+00:00",
       "first_title": "[VIC, QLD, NSW, SA] 50% off Goodwe Solar Battery 22.4kWh+5kW Inverter Installed: $4,500 ($4,999 SA) @ Solar Battery & Panel",
       "last_emailed_at": "2026-07-23T09:27:17+00:00",
       "last_savings": 4500,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "[VIC, QLD, NSW, SA] 50% off Goodwe Solar Battery 22.4kWh+5kW Inverter Installed: $4,500 ($4,999 SA) @ Solar Battery & Panel",
       "link": "https://www.ozbargain.com.au/node/968772",
       "market_price": 9000,
       "node_id": "968772",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 4500,
           "market_price": 9000,
           "savings": 4500
         }
       ],
       "source": "html",
-      "times_seen": 29
+      "times_seen": 30
     },
     "node:968793": {
       "best_savings": 500,
@@ -13858,26 +13860,26 @@
       "deal_price": 899,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:20+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:11+00:00",
       "first_seen_at": "2026-07-23T09:27:17+00:00",
       "first_title": "eufy Robot Vacuum S1 Pro + Bonus Cleaning Solution Cartridge $899.94 Delivered @ eufy AU",
       "last_emailed_at": "2026-07-23T09:27:17+00:00",
       "last_savings": 1800,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "eufy Robot Vacuum S1 Pro + Bonus Cleaning Solution Cartridge $899.94 Delivered @ eufy AU",
       "link": "https://www.ozbargain.com.au/node/968861",
       "market_price": 0,
       "node_id": "968861",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 899,
           "market_price": 0,
           "savings": 1800
         }
       ],
       "source": "html",
-      "times_seen": 29
+      "times_seen": 30
     },
     "node:968862": {
       "best_savings": 1100,
@@ -13885,26 +13887,26 @@
       "deal_price": 1415,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:20+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:12+00:00",
       "first_seen_at": "2026-07-23T09:27:17+00:00",
       "first_title": "[QLD] Ocular IQ Home Solar EV Charger: Single Phase 7kW from $1415, Three Phase 22kW from $1849 Installed @ EVSE (SE QLD Only)",
       "last_emailed_at": "2026-07-23T09:27:17+00:00",
       "last_savings": 1100,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "[QLD] Ocular IQ Home Solar EV Charger: Single Phase 7kW from $1415, Three Phase 22kW from $1849 Installed @ EVSE (SE QLD Only)",
       "link": "https://www.ozbargain.com.au/node/968862",
       "market_price": 0,
       "node_id": "968862",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 1415,
           "market_price": 0,
           "savings": 1100
         }
       ],
       "source": "html",
-      "times_seen": 29
+      "times_seen": 30
     },
     "node:968866": {
       "best_savings": 360,
@@ -13912,26 +13914,26 @@
       "deal_price": 30,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:21+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:12+00:00",
       "first_seen_at": "2026-07-23T09:27:17+00:00",
       "first_title": "Sign up to Marketing for $30 off Minimum $100 Online Spend at Each Selected Accent Group Stores @ Glue Store",
       "last_emailed_at": "2026-07-23T09:27:17+00:00",
       "last_savings": 360,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Sign up to Marketing for $30 off Minimum $100 Online Spend at Each Selected Accent Group Stores @ Glue Store",
       "link": "https://www.ozbargain.com.au/node/968866",
       "market_price": 0,
       "node_id": "968866",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 30,
           "market_price": 0,
           "savings": 360
         }
       ],
       "source": "html",
-      "times_seen": 29
+      "times_seen": 30
     },
     "node:968959": {
       "best_savings": 245,
@@ -13939,26 +13941,26 @@
       "deal_price": 604,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:21+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:12+00:00",
       "first_seen_at": "2026-07-24T09:23:33+00:00",
       "first_title": "Brooklyn Bicycle Co. Bikes from $604 (Was $849-$999) + $100-$200 Delivery ($0 SA Pickup) @ The Bike Collective",
       "last_emailed_at": "2026-07-24T09:23:33+00:00",
       "last_savings": 245,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Brooklyn Bicycle Co. Bikes from $604 (Was $849-$999) + $100-$200 Delivery ($0 SA Pickup) @ The Bike Collective",
       "link": "https://www.ozbargain.com.au/node/968959",
       "market_price": 849,
       "node_id": "968959",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 604,
           "market_price": 849,
           "savings": 245
         }
       ],
       "source": "html",
-      "times_seen": 27
+      "times_seen": 28
     },
     "node:968960": {
       "best_savings": 300,
@@ -13994,26 +13996,26 @@
       "deal_price": 875,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:21+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:13+00:00",
       "first_seen_at": "2026-07-24T09:23:33+00:00",
       "first_title": "AmEx Platinum Business: 350,000 Reward Points & $875 Credit with $12,000 Eligible Spend in 3 Months, $1,750 Annual Fee @ AMEX",
       "last_emailed_at": "2026-07-24T09:23:33+00:00",
       "last_savings": 5600,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "AmEx Platinum Business: 350,000 Reward Points & $875 Credit with $12,000 Eligible Spend in 3 Months, $1,750 Annual Fee @ AMEX",
       "link": "https://www.ozbargain.com.au/node/968973",
       "market_price": 0,
       "node_id": "968973",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 875,
           "market_price": 0,
           "savings": 5600
         }
       ],
       "source": "html",
-      "times_seen": 27
+      "times_seen": 28
     },
     "node:968975": {
       "best_savings": 500,
@@ -14021,26 +14023,26 @@
       "deal_price": 399,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:22+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:13+00:00",
       "first_seen_at": "2026-07-24T09:23:33+00:00",
       "first_title": "Tineco Floor ONE S7 FlashDry Smart Cordless Wet Dry Vacuum Cleaner $399 (RRP $899) Delivered @ Tineco AU Amazon AU",
       "last_emailed_at": "2026-07-24T09:23:33+00:00",
       "last_savings": 500,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Tineco Floor ONE S7 FlashDry Smart Cordless Wet Dry Vacuum Cleaner $399 (RRP $899) Delivered @ Tineco AU Amazon AU",
       "link": "https://www.ozbargain.com.au/node/968975",
       "market_price": 899,
       "node_id": "968975",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 399,
           "market_price": 899,
           "savings": 500
         }
       ],
       "source": "html",
-      "times_seen": 27
+      "times_seen": 28
     },
     "node:968981": {
       "best_savings": 121,
@@ -14104,26 +14106,26 @@
       "deal_price": 99,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:22+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:13+00:00",
       "first_seen_at": "2026-07-24T09:23:33+00:00",
       "first_title": "Superdry Hooded 5 Baffle Sports Puffer Army Khaki Green $99 (Was $249.95) Delivered @ Superdry",
       "last_emailed_at": "2026-07-24T09:23:33+00:00",
       "last_savings": 150,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Superdry Hooded 5 Baffle Sports Puffer $99 (Was $249.95) Delivered @ Superdry",
       "link": "https://www.ozbargain.com.au/node/968991",
       "market_price": 249,
       "node_id": "968991",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 99,
           "market_price": 249,
           "savings": 150
         }
       ],
       "source": "html",
-      "times_seen": 27
+      "times_seen": 28
     },
     "node:968998": {
       "best_savings": 150,
@@ -14131,26 +14133,26 @@
       "deal_price": 300,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:22+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:14+00:00",
       "first_seen_at": "2026-07-24T09:23:33+00:00",
       "first_title": "Sign up to IG Markets, Complete a $300+ Cryptocurrency Trade within 30 Days & Get a $150 Digital Visa Gift Card @ Finder",
       "last_emailed_at": "2026-07-24T09:23:33+00:00",
       "last_savings": 150,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Sign up to IG Markets, Complete a $300+ Cryptocurrency Trade within 30 Days & Get a $150 Digital Visa Gift Card @ Finder",
       "link": "https://www.ozbargain.com.au/node/968998",
       "market_price": 0,
       "node_id": "968998",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 300,
           "market_price": 0,
           "savings": 150
         }
       ],
       "source": "html",
-      "times_seen": 27
+      "times_seen": 28
     },
     "node:969018": {
       "best_savings": 202,
@@ -14270,26 +14272,26 @@
       "deal_price": 1279,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:23+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:14+00:00",
       "first_seen_at": "2026-07-26T09:17:11+00:00",
       "first_title": "Lenovo ThinkPad E14 Gen 7 WUXGA 14\" Laptop: Intel Core 5-210H, 16GB RAM, 512GB SSD, 48Whr $1279 (Was $1949) Delivered @ Lenovo",
       "last_emailed_at": "2026-07-26T09:17:11+00:00",
       "last_savings": 670,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Lenovo ThinkPad E14 Gen 7 WUXGA 14\" Laptop: Intel Core 5-210H, 16GB RAM, 512GB SSD, 48Whr $1279 (Was $1949) Delivered @ Lenovo",
       "link": "https://www.ozbargain.com.au/node/969123",
       "market_price": 1949,
       "node_id": "969123",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 1279,
           "market_price": 1949,
           "savings": 670
         }
       ],
       "source": "html",
-      "times_seen": 24
+      "times_seen": 25
     },
     "node:969148": {
       "best_savings": 194,
@@ -14521,26 +14523,26 @@
       "deal_price": 54,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:23+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:14+00:00",
       "first_seen_at": "2026-07-28T09:38:51+00:00",
       "first_title": "Macpac Men's V2 Uber Light Down Vest - Orange - $54.99 (Was $189.99) + Shipping ($0 C&C/ in Limited Stores) @ Rebel Sport",
       "last_emailed_at": "2026-07-28T09:38:51+00:00",
       "last_savings": 135,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Macpac Men's V2 Uber Light Down Vest - Orange - $54.99 (Was $189.99) + Shipping ($0 C&C/ in Limited Stores) @ Rebel Sport",
       "link": "https://www.ozbargain.com.au/node/969387",
       "market_price": 189,
       "node_id": "969387",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 54,
           "market_price": 189,
           "savings": 135
         }
       ],
       "source": "html",
-      "times_seen": 21
+      "times_seen": 22
     },
     "node:969396": {
       "best_savings": 900,
@@ -14548,26 +14550,26 @@
       "deal_price": 499,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:23+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:15+00:00",
       "first_seen_at": "2026-07-28T09:38:51+00:00",
       "first_title": "[NSW] Jamo S7-17B 2-Way Bookshelf Speakers $499 (Was $1399) C&C Only @ Digital Cinema",
       "last_emailed_at": "2026-07-28T09:38:51+00:00",
       "last_savings": 900,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "[NSW] Jamo S7-17B 2-Way Bookshelf Speakers $499 (Was $1399) C&C Only @ Digital Cinema",
       "link": "https://www.ozbargain.com.au/node/969396",
       "market_price": 1399,
       "node_id": "969396",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 499,
           "market_price": 1399,
           "savings": 900
         }
       ],
       "source": "html",
-      "times_seen": 21
+      "times_seen": 22
     },
     "node:969431": {
       "best_savings": 1215,
@@ -14575,26 +14577,26 @@
       "deal_price": 6000,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:24+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:15+00:00",
       "first_seen_at": "2026-07-29T09:40:37+00:00",
       "first_title": "Westpac Altitude Qantas/Velocity Black: 90,000 QFF/VFF with $6,000 Spend in 90 Days, $295 Fee ($0 1st Year), $75/Yr Program Fee",
       "last_emailed_at": "2026-07-29T09:40:37+00:00",
       "last_savings": 1215,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Westpac Altitude Qantas/Velocity Black: 90,000 QFF/VFF with $6,000 Spend in 90 Days, $295 Fee ($0 1st Year), $75/Yr Program Fee",
       "link": "https://www.ozbargain.com.au/node/969431",
       "market_price": 0,
       "node_id": "969431",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 6000,
           "market_price": 0,
           "savings": 1215
         }
       ],
       "source": "html",
-      "times_seen": 20
+      "times_seen": 21
     },
     "node:969447": {
       "best_savings": 151,
@@ -14602,26 +14604,26 @@
       "deal_price": 98,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:24+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:15+00:00",
       "first_seen_at": "2026-07-29T09:40:37+00:00",
       "first_title": "[PC, PS5] Anno 117: Pax Romana - Governor's Edition $98 (RRP $249.95) + Delivery ($0 C&C/ in-Store) @ EB Games",
       "last_emailed_at": "2026-07-29T09:40:37+00:00",
       "last_savings": 151,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "[PC, PS5] Anno 117: Pax Romana - Governor's Edition $98 (RRP $249.95) + Delivery ($0 C&C/ in-Store) @ EB Games",
       "link": "https://www.ozbargain.com.au/node/969447",
       "market_price": 249,
       "node_id": "969447",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 98,
           "market_price": 249,
           "savings": 151
         }
       ],
       "source": "html",
-      "times_seen": 20
+      "times_seen": 21
     },
     "node:969470": {
       "best_savings": 120,
@@ -14685,26 +14687,26 @@
       "deal_price": 779,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:24+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:16+00:00",
       "first_seen_at": "2026-07-29T09:40:37+00:00",
       "first_title": "Sihoo Doro C300 Pro V2 Ergonomic Chair: Standard $779, Footrest $799 Delivered (Was $1,099, Save up to $320) @ Sihoo Australia",
       "last_emailed_at": "2026-07-29T09:40:37+00:00",
       "last_savings": 300,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Sihoo Doro C300 Pro V2 Ergonomic Chair: Standard $779, Footrest $799 Delivered (Was $1,099, Save up to $320) @ Sihoo Australia",
       "link": "https://www.ozbargain.com.au/node/969509",
       "market_price": 1079,
       "node_id": "969509",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 779,
           "market_price": 1079,
           "savings": 300
         }
       ],
       "source": "html",
-      "times_seen": 20
+      "times_seen": 21
     },
     "node:969510": {
       "best_savings": 154,
@@ -14712,26 +14714,26 @@
       "deal_price": 159,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:25+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:16+00:00",
       "first_seen_at": "2026-07-29T09:40:37+00:00",
       "first_title": "[Kogan First] Kogan Mobile Medium 4G Prepaid Plan: 365 Days Expiry, 250GB Data - $159 Delivered ($154 with App Code) @ Kogan",
       "last_emailed_at": "2026-07-29T09:40:37+00:00",
       "last_savings": 154,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "[Kogan First] Kogan Mobile Medium 4G Prepaid Plan: 365 Days Expiry, 250GB Data - $159 Delivered ($154 with App Code) @ Kogan",
       "link": "https://www.ozbargain.com.au/node/969510",
       "market_price": 0,
       "node_id": "969510",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 159,
           "market_price": 0,
           "savings": 154
         }
       ],
       "source": "html",
-      "times_seen": 20
+      "times_seen": 21
     },
     "node:969513": {
       "best_savings": 741,
@@ -14795,26 +14797,26 @@
       "deal_price": 0,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:25+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:16+00:00",
       "first_seen_at": "2026-07-29T09:40:37+00:00",
       "first_title": "American Express Platinum Business Employee Card: 60,000 Bonus Membership Rewards Points Per Card on Maximum of 3 Cards",
       "last_emailed_at": "2026-07-29T09:40:37+00:00",
       "last_savings": 810,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "American Express Platinum Business Employee Card: 60,000 Bonus Membership Rewards Points Per Card on Maximum of 3 Cards",
       "link": "https://www.ozbargain.com.au/node/969522",
       "market_price": 0,
       "node_id": "969522",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 0,
           "market_price": 0,
           "savings": 810
         }
       ],
       "source": "html",
-      "times_seen": 20
+      "times_seen": 21
     },
     "node:969533": {
       "best_savings": 132,
@@ -14850,26 +14852,26 @@
       "deal_price": 0,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:25+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:17+00:00",
       "first_seen_at": "2026-07-29T09:40:37+00:00",
       "first_title": "American Express Qantas Business Rewards Employee Card: 40,000 Bonus Qantas Points Per Card on Maximum of 3 Cards",
       "last_emailed_at": "2026-07-29T09:40:37+00:00",
       "last_savings": 540,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "American Express Qantas Business Rewards Employee Card: 40,000 Bonus Qantas Points Per Card on Maximum of 3 Cards",
       "link": "https://www.ozbargain.com.au/node/969537",
       "market_price": 0,
       "node_id": "969537",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 0,
           "market_price": 0,
           "savings": 540
         }
       ],
       "source": "html",
-      "times_seen": 20
+      "times_seen": 21
     },
     "node:969541": {
       "best_savings": 945,
@@ -14877,26 +14879,26 @@
       "deal_price": 5000,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:26+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:17+00:00",
       "first_seen_at": "2026-07-29T09:40:37+00:00",
       "first_title": "Qantas AmEx Ultimate: 70,000 Qantas Points with $5,000 Spend in 3 Months, $450 Travel Credit, $450 Annual Fee @ American Express",
       "last_emailed_at": "2026-07-29T09:40:37+00:00",
       "last_savings": 945,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Qantas AmEx Ultimate: 70,000 Qantas Points with $5,000 Spend in 3 Months, $450 Travel Credit, $450 Annual Fee @ American Express",
       "link": "https://www.ozbargain.com.au/node/969541",
       "market_price": 0,
       "node_id": "969541",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 5000,
           "market_price": 0,
           "savings": 945
         }
       ],
       "source": "html",
-      "times_seen": 20
+      "times_seen": 21
     },
     "node:969550": {
       "best_savings": 100,
@@ -15016,26 +15018,26 @@
       "deal_price": 108,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:26+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:18+00:00",
       "first_seen_at": "2026-07-30T09:33:59+00:00",
       "first_title": "[NSW, VIC] Pinot Discovery Mixed 6-Pack $108 ($18/Bottle, Was $226) Delivered to Sydney & Melbourne @ Brand Markets",
       "last_emailed_at": "2026-07-30T09:33:59+00:00",
       "last_savings": 208,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "[NSW, VIC] Pinot Discovery Mixed 6-Pack $108 ($18/Bottle, Was $226) Delivered to Sydney & Melbourne @ Brand Markets",
       "link": "https://www.ozbargain.com.au/node/969621",
       "market_price": 316,
       "node_id": "969621",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 108,
           "market_price": 316,
           "savings": 208
         }
       ],
       "source": "html",
-      "times_seen": 19
+      "times_seen": 20
     },
     "node:969635": {
       "best_savings": 139,
@@ -15043,26 +15045,26 @@
       "deal_price": 419,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:27+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:18+00:00",
       "first_seen_at": "2026-07-30T09:33:59+00:00",
       "first_title": "LEGO 76354 Marvel S.H.I.E.L.D. Helicarrier $419.99 (25% off) + Delivery ($0 C&C/ in-Store) @ AG LEGO Certified Stores",
       "last_emailed_at": "2026-07-30T09:33:59+00:00",
       "last_savings": 139,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "LEGO 76354 Marvel S.H.I.E.L.D. Helicarrier $419.99 (25% off) + Delivery ($0 C&C/ in-Store) @ AG LEGO Certified Stores",
       "link": "https://www.ozbargain.com.au/node/969635",
       "market_price": 558,
       "node_id": "969635",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 419,
           "market_price": 558,
           "savings": 139
         }
       ],
       "source": "html",
-      "times_seen": 19
+      "times_seen": 20
     },
     "node:969662": {
       "best_savings": 100,
@@ -15070,26 +15072,26 @@
       "deal_price": 329,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:27+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:18+00:00",
       "first_seen_at": "2026-07-30T09:33:59+00:00",
       "first_title": "AirPods Pro 3 Wireless Earbuds $329 (RRP $429) Delivered @ Telstra Rewards (Telstra ID Required)",
       "last_emailed_at": "2026-07-30T09:33:59+00:00",
       "last_savings": 100,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Apple AirPods Pro 3 Wireless Earbuds $329 (RRP $429) Delivered @ Telstra Rewards (Telstra ID Required)",
       "link": "https://www.ozbargain.com.au/node/969662",
       "market_price": 429,
       "node_id": "969662",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 329,
           "market_price": 429,
           "savings": 100
         }
       ],
       "source": "html",
-      "times_seen": 19
+      "times_seen": 20
     },
     "node:969667": {
       "best_savings": 200,
@@ -15097,26 +15099,26 @@
       "deal_price": 200,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:27+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:19+00:00",
       "first_seen_at": "2026-07-30T09:33:59+00:00",
       "first_title": "Extra 50% off Pet Supplies Warehouse Sale (Was 40% off) + Delivery ($0 NSW C&C/ $200 Order) @ PupNPussy",
       "last_emailed_at": "2026-07-30T09:33:59+00:00",
       "last_savings": 200,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Extra 50% off Pet Supplies Warehouse Sale (Was 40% off) + Delivery ($0 NSW C&C/ $200 Order) @ PupNPussy",
       "link": "https://www.ozbargain.com.au/node/969667",
       "market_price": 400,
       "node_id": "969667",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 200,
           "market_price": 400,
           "savings": 200
         }
       ],
       "source": "html",
-      "times_seen": 19
+      "times_seen": 20
     },
     "node:969733": {
       "best_savings": 150,
@@ -15124,26 +15126,26 @@
       "deal_price": 849,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:28+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:19+00:00",
       "first_seen_at": "2026-07-31T09:48:08+00:00",
       "first_title": "Sony WH-1000XXB The Collexion Wireless Noise Cancelling Headphones $849 (RRP $999) Delivered @ Amazon AU",
       "last_emailed_at": "2026-07-31T09:48:08+00:00",
       "last_savings": 150,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Sony WH-1000XXB The Collexion Wireless Noise Cancelling Headphones $849 (RRP $999) Delivered @ Amazon AU",
       "link": "https://www.ozbargain.com.au/node/969733",
       "market_price": 999,
       "node_id": "969733",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 849,
           "market_price": 999,
           "savings": 150
         }
       ],
       "source": "html",
-      "times_seen": 18
+      "times_seen": 19
     },
     "node:969762": {
       "best_savings": 100,
@@ -15151,26 +15153,26 @@
       "deal_price": 100,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:28+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:19+00:00",
       "first_seen_at": "2026-07-31T09:48:08+00:00",
       "first_title": "$100 off 5 Select Mooloolaba & Maroochydore (Sunshine Coast) Holiday Home Bookings (for Stays between 3-31 Aug) @ G1 Holidays",
       "last_emailed_at": "2026-07-31T09:48:08+00:00",
       "last_savings": 100,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "$100 off 5 Select Mooloolaba & Maroochydore (Sunshine Coast) Holiday Home Bookings (for Stays between 3-31 Aug) @ G1 Holidays",
       "link": "https://www.ozbargain.com.au/node/969762",
       "market_price": 0,
       "node_id": "969762",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 100,
           "market_price": 0,
           "savings": 100
         }
       ],
       "source": "html",
-      "times_seen": 18
+      "times_seen": 19
     },
     "node:969782": {
       "best_savings": 424,
@@ -15206,26 +15208,26 @@
       "deal_price": 299,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:28+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:20+00:00",
       "first_seen_at": "2026-08-01T09:08:36+00:00",
       "first_title": "Bose QuietComfort Wireless Noise Cancelling, Bluetooth Over Ear Headphones $299 (RRP $549) Delivered @ Amazon AU",
       "last_emailed_at": "2026-08-01T09:08:36+00:00",
       "last_savings": 250,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Bose QuietComfort Wireless Noise Cancelling, Bluetooth Over Ear Headphones $299 (RRP $549) Delivered @ Amazon AU",
       "link": "https://www.ozbargain.com.au/node/969807",
       "market_price": 549,
       "node_id": "969807",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 299,
           "market_price": 549,
           "savings": 250
         }
       ],
       "source": "html",
-      "times_seen": 17
+      "times_seen": 18
     },
     "node:969838": {
       "best_savings": 213,
@@ -15233,26 +15235,26 @@
       "deal_price": 115,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:29+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:20+00:00",
       "first_seen_at": "2026-08-01T09:08:36+00:00",
       "first_title": "McLaren Vale Mixed Red (Shiraz & Cabernet) 12-Pack $115 Delivered (RRP $328, $0 SA C&C) @ Bec Hardy Wines",
       "last_emailed_at": "2026-08-01T09:08:36+00:00",
       "last_savings": 213,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "McLaren Vale Mixed Red (Shiraz & Cabernet) 12-Pack $115 Delivered (RRP $328, $0 SA C&C) @ Bec Hardy Wines",
       "link": "https://www.ozbargain.com.au/node/969838",
       "market_price": 328,
       "node_id": "969838",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 115,
           "market_price": 328,
           "savings": 213
         }
       ],
       "source": "html",
-      "times_seen": 17
+      "times_seen": 18
     },
     "node:969852": {
       "best_savings": 167,
@@ -15288,26 +15290,26 @@
       "deal_price": 3199,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:29+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:20+00:00",
       "first_seen_at": "2026-08-01T09:08:36+00:00",
       "first_title": "Final Audio D8000 AFDS Open Planar Magnetic Headphones $3199 Delivered (Save $2,300) @ Addicted to Audio",
       "last_emailed_at": "2026-08-01T09:08:36+00:00",
       "last_savings": 2300,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Final Audio D8000 AFDS Open Planar Magnetic Headphones $3199 Delivered (Save $2,300) @ Addicted to Audio",
       "link": "https://www.ozbargain.com.au/node/969873",
       "market_price": 0,
       "node_id": "969873",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 3199,
           "market_price": 0,
           "savings": 2300
         }
       ],
       "source": "html",
-      "times_seen": 17
+      "times_seen": 18
     },
     "node:969891": {
       "best_savings": 1000,
@@ -15315,26 +15317,26 @@
       "deal_price": 1000,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:29+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:21+00:00",
       "first_seen_at": "2026-08-01T09:08:36+00:00",
       "first_title": "$1000 off Chery Tiggo 4 or $1000 Fuel Card (from $23,990 Driveaway Before Discount) @ Chery",
       "last_emailed_at": "2026-08-01T09:08:36+00:00",
       "last_savings": 1000,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "$1000 off Chery Tiggo 4 ICE or $1000 Fuel Card (from $23,990 Driveaway Before Discount) @ Chery",
       "link": "https://www.ozbargain.com.au/node/969891",
       "market_price": 0,
       "node_id": "969891",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 1000,
           "market_price": 0,
           "savings": 1000
         }
       ],
       "source": "html",
-      "times_seen": 17
+      "times_seen": 18
     },
     "node:969926": {
       "best_savings": 300,
@@ -15342,26 +15344,26 @@
       "deal_price": 300,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:30+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:21+00:00",
       "first_seen_at": "2026-08-02T09:11:56+00:00",
       "first_title": "$300 Cashback for Joining Combined Hospital & Extras Insurance & Holding for 90 Days via Canstar @ Shopback",
       "last_emailed_at": "2026-08-02T09:11:56+00:00",
       "last_savings": 300,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Join a Combined Hospital & Extras Insurance Policy via Canstar & Hold for 90 Days, Get $300 Cashback @ Shopback",
       "link": "https://www.ozbargain.com.au/node/969926",
       "market_price": 0,
       "node_id": "969926",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 300,
           "market_price": 0,
           "savings": 300
         }
       ],
       "source": "html",
-      "times_seen": 16
+      "times_seen": 17
     },
     "node:969974": {
       "best_savings": 250,
@@ -15397,26 +15399,26 @@
       "deal_price": 79,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:30+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:21+00:00",
       "first_seen_at": "2026-08-03T10:46:03+00:00",
       "first_title": "Nike Air Jordan Women\u2019s Stadium 90 Sneakers $79 (60% off) + $10 Delivery ($0 with $100 Order) @ ModeFree Studio",
       "last_emailed_at": "2026-08-03T10:46:03+00:00",
       "last_savings": 118,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Nike Air Jordan Women\u2019s Stadium 90 Sneakers $79 (60% off) + $10 Delivery ($0 with $100 Order) @ ModeFree Studio",
       "link": "https://www.ozbargain.com.au/node/970008",
       "market_price": 197,
       "node_id": "970008",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 79,
           "market_price": 197,
           "savings": 118
         }
       ],
       "source": "html",
-      "times_seen": 15
+      "times_seen": 16
     },
     "node:970013": {
       "best_savings": 257,
@@ -15452,26 +15454,26 @@
       "deal_price": 150,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:30+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:22+00:00",
       "first_seen_at": "2026-08-03T10:46:03+00:00",
       "first_title": "Black Stained Birch Plywood 12\u00d72440\u00d71220mm $150 (Was $269) + 20% off Shipping ($0 VIC C&C) @ Ply Online",
       "last_emailed_at": "2026-08-03T10:46:03+00:00",
       "last_savings": 119,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Black Stained Birch Plywood 12\u00d72440\u00d71220mm $150 (Was $269) + 20% off Shipping ($0 VIC C&C) @ Ply Online",
       "link": "https://www.ozbargain.com.au/node/970021",
       "market_price": 269,
       "node_id": "970021",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 150,
           "market_price": 269,
           "savings": 119
         }
       ],
       "source": "html",
-      "times_seen": 15
+      "times_seen": 16
     },
     "node:970046": {
       "best_savings": 681,
@@ -15535,26 +15537,26 @@
       "deal_price": 1000,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:31+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:22+00:00",
       "first_seen_at": "2026-08-04T09:40:15+00:00",
       "first_title": "Spend $1000 or More in One or More Transactions at Microsoft, Get $400 Cashback @ NAB Goodies",
       "last_emailed_at": "2026-08-04T09:40:15+00:00",
       "last_savings": 400,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Spend $1000 or More in One or More Transactions at Microsoft, Get $400 Cashback @ NAB Goodies",
       "link": "https://www.ozbargain.com.au/node/970101",
       "market_price": 0,
       "node_id": "970101",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 1000,
           "market_price": 0,
           "savings": 400
         }
       ],
       "source": "html",
-      "times_seen": 14
+      "times_seen": 15
     },
     "node:970106": {
       "best_savings": 100,
@@ -15562,26 +15564,26 @@
       "deal_price": 100,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:31+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:22+00:00",
       "first_seen_at": "2026-08-04T09:40:15+00:00",
       "first_title": "$100 off $650 Spend, $75 off $400, $50 off $250, $25 off $150 Car Servicing & Select Repairs @ AutoGuru Participating Mechanics",
       "last_emailed_at": "2026-08-04T09:40:15+00:00",
       "last_savings": 100,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "$100 off $650 Spend, $75 off $400, $50 off $250, $25 off $150 Car Servicing & Select Repairs @ AutoGuru Participating Mechanics",
       "link": "https://www.ozbargain.com.au/node/970106",
       "market_price": 0,
       "node_id": "970106",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 100,
           "market_price": 0,
           "savings": 100
         }
       ],
       "source": "html",
-      "times_seen": 14
+      "times_seen": 15
     },
     "node:970107": {
       "best_savings": 400,
@@ -15589,26 +15591,26 @@
       "deal_price": 1000,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:31+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:23+00:00",
       "first_seen_at": "2026-08-04T09:40:15+00:00",
       "first_title": "Spend $1000 or More in One Transaction at Microsoft, Get $400 Cashback @ Westpac",
       "last_emailed_at": "2026-08-04T09:40:15+00:00",
       "last_savings": 400,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Spend $1000 or More in One Transaction at Microsoft, Get $400 Cashback @ Westpac",
       "link": "https://www.ozbargain.com.au/node/970107",
       "market_price": 0,
       "node_id": "970107",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 1000,
           "market_price": 0,
           "savings": 400
         }
       ],
       "source": "html",
-      "times_seen": 14
+      "times_seen": 15
     },
     "node:970121": {
       "best_savings": 180,
@@ -15616,26 +15618,26 @@
       "deal_price": 419,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:32+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:23+00:00",
       "first_seen_at": "2026-08-04T09:40:15+00:00",
       "first_title": "Arturia MicroFreak Experimental Hybrid Synthesizer $419.19 (RRP $599) Delivered @ Amazon UK via AU",
       "last_emailed_at": "2026-08-04T09:40:15+00:00",
       "last_savings": 180,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Arturia MicroFreak Experimental Hybrid Synthesizer $419.19 (RRP $599) Delivered @ Amazon UK via AU",
       "link": "https://www.ozbargain.com.au/node/970121",
       "market_price": 599,
       "node_id": "970121",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 419,
           "market_price": 599,
           "savings": 180
         }
       ],
       "source": "html",
-      "times_seen": 14
+      "times_seen": 15
     },
     "node:970145": {
       "best_savings": 128,
@@ -15671,34 +15673,35 @@
       "deal_price": 219,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:32+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:23+00:00",
       "first_seen_at": "2026-08-04T09:40:15+00:00",
       "first_title": "Vodafone: 30% Cashback on 350GB 12-Month Prepaid Plus SIM for $219 (Was $350) @ TopCashback AU",
       "last_emailed_at": "2026-08-04T09:40:15+00:00",
       "last_savings": 131,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Vodafone: 30% Cashback on 350GB 12-Month Prepaid Plus SIM for $219 (Was $350) @ TopCashback AU",
       "link": "https://www.ozbargain.com.au/node/970156",
       "market_price": 350,
       "node_id": "970156",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 219,
           "market_price": 350,
           "savings": 131
         }
       ],
       "source": "html",
-      "times_seen": 14
+      "times_seen": 15
     },
     "node:970170": {
       "best_savings": 120,
       "best_seen_at": "2026-08-04T09:40:15+00:00",
       "deal_price": 679,
       "email_count": 1,
-      "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:32+00:00",
+      "expired": true,
+      "expires_on": "17 Aug 10:24pm",
+      "expiry_checked_at": "2026-08-18T08:16:14+00:00",
       "first_seen_at": "2026-08-04T09:40:15+00:00",
       "first_title": "[Prime] XREAL XR Glasses: 1S $679.15 (RRP $799), One Pro $934.15 (RRP $1099) Delivered @ Nreal US Amazon AU",
       "last_emailed_at": "2026-08-04T09:40:15+00:00",
@@ -15752,8 +15755,9 @@
       "best_seen_at": "2026-08-04T09:40:15+00:00",
       "deal_price": 2819,
       "email_count": 1,
-      "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:33+00:00",
+      "expired": true,
+      "expires_on": "17 Aug",
+      "expiry_checked_at": "2026-08-18T08:16:14+00:00",
       "first_seen_at": "2026-08-04T09:40:15+00:00",
       "first_title": "Bluetti Apex 300 Power Station 3,840W 2,764.8Wh & Bonus Foldable Trolley (Worth $499) for $2,819.06 Shipped @ Bluetti AU",
       "last_emailed_at": "2026-08-04T09:40:15+00:00",
@@ -15836,26 +15840,26 @@
       "deal_price": 400,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:33+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:24+00:00",
       "first_seen_at": "2026-08-06T09:42:24+00:00",
       "first_title": "ANZ Low Rate Credit Card: $400 Cashback with $5,000 Spend in 6 Months ($58 Annual Fee) @ ANZ",
       "last_emailed_at": "2026-08-06T09:42:24+00:00",
       "last_savings": 400,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "ANZ Low Rate Credit Card: $400 Cashback with $5,000 Spend in 6 Months ($58 Annual Fee) @ ANZ",
       "link": "https://www.ozbargain.com.au/node/970373",
       "market_price": 0,
       "node_id": "970373",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 400,
           "market_price": 0,
           "savings": 400
         }
       ],
       "source": "html",
-      "times_seen": 12
+      "times_seen": 13
     },
     "node:970378": {
       "best_savings": 169,
@@ -15863,26 +15867,26 @@
       "deal_price": 169,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:34+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:24+00:00",
       "first_seen_at": "2026-08-06T09:42:24+00:00",
       "first_title": "365-Day Prepaid SIM Plans + 12 Months of Free OnePass: 280GB (4G) for $169, 360GB (5G/4G) for $179 @ OnePass Mobile",
       "last_emailed_at": "2026-08-06T09:42:24+00:00",
       "last_savings": 169,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "365-Day Prepaid SIM Plans + 12 Months of Free OnePass: 280GB (4G) for $169, 360GB (5G/4G) for $179 @ OnePass Mobile",
       "link": "https://www.ozbargain.com.au/node/970378",
       "market_price": 0,
       "node_id": "970378",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 169,
           "market_price": 0,
           "savings": 169
         }
       ],
       "source": "html",
-      "times_seen": 12
+      "times_seen": 13
     },
     "node:970421": {
       "best_savings": 366,
@@ -15918,26 +15922,26 @@
       "deal_price": 399,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:34+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:25+00:00",
       "first_seen_at": "2026-08-06T09:42:24+00:00",
       "first_title": "Samsung Jet 95S Stick Vacuum $399 (RRP $799) + Delivery ($0 C&C/ in-Store) @ JB Hi-Fi",
       "last_emailed_at": "2026-08-06T09:42:24+00:00",
       "last_savings": 400,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Samsung Jet 95S Stick Vacuum $399 (RRP $799) + Delivery ($0 C&C/ in-Store) @ JB Hi-Fi",
       "link": "https://www.ozbargain.com.au/node/970427",
       "market_price": 799,
       "node_id": "970427",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 399,
           "market_price": 799,
           "savings": 400
         }
       ],
       "source": "html",
-      "times_seen": 12
+      "times_seen": 13
     },
     "node:970430": {
       "best_savings": 550,
@@ -15945,26 +15949,26 @@
       "deal_price": 999,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:34+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:25+00:00",
       "first_seen_at": "2026-08-06T09:42:24+00:00",
       "first_title": "Samsung Galaxy S26 5G 256GB (Black) $999 + Delivery ($0 C&C/In-Store) @ JB Hi-Fi",
       "last_emailed_at": "2026-08-06T09:42:24+00:00",
       "last_savings": 550,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Samsung Galaxy S26 5G 256GB (Black) $999 + Delivery ($0 C&C/ In-Store) @ JB Hi-Fi",
       "link": "https://www.ozbargain.com.au/node/970430",
       "market_price": 0,
       "node_id": "970430",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 999,
           "market_price": 0,
           "savings": 550
         }
       ],
       "source": "html",
-      "times_seen": 12
+      "times_seen": 13
     },
     "node:970442": {
       "best_savings": 450,
@@ -15972,26 +15976,26 @@
       "deal_price": 450,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:35+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:25+00:00",
       "first_seen_at": "2026-08-06T09:42:24+00:00",
       "first_title": "ANZ Platinum Credit Card: $450 Cashback with $4500 Spend in 4 Months, $0 First Year Annual Fee (Then $87/Year) @ ANZ",
       "last_emailed_at": "2026-08-06T09:42:24+00:00",
       "last_savings": 450,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "ANZ Platinum Credit Card: $450 Cashback with $4500 Spend in 4 Months, $0 First Year Annual Fee (Then $87/Year) @ ANZ",
       "link": "https://www.ozbargain.com.au/node/970442",
       "market_price": 0,
       "node_id": "970442",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 450,
           "market_price": 0,
           "savings": 450
         }
       ],
       "source": "html",
-      "times_seen": 12
+      "times_seen": 13
     },
     "node:970456": {
       "best_savings": 399,
@@ -16027,26 +16031,26 @@
       "deal_price": 1299,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:35+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:26+00:00",
       "first_seen_at": "2026-08-06T09:42:24+00:00",
       "first_title": "Tonewinner Amplifiers, Subwoofers, Receivers - 40% off RRP - e.g. D6000 15\" Subwoofer $1,299 Delivered @ Selby",
       "last_emailed_at": "2026-08-06T09:42:24+00:00",
       "last_savings": 866,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Tonewinner Amplifiers, Subwoofers, Receivers - 40% off RRP - e.g. D6000 15\" Subwoofer $1,299 Delivered @ Selby",
       "link": "https://www.ozbargain.com.au/node/970471",
       "market_price": 2165,
       "node_id": "970471",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 1299,
           "market_price": 2165,
           "savings": 866
         }
       ],
       "source": "html",
-      "times_seen": 12
+      "times_seen": 13
     },
     "node:970501": {
       "best_savings": 150,
@@ -16137,8 +16141,9 @@
       "best_seen_at": "2026-08-07T08:17:17+00:00",
       "deal_price": 8250,
       "email_count": 1,
-      "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:35+00:00",
+      "expired": true,
+      "expires_on": "17 Aug 10:00pm",
+      "expiry_checked_at": "2026-08-18T08:16:17+00:00",
       "first_seen_at": "2026-08-07T08:17:17+00:00",
       "first_title": "Comac Vega 85BT Walk Behind Floor Scrubber $8250 Free Shipping (RRP $13000) from TCE Solutions",
       "last_emailed_at": "2026-08-07T08:17:17+00:00",
@@ -16193,26 +16198,26 @@
       "deal_price": 1319,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:36+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:26+00:00",
       "first_seen_at": "2026-08-08T08:46:44+00:00",
       "first_title": "40% off RRP Voucher for Samsung Galaxy S26 Ultra Enterprise Edition $1319.40 @ Samsung Partnership Store / Uber (Unique Code)",
       "last_emailed_at": "2026-08-08T08:46:44+00:00",
       "last_savings": 879,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Samsung Galaxy S26 Ultra Enterprise Edition $1319.40 (40% off) for Uber/UberEats Pro Drivers @ Samsung Uber Partnership Store",
       "link": "https://www.ozbargain.com.au/node/970658",
       "market_price": 2198,
       "node_id": "970658",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 1319,
           "market_price": 2198,
           "savings": 879
         }
       ],
       "source": "html",
-      "times_seen": 10
+      "times_seen": 11
     },
     "node:970662": {
       "best_savings": 201,
@@ -16220,7 +16225,7 @@
       "deal_price": 298,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:36+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:26+00:00",
       "first_seen_at": "2026-08-08T08:46:44+00:00",
       "first_title": "Lenovo Idea Tab FIFA Edition 11\" 2.5K 90Hz Touch Display MediaTe\u2026 $298 (RRP $499) Delivered @ Amazon AU",
       "last_emailed_at": "2026-08-08T08:46:44+00:00",
@@ -16247,26 +16252,26 @@
       "deal_price": 663,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:36+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:27+00:00",
       "first_seen_at": "2026-08-09T08:47:45+00:00",
       "first_title": "Garmin Forerunner 965 $663.91 (RRP $999) Delivered @ Amazon AU",
       "last_emailed_at": "2026-08-09T08:47:45+00:00",
       "last_savings": 336,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Garmin Forerunner 965 $663.91 (RRP $999) Delivered @ Amazon AU",
       "link": "https://www.ozbargain.com.au/node/970737",
       "market_price": 999,
       "node_id": "970737",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 663,
           "market_price": 999,
           "savings": 336
         }
       ],
       "source": "html",
-      "times_seen": 9
+      "times_seen": 10
     },
     "node:970748": {
       "best_savings": 150,
@@ -16302,26 +16307,26 @@
       "deal_price": 1150,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:37+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:27+00:00",
       "first_seen_at": "2026-08-10T08:41:52+00:00",
       "first_title": "Stihl MS391 Farm Boss Chainsaw 20\" $1150 (+ $30 National Delivery) @ South Side Mower Centre",
       "last_emailed_at": "2026-08-10T08:41:52+00:00",
       "last_savings": 399,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Stihl MS 391 Farm Boss Chainsaw 20\" $1,150 + $30 Delivery ($0 QLD C&C) @ Southside Mower Centre",
       "link": "https://www.ozbargain.com.au/node/970842",
       "market_price": 0,
       "node_id": "970842",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 1150,
           "market_price": 0,
           "savings": 399
         }
       ],
       "source": "html",
-      "times_seen": 8
+      "times_seen": 9
     },
     "node:970847": {
       "best_savings": 341,
@@ -16329,26 +16334,26 @@
       "deal_price": 338,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:37+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:27+00:00",
       "first_seen_at": "2026-08-10T08:41:52+00:00",
       "first_title": "[Prime] Garmin Instinct 2 Solar Smart Watch in Graphite $338.98 (RRP $679) Delivered @ Amazon AU",
       "last_emailed_at": "2026-08-10T08:41:52+00:00",
       "last_savings": 341,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Garmin Instinct 2 Solar Smart Watch in Graphite $338.98 (RRP $679) Delivered @ Amazon AU",
       "link": "https://www.ozbargain.com.au/node/970847",
       "market_price": 679,
       "node_id": "970847",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 338,
           "market_price": 679,
           "savings": 341
         }
       ],
       "source": "html",
-      "times_seen": 8
+      "times_seen": 9
     },
     "node:970894": {
       "best_savings": 420,
@@ -16356,26 +16361,26 @@
       "deal_price": 100,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:37+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:28+00:00",
       "first_seen_at": "2026-08-11T08:11:39+00:00",
       "first_title": "[NSW] Switch to Origin Energy & Stay until 30/9 for Bill Credits: Electricity $100, Gas $160 @ One Big Switch",
       "last_emailed_at": "2026-08-11T08:11:39+00:00",
       "last_savings": 420,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "[NSW] Switch to Origin Energy & Stay until 30/9 for Bill Credits: Electricity $100, Gas $160 @ One Big Switch",
       "link": "https://www.ozbargain.com.au/node/970894",
       "market_price": 0,
       "node_id": "970894",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 100,
           "market_price": 0,
           "savings": 420
         }
       ],
       "source": "html",
-      "times_seen": 7
+      "times_seen": 8
     },
     "node:970898": {
       "best_savings": 120,
@@ -16467,34 +16472,35 @@
       "deal_price": 2399,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:38+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:28+00:00",
       "first_seen_at": "2026-08-12T08:21:18+00:00",
       "first_title": "NCM T7s Trekking E-Bike $2,399 (Was $2,799) + $29 Delivery ($0 VIC C&C) @ NCM Bikes",
       "last_emailed_at": "2026-08-12T08:21:18+00:00",
       "last_savings": 400,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "NCM T7s Trekking E-Bike $2,399 (Was $2,799) + $29 Delivery ($0 VIC C&C) @ NCM Bikes",
       "link": "https://www.ozbargain.com.au/node/971026",
       "market_price": 2799,
       "node_id": "971026",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 2399,
           "market_price": 2799,
           "savings": 400
         }
       ],
       "source": "html",
-      "times_seen": 6
+      "times_seen": 7
     },
     "node:971033": {
       "best_savings": 210,
       "best_seen_at": "2026-08-12T08:21:18+00:00",
       "deal_price": 239,
       "email_count": 1,
-      "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:38+00:00",
+      "expired": true,
+      "expires_on": "17 Aug",
+      "expiry_checked_at": "2026-08-18T08:16:19+00:00",
       "first_seen_at": "2026-08-12T08:21:18+00:00",
       "first_title": "Ninja XXXL FlexDrawer Air Fryer, 10.4L Extra Large Drawer $239 (RRP $449.99) Delivered @ Amazon AU (Excl. NT)",
       "last_emailed_at": "2026-08-12T08:21:18+00:00",
@@ -16521,26 +16527,26 @@
       "deal_price": 0,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:38+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:28+00:00",
       "first_seen_at": "2026-08-12T08:21:18+00:00",
       "first_title": "Add an Additional Credit Card (First Approved Card Only), Get 7,500 Bonus Qantas / Velocity Points @ American Express",
       "last_emailed_at": "2026-08-12T08:21:18+00:00",
       "last_savings": 101,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Add an Additional Credit Card (First Approved Card Only), Get 7,500 Bonus Qantas / Velocity Points @ American Express",
       "link": "https://www.ozbargain.com.au/node/971049",
       "market_price": 0,
       "node_id": "971049",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 0,
           "market_price": 0,
           "savings": 101
         }
       ],
       "source": "html",
-      "times_seen": 6
+      "times_seen": 7
     },
     "node:971054": {
       "best_savings": 840,
@@ -16548,34 +16554,35 @@
       "deal_price": 180,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:39+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:29+00:00",
       "first_seen_at": "2026-08-12T08:21:18+00:00",
       "first_title": "82% off Secret Premium Coonawarra Shiraz 2015 12-Pack $180 ($15/Bottle, RRP $1,020) Delivered @ Dozen Deals",
       "last_emailed_at": "2026-08-12T08:21:18+00:00",
       "last_savings": 840,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "82% off Secret Premium Coonawarra Shiraz 2015 12-Pack $180 ($15/Bottle, RRP $1,020) Delivered @ Dozen Deals",
       "link": "https://www.ozbargain.com.au/node/971054",
       "market_price": 1020,
       "node_id": "971054",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 180,
           "market_price": 1020,
           "savings": 840
         }
       ],
       "source": "html",
-      "times_seen": 6
+      "times_seen": 7
     },
     "node:971055": {
       "best_savings": 100,
       "best_seen_at": "2026-08-12T08:21:18+00:00",
       "deal_price": 99,
       "email_count": 1,
-      "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:39+00:00",
+      "expired": true,
+      "expires_on": "17 Aug 8:59pm",
+      "expiry_checked_at": "2026-08-18T08:16:20+00:00",
       "first_seen_at": "2026-08-12T08:21:18+00:00",
       "first_title": "Nutribullet 8L Air Fryer $99 (Was $199) + Delivery ($0 C&C/ In-Store) @ JB Hi-Fi",
       "last_emailed_at": "2026-08-12T08:21:18+00:00",
@@ -16602,26 +16609,26 @@
       "deal_price": 671,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:40+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:29+00:00",
       "first_seen_at": "2026-08-12T08:21:18+00:00",
       "first_title": "Terramaster F4 4 Bay SSD NAS Storage $671.99 (RRP $839.99) Delivered @ TerraMaster via Amazon AU",
       "last_emailed_at": "2026-08-12T08:21:18+00:00",
       "last_savings": 168,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Terramaster F4 4 Bay SSD NAS Storage $671.99 (RRP $839.99) Delivered @ TerraMaster via Amazon AU",
       "link": "https://www.ozbargain.com.au/node/971068",
       "market_price": 839,
       "node_id": "971068",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 671,
           "market_price": 839,
           "savings": 168
         }
       ],
       "source": "html",
-      "times_seen": 6
+      "times_seen": 7
     },
     "node:971084": {
       "best_savings": 190,
@@ -16629,26 +16636,26 @@
       "deal_price": 298,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:40+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:29+00:00",
       "first_seen_at": "2026-08-12T08:21:18+00:00",
       "first_title": "Monster Vision 2 Portable Entertainment System, 15.6\" 1080p, 60W Audio $298.29 (39% off) + $14.95 Delivery @ gizmoo",
       "last_emailed_at": "2026-08-12T08:21:18+00:00",
       "last_savings": 190,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Monster Vision 2 Portable Entertainment System, 15.6\" 1080p, 60W Audio $298.29 (39% off) + $14.95 Delivery @ gizmoo",
       "link": "https://www.ozbargain.com.au/node/971084",
       "market_price": 488,
       "node_id": "971084",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 298,
           "market_price": 488,
           "savings": 190
         }
       ],
       "source": "html",
-      "times_seen": 6
+      "times_seen": 7
     },
     "node:971136": {
       "best_savings": 140,
@@ -16656,26 +16663,26 @@
       "deal_price": 159,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:40+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:30+00:00",
       "first_seen_at": "2026-08-13T08:24:07+00:00",
       "first_title": "Shark StainForce Portable Spot & Stain Cleaner $159 (Was $299) Delivered @ Amazon AU",
       "last_emailed_at": "2026-08-13T08:24:07+00:00",
       "last_savings": 140,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Shark StainForce Portable Spot & Stain Cleaner $159 (Was $299) Delivered @ Amazon AU",
       "link": "https://www.ozbargain.com.au/node/971136",
       "market_price": 299,
       "node_id": "971136",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 159,
           "market_price": 299,
           "savings": 140
         }
       ],
       "source": "html",
-      "times_seen": 5
+      "times_seen": 6
     },
     "node:971142": {
       "best_savings": 219,
@@ -16767,26 +16774,26 @@
       "deal_price": 50,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:41+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:30+00:00",
       "first_seen_at": "2026-08-13T08:24:07+00:00",
       "first_title": "Activate & Spend $X (Min. $50) in 1 Transaction for 4 Consecutive Weeks at Coles, Get 10,000 Flybuys Points or $50 off @ Flybuys",
       "last_emailed_at": "2026-08-13T08:24:07+00:00",
       "last_savings": 100,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Activate & Spend $X (Min. $50) in 1 Transaction for 4 Consecutive Weeks at Coles, Get 10,000 Flybuys Points or $50 off @ Flybuys",
       "link": "https://www.ozbargain.com.au/node/971173",
       "market_price": 0,
       "node_id": "971173",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 50,
           "market_price": 0,
           "savings": 100
         }
       ],
       "source": "html",
-      "times_seen": 5
+      "times_seen": 6
     },
     "node:971181": {
       "best_savings": 120,
@@ -16822,26 +16829,26 @@
       "deal_price": 450,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:41+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:31+00:00",
       "first_seen_at": "2026-08-13T08:24:07+00:00",
       "first_title": "Join Hospital + Extras or Packaged Cover on Direct Debit, Stay 90 Days, Get $450 (Singles) / $650 (Family) EDR Dollars @ Bupa",
       "last_emailed_at": "2026-08-13T08:24:07+00:00",
       "last_savings": 650,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Join Hospital + Extras or Packaged Cover on Direct Debit, Stay 90 Days, Get $450 (Singles) / $650 (Family) EDR Dollars @ Bupa",
       "link": "https://www.ozbargain.com.au/node/971182",
       "market_price": 0,
       "node_id": "971182",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 450,
           "market_price": 0,
           "savings": 650
         }
       ],
       "source": "html",
-      "times_seen": 5
+      "times_seen": 6
     },
     "node:971207": {
       "best_savings": 265,
@@ -16849,26 +16856,26 @@
       "deal_price": 265,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:41+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:32+00:00",
       "first_seen_at": "2026-08-13T08:24:07+00:00",
       "first_title": "Join via Compare The Market & Hold for 90 Days: $265 Cashback for Hospital & Extras, $215 CB for Hospital Only @ TopCashback AU",
       "last_emailed_at": "2026-08-13T08:24:07+00:00",
       "last_savings": 265,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Join via Compare The Market & Hold for 90 Days: $265 Cashback for Hospital & Extras, $215 CB for Hospital Only @ TopCashback AU",
       "link": "https://www.ozbargain.com.au/node/971207",
       "market_price": 0,
       "node_id": "971207",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 265,
           "market_price": 0,
           "savings": 265
         }
       ],
       "source": "html",
-      "times_seen": 5
+      "times_seen": 6
     },
     "node:971216": {
       "best_savings": 100,
@@ -16960,34 +16967,35 @@
       "deal_price": 234,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:42+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:33+00:00",
       "first_seen_at": "2026-08-13T08:24:07+00:00",
       "first_title": "Osprey Ozone 40L 2-Wheel Carry On Travel Bag - Black $234.50 (was $469.00) Delivered @ Wild Earth",
       "last_emailed_at": "2026-08-13T08:24:07+00:00",
       "last_savings": 235,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Osprey Ozone 40L 2-Wheel Carry On Travel Bag - Black $234.50 (was $469.00) Delivered @ Wild Earth",
       "link": "https://www.ozbargain.com.au/node/971244",
       "market_price": 469,
       "node_id": "971244",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 234,
           "market_price": 469,
           "savings": 235
         }
       ],
       "source": "html",
-      "times_seen": 5
+      "times_seen": 6
     },
     "node:971282": {
       "best_savings": 130,
       "best_seen_at": "2026-08-14T08:22:33+00:00",
       "deal_price": 149,
       "email_count": 1,
-      "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:11+00:00",
+      "expired": true,
+      "expires_on": "18 Aug 6:43am",
+      "expiry_checked_at": "2026-08-18T08:15:52+00:00",
       "first_seen_at": "2026-08-14T08:22:33+00:00",
       "first_title": "ASUS TUF Gaming BE3600 Dual Band Wi-Fi 7 Router $149 (RRP $279) Delivered @ Amazon AU (Excl. NT)",
       "last_emailed_at": "2026-08-14T08:22:33+00:00",
@@ -17042,26 +17050,26 @@
       "deal_price": 298,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:12+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:04+00:00",
       "first_seen_at": "2026-08-14T08:22:33+00:00",
       "first_title": "Roborock Q7T+ Robotic Vacuum Cleaner, Black $298.99 (RRP $799) Delivered @ Roborock AU Direct Amazon AU",
       "last_emailed_at": "2026-08-14T08:22:33+00:00",
       "last_savings": 501,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Roborock Q7T+ Robotic Vacuum Cleaner, Black $298.99 (RRP $799) Delivered @ Roborock AU Direct Amazon AU",
       "link": "https://www.ozbargain.com.au/node/971316",
       "market_price": 799,
       "node_id": "971316",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 298,
           "market_price": 799,
           "savings": 501
         }
       ],
       "source": "html",
-      "times_seen": 4
+      "times_seen": 5
     },
     "node:971325": {
       "best_savings": 1920,
@@ -17069,26 +17077,26 @@
       "deal_price": 1279,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:13+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:05+00:00",
       "first_seen_at": "2026-08-14T08:22:33+00:00",
       "first_title": "60% off PowerGuard 3000W Portable Power Station (2560Wh) $1,279.60 (RRP $3,199) Delivered @ Techunion",
       "last_emailed_at": "2026-08-14T08:22:33+00:00",
       "last_savings": 1920,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "60% off PowerGuard 3000W Portable Power Station (2560Wh) $1,279.60 (RRP $3,199) Delivered @ Techunion",
       "link": "https://www.ozbargain.com.au/node/971325",
       "market_price": 3199,
       "node_id": "971325",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 1279,
           "market_price": 3199,
           "savings": 1920
         }
       ],
       "source": "html",
-      "times_seen": 4
+      "times_seen": 5
     },
     "node:971429": {
       "best_savings": 161,
@@ -17096,7 +17104,7 @@
       "deal_price": 39,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:08+00:00",
+      "expiry_checked_at": "2026-08-18T08:16:59+00:00",
       "first_seen_at": "2026-08-15T08:02:41+00:00",
       "first_title": "Massena 25th Anniversary Celebration 2023 Barossa Valley Shiraz $39.99 (Was $200) / 3PK $119.97 Delivered @ Skye Cellars",
       "last_emailed_at": "2026-08-15T08:02:41+00:00",
@@ -17123,7 +17131,7 @@
       "deal_price": 1650,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:08+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:00+00:00",
       "first_seen_at": "2026-08-15T08:02:41+00:00",
       "first_title": "Save $1650 on Google Pixel 11 Pro XL 256GB with $79/m 36-Month Optus Plan (Total Min cost $3293) @ Harvey Norman",
       "last_emailed_at": "2026-08-15T08:02:41+00:00",
@@ -17206,26 +17214,26 @@
       "deal_price": 2048,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:10+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:01+00:00",
       "first_seen_at": "2026-08-15T08:02:41+00:00",
       "first_title": "Apple iPad Pro (M5) 11\" Wi-Fi/Cellular 256GB Space Black $2,048.40 Outright (RRP $2,349) + Free Delivery/C&C in-Store @ Optus",
       "last_emailed_at": "2026-08-15T08:02:41+00:00",
       "last_savings": 301,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Apple iPad Pro (M5) 11\" Wi-Fi/Cellular 256GB Space Black $2,048.40 Outright (RRP $2,349) Delivered / C&C / in-Store @ Optus",
       "link": "https://www.ozbargain.com.au/node/971451",
       "market_price": 2349,
       "node_id": "971451",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 2048,
           "market_price": 2349,
           "savings": 301
         }
       ],
       "source": "html",
-      "times_seen": 3
+      "times_seen": 4
     },
     "node:971454": {
       "best_savings": 110,
@@ -17233,26 +17241,26 @@
       "deal_price": 159,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:10+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:02+00:00",
       "first_seen_at": "2026-08-15T08:02:41+00:00",
       "first_title": "Saucony Hurricane 25 $159.99 (Was $269.99) + Delivery @ Saucony",
       "last_emailed_at": "2026-08-15T08:02:41+00:00",
       "last_savings": 110,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Saucony Hurricane 25 $159.99 (Was $269.99) + $15 Delivery ($0 with $200 Order) @ Saucony",
       "link": "https://www.ozbargain.com.au/node/971454",
       "market_price": 269,
       "node_id": "971454",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 159,
           "market_price": 269,
           "savings": 110
         }
       ],
       "source": "html",
-      "times_seen": 3
+      "times_seen": 4
     },
     "node:971473": {
       "best_savings": 106,
@@ -17260,26 +17268,26 @@
       "deal_price": 74,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:11+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:03+00:00",
       "first_seen_at": "2026-08-15T08:02:41+00:00",
       "first_title": "Jean Paul Gaultier Le Male Eau De Toilette 125ml $74.99 (Was $180) + Delivery ($0 C&C/ in-Store) @ Chemist Warehouse",
       "last_emailed_at": "2026-08-15T08:02:41+00:00",
       "last_savings": 106,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Jean Paul Gaultier Le Male Eau De Toilette 125ml $74.99 (Was $180) + Delivery ($0 C&C/ in-Store) @ Chemist Warehouse",
       "link": "https://www.ozbargain.com.au/node/971473",
       "market_price": 180,
       "node_id": "971473",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 74,
           "market_price": 180,
           "savings": 106
         }
       ],
       "source": "html",
-      "times_seen": 3
+      "times_seen": 4
     },
     "node:971480": {
       "best_savings": 281,
@@ -17287,7 +17295,7 @@
       "deal_price": 315,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:09+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:01+00:00",
       "first_seen_at": "2026-08-16T08:03:16+00:00",
       "first_title": "Bosch GDS 18V-1000 18V Li-ion Cordless 1/2\" High Torque Impact Wrench - Skin Only $315 (RRP $596) + Bosch Redemption @ Syd Tools",
       "last_emailed_at": "2026-08-16T08:03:16+00:00",
@@ -17314,26 +17322,26 @@
       "deal_price": 999,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:09+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:01+00:00",
       "first_seen_at": "2026-08-16T08:03:16+00:00",
       "first_title": "ASUS ROG Rapture GT-BE19000AI Tri-Band Router $999 (RRP $1,399) Delivered @ Amazon AU",
       "last_emailed_at": "2026-08-16T08:03:16+00:00",
       "last_savings": 400,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "ASUS ROG Rapture GT-BE19000AI Tri-Band Router $999 (RRP $1,399) Delivered @ Amazon AU",
       "link": "https://www.ozbargain.com.au/node/971503",
       "market_price": 1399,
       "node_id": "971503",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 999,
           "market_price": 1399,
           "savings": 400
         }
       ],
       "source": "html",
-      "times_seen": 2
+      "times_seen": 3
     },
     "node:971535": {
       "best_savings": 140,
@@ -17341,57 +17349,62 @@
       "deal_price": 59,
       "email_count": 1,
       "expired": false,
-      "expiry_checked_at": "2026-08-17T08:48:09+00:00",
+      "expiry_checked_at": "2026-08-18T08:17:02+00:00",
       "first_seen_at": "2026-08-16T08:03:16+00:00",
       "first_title": "Hush Puppies Chalet Women's Leather Boots $59.80 (RRP $199.95) + Shipping @ Brand House Direct",
       "last_emailed_at": "2026-08-16T08:03:16+00:00",
       "last_savings": 140,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Hush Puppies Chalet Women's Leather Boots $59.80 (RRP $199.95) + Shipping @ Brand House Direct",
       "link": "https://www.ozbargain.com.au/node/971535",
       "market_price": 199,
       "node_id": "971535",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 59,
           "market_price": 199,
           "savings": 140
         }
       ],
       "source": "html",
-      "times_seen": 2
+      "times_seen": 3
     },
     "node:971583": {
       "best_savings": 121,
       "best_seen_at": "2026-08-17T08:48:52+00:00",
       "deal_price": 199,
       "email_count": 1,
+      "expired": false,
+      "expiry_checked_at": "2026-08-18T08:16:58+00:00",
       "first_seen_at": "2026-08-17T08:48:52+00:00",
       "first_title": "New Balance - Made in USA 990v6 $199 Delivered (Was $320) / $0 C&C / in-Store @ New Balance",
       "last_emailed_at": "2026-08-17T08:48:52+00:00",
       "last_savings": 121,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
-      "last_title": "New Balance - Made in USA 990v6 $199 Delivered (Was $320) / $0 C&C / in-Store @ New Balance",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
+      "last_title": "New Balance - Made in USA 990v6 $199 Delivered / C&C / in-Store (Was $320) @ New Balance",
       "link": "https://www.ozbargain.com.au/node/971583",
       "market_price": 320,
       "node_id": "971583",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 199,
           "market_price": 320,
           "savings": 121
         }
       ],
       "source": "html",
-      "times_seen": 1
+      "times_seen": 2
     },
     "node:971591": {
       "best_savings": 350,
       "best_seen_at": "2026-08-17T08:48:52+00:00",
       "deal_price": 350,
       "email_count": 1,
+      "expired": true,
+      "expires_on": "17 Aug",
+      "expiry_checked_at": "2026-08-18T08:15:48+00:00",
       "first_seen_at": "2026-08-17T08:48:52+00:00",
       "first_title": "Canstar: $350 Cashback on Hospital & Extras Health Insurance Policies @ ShopBack",
       "last_emailed_at": "2026-08-17T08:48:52+00:00",
@@ -17417,56 +17430,62 @@
       "best_seen_at": "2026-08-17T08:48:52+00:00",
       "deal_price": 399,
       "email_count": 1,
+      "expired": false,
+      "expiry_checked_at": "2026-08-18T08:16:58+00:00",
       "first_seen_at": "2026-08-17T08:48:52+00:00",
       "first_title": "Samsung Galaxy Tab A11+ 5G 128GB $399 (Was $549) Delivered @ Telstra",
       "last_emailed_at": "2026-08-17T08:48:52+00:00",
       "last_savings": 150,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Samsung Galaxy Tab A11+ 5G 128GB $399 (Was $549) Delivered @ Telstra",
       "link": "https://www.ozbargain.com.au/node/971628",
       "market_price": 549,
       "node_id": "971628",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 399,
           "market_price": 549,
           "savings": 150
         }
       ],
       "source": "html",
-      "times_seen": 1
+      "times_seen": 2
     },
     "node:971630": {
       "best_savings": 297,
       "best_seen_at": "2026-08-17T08:48:52+00:00",
       "deal_price": 198,
       "email_count": 1,
+      "expired": false,
+      "expiry_checked_at": "2026-08-18T08:16:59+00:00",
       "first_seen_at": "2026-08-17T08:48:52+00:00",
       "first_title": "Beaucaire Jacket (2 Colours) $198 (Was $495, 60% off RRP)+ $14.95 Delivery ($0 over $400 Spend, $0 VIC C&C) @ Henry Bucks",
       "last_emailed_at": "2026-08-17T08:48:52+00:00",
       "last_savings": 297,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
-      "last_title": "Beaucaire Jacket (2 Colours) $198 (Was $495, 60% off RRP)+ $14.95 Delivery ($0 over $400 Spend, $0 VIC C&C) @ Henry Bucks",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
+      "last_title": "Beaucaire Jacket (2 Colours) $198 (60% off RRP $495) + $14.95 Delivery ($0 over $400 Spend, $0 C&C) @ Henry Bucks",
       "link": "https://www.ozbargain.com.au/node/971630",
       "market_price": 495,
       "node_id": "971630",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 198,
           "market_price": 495,
           "savings": 297
         }
       ],
       "source": "html",
-      "times_seen": 1
+      "times_seen": 2
     },
     "node:971631": {
       "best_savings": 250,
       "best_seen_at": "2026-08-17T08:48:52+00:00",
       "deal_price": 0,
       "email_count": 1,
+      "expired": false,
+      "expiry_checked_at": "2026-08-18T08:16:59+00:00",
       "first_seen_at": "2026-08-17T08:48:52+00:00",
       "first_title": "Up to 50,000 Flybuys Points with Optus Sim Only Mobile Plans",
       "last_emailed_at": "2026-08-17T08:48:52+00:00",
@@ -17492,21 +17511,148 @@
       "best_seen_at": "2026-08-17T08:48:52+00:00",
       "deal_price": 196,
       "email_count": 1,
+      "expired": false,
+      "expiry_checked_at": "2026-08-18T08:17:00+00:00",
       "first_seen_at": "2026-08-17T08:48:52+00:00",
       "first_title": "Asus ROG Bulwark Dock DG300 USB-C $196.95 (RRP $349) Delivered @ Amazon JP via AU",
       "last_emailed_at": "2026-08-17T08:48:52+00:00",
       "last_savings": 153,
-      "last_seen_at": "2026-08-17T08:48:52+00:00",
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
       "last_title": "Asus ROG Bulwark Dock DG300 USB-C $196.95 (RRP $349) Delivered @ Amazon JP via AU",
       "link": "https://www.ozbargain.com.au/node/971641",
       "market_price": 349,
       "node_id": "971641",
       "price_history": [
         {
-          "at": "2026-08-17T08:48:52+00:00",
+          "at": "2026-08-18T08:17:41+00:00",
           "deal_price": 196,
           "market_price": 349,
           "savings": 153
+        }
+      ],
+      "source": "html",
+      "times_seen": 2
+    },
+    "node:971696": {
+      "best_savings": 100,
+      "best_seen_at": "2026-08-18T08:17:41+00:00",
+      "deal_price": 448,
+      "email_count": 1,
+      "first_seen_at": "2026-08-18T08:17:41+00:00",
+      "first_title": "DJI Osmo Pocket 4 1 CMOS 4K/240fps Gimbal US$448.00 (~A$667.05) with PayPal Delivered @ EasyFly Store via AliExpress",
+      "last_emailed_at": "2026-08-18T08:17:41+00:00",
+      "last_savings": 100,
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
+      "last_title": "DJI Osmo Pocket 4 1 CMOS 4K/240fps Gimbal US$448.00 (~A$667.05) with PayPal Delivered @ EasyFly Store via AliExpress",
+      "link": "https://www.ozbargain.com.au/node/971696",
+      "market_price": 0,
+      "node_id": "971696",
+      "price_history": [
+        {
+          "at": "2026-08-18T08:17:41+00:00",
+          "deal_price": 448,
+          "market_price": 0,
+          "savings": 100
+        }
+      ],
+      "source": "html",
+      "times_seen": 1
+    },
+    "node:971706": {
+      "best_savings": 147,
+      "best_seen_at": "2026-08-18T08:17:41+00:00",
+      "deal_price": 72,
+      "email_count": 1,
+      "first_seen_at": "2026-08-18T08:17:41+00:00",
+      "first_title": "Belkin BoostCharge Pro 3-in-1 Wireless Charging Stand $72.99  (RRP $219.95) Delivered @ Amazon AU",
+      "last_emailed_at": "2026-08-18T08:17:41+00:00",
+      "last_savings": 147,
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
+      "last_title": "Belkin BoostCharge Pro 3-in-1 Wireless Charging Stand $72.99  (RRP $219.95) Delivered @ Amazon AU",
+      "link": "https://www.ozbargain.com.au/node/971706",
+      "market_price": 219,
+      "node_id": "971706",
+      "price_history": [
+        {
+          "at": "2026-08-18T08:17:41+00:00",
+          "deal_price": 72,
+          "market_price": 219,
+          "savings": 147
+        }
+      ],
+      "source": "html",
+      "times_seen": 1
+    },
+    "node:971758": {
+      "best_savings": 1000,
+      "best_seen_at": "2026-08-18T08:17:41+00:00",
+      "deal_price": 1000,
+      "email_count": 1,
+      "first_seen_at": "2026-08-18T08:17:41+00:00",
+      "first_title": "Referrer & Referee Each Get $1000 Credit for Loan Settling at $350k & above, or $250 Each for Settling below @ Athena Home Loan",
+      "last_emailed_at": "2026-08-18T08:17:41+00:00",
+      "last_savings": 1000,
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
+      "last_title": "Referrer & Referee Each Get $1000 Credit for Loan Settling at $350k & above, or $250 Each for Settling below @ Athena Home Loan",
+      "link": "https://www.ozbargain.com.au/node/971758",
+      "market_price": 0,
+      "node_id": "971758",
+      "price_history": [
+        {
+          "at": "2026-08-18T08:17:41+00:00",
+          "deal_price": 1000,
+          "market_price": 0,
+          "savings": 1000
+        }
+      ],
+      "source": "html",
+      "times_seen": 1
+    },
+    "node:971768": {
+      "best_savings": 675,
+      "best_seen_at": "2026-08-18T08:17:41+00:00",
+      "deal_price": 123,
+      "email_count": 1,
+      "first_seen_at": "2026-08-18T08:17:41+00:00",
+      "first_title": "Best of The Best Shiraz & Mixed Reds Dozen 12-Pack $123.50 ($10.30/Bottle, RRP $798) Delivered @ Dozen Deals",
+      "last_emailed_at": "2026-08-18T08:17:41+00:00",
+      "last_savings": 675,
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
+      "last_title": "Best of The Best Shiraz & Mixed Reds Dozen 12-Pack $123.50 ($10.30/Bottle, RRP $798) Delivered @ Dozen Deals",
+      "link": "https://www.ozbargain.com.au/node/971768",
+      "market_price": 798,
+      "node_id": "971768",
+      "price_history": [
+        {
+          "at": "2026-08-18T08:17:41+00:00",
+          "deal_price": 123,
+          "market_price": 798,
+          "savings": 675
+        }
+      ],
+      "source": "html",
+      "times_seen": 1
+    },
+    "node:971776": {
+      "best_savings": 371,
+      "best_seen_at": "2026-08-18T08:17:41+00:00",
+      "deal_price": 279,
+      "email_count": 1,
+      "first_seen_at": "2026-08-18T08:17:41+00:00",
+      "first_title": "Citizen Promaster 41mm NY0125-08W $279 ($254 with Sign up Bonus, RRP $650) Delivered / NSW C&C @ StarBuy",
+      "last_emailed_at": "2026-08-18T08:17:41+00:00",
+      "last_savings": 371,
+      "last_seen_at": "2026-08-18T08:17:41+00:00",
+      "last_title": "Citizen Promaster 41mm NY0125-08W $279 ($254 with Sign up Bonus, RRP $650) Delivered / NSW C&C @ StarBuy",
+      "link": "https://www.ozbargain.com.au/node/971776",
+      "market_price": 650,
+      "node_id": "971776",
+      "price_history": [
+        {
+          "at": "2026-08-18T08:17:41+00:00",
+          "deal_price": 279,
+          "market_price": 650,
+          "savings": 371
         }
       ],
       "source": "html",
